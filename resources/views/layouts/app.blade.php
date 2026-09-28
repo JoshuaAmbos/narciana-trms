@@ -20,10 +20,10 @@
             </div>
         </div>
         <nav class="nav">
-            @foreach (config('narciana.nav') as [$routeName, $label, $roles])
+            @foreach (config('narciana.nav') as [$routeName, $label, $roles, $icon])
                 <a href="{{ Route::has($routeName) ? route($routeName) : '#' }}"
                    class="{{ request()->routeIs(Str::before($routeName, '.').'*') ? 'on' : '' }}">
-                    <span class="ico"></span>{{ $label }}
+                    <x-icon :name="$icon" />{{ $label }}
                 </a>
             @endforeach
         </nav>

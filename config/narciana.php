@@ -14,20 +14,20 @@ return [
         'caretaker' => env('SEED_CARETAKER_PASSWORD'),
     ],
 
-    // Sidebar menu: [route name, label, roles that may see it].
+    // Sidebar menu: [route name, label, roles that may see it, Lucide icon name].
     // Items whose route does not exist yet link to "#". Hiding by role starts in Module 2.
     'nav' => [
-        ['dashboard', 'Dashboard', ['Owner', 'Manager', 'Caretaker']],
-        ['rooms.index', 'Rooms & Inquiries', ['Owner', 'Manager', 'Caretaker']],
+        ['dashboard', 'Dashboard', ['Owner', 'Manager', 'Caretaker'], 'layout-dashboard'],
+        ['rooms.index', 'Rooms & Inquiries', ['Owner', 'Manager', 'Caretaker'], 'door-open'],
         // Caretaker sees this page only for appliances and visitors, not the MOA details.
-        ['tenants.index', 'Tenants & MOA', ['Owner', 'Manager', 'Caretaker']],
-        ['billing.index', 'Billing', ['Owner', 'Manager']],
-        ['payments.index', 'Payments', ['Owner', 'Manager']],
-        ['concerns.index', 'Concerns', ['Owner', 'Manager', 'Caretaker']],
-        ['moveouts.index', 'Move-out Settlement', ['Owner', 'Manager']],
-        ['reports.index', 'Reports', ['Owner', 'Manager']],
-        ['users.index', 'User Accounts', ['Owner']],
-        ['settings.index', 'Settings & Backup', ['Owner']],
+        ['tenants.index', 'Tenants & MOA', ['Owner', 'Manager', 'Caretaker'], 'users'],
+        ['billing.index', 'Billing', ['Owner', 'Manager'], 'receipt'],
+        ['payments.index', 'Payments', ['Owner', 'Manager'], 'wallet'],
+        ['concerns.index', 'Concerns', ['Owner', 'Manager', 'Caretaker'], 'wrench'],
+        ['moveouts.index', 'Move-out Settlement', ['Owner', 'Manager'], 'package'],
+        ['reports.index', 'Reports', ['Owner', 'Manager'], 'chart-column'],
+        ['users.index', 'User Accounts', ['Owner'], 'user-cog'],
+        ['settings.index', 'Settings & Backup', ['Owner'], 'settings'],
     ],
 
 ];

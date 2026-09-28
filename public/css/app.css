@@ -81,14 +81,9 @@ a { color: var(--navy-2); }
 }
 .nav a:hover, .nav a:focus-visible { background: #274a74; color: #fff; }
 .nav a.on { background: var(--navy-2); color: #fff; border-left-color: var(--gold); }
-.nav .ico {
-    width: 18px;
-    height: 18px;
-    border-radius: 4px;
-    background: #5b7fa6;
-    flex-shrink: 0;
-}
-.nav a.on .ico { background: var(--gold); }
+.nav .icon { flex-shrink: 0; color: #9fb6d3; }
+.nav a:hover .icon { color: #fff; }
+.nav a.on .icon { color: var(--gold); }
 
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Blade;
@@ -15,7 +16,8 @@ class LayoutTest extends TestCase
     {
         $this->seed();
 
-        $this->get('/')
+        $this->actingAs(User::where('username', 'owner')->first())
+            ->get('/')
             ->assertOk()
             ->assertSee('Narciana House')
             ->assertSee('Rooms &amp; Inquiries', false)
@@ -28,7 +30,8 @@ class LayoutTest extends TestCase
         $this->seed();
         $this->seed(DemoSeeder::class);
 
-        $this->get('/')
+        $this->actingAs(User::factory()->role('Manager')->create())
+            ->get('/')
             ->assertOk()
             ->assertSee('208')
             ->assertSee('₱3,600.00');
@@ -51,7 +54,8 @@ class LayoutTest extends TestCase
 
     public function test_active_menu_item_is_highlighted(): void
     {
-        $this->get('/')->assertOk()->assertSee('class="on"', false)->assertSee('icon-layout-dashboard', false);
+        $this->actingAs(User::factory()->create())
+            ->get('/')->assertOk()->assertSee('class="on"', false)->assertSee('icon-layout-dashboard', false);
     }
 
     public function test_app_runs_in_manila_time(): void

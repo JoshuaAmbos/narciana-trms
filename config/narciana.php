@@ -30,4 +30,26 @@ return [
         ['settings.index', 'Settings & Backup', ['Owner'], 'settings'],
     ],
 
+    // "Role access" table shown on the User Accounts screen (same as the roles table in the project rules).
+    // [function, Owner, Manager, Caretaker]  - true = yes, false = no, string = limited access
+    'role_access' => [
+        ['Dashboard', true, true, 'Concerns, rooms only'],
+        ['Rooms: add/edit rooms, rents', true, false, false],
+        ['Rooms: view availability', true, true, true],
+        ['Inquiries: log / update', true, true, true],
+        ['Tenants and MOA, occupants', true, true, false],
+        ['Appliances and visitors', true, true, true],
+        ['Meter readings', true, true, false],
+        ['Billing', true, true, false],
+        ['Payments', true, true, false],
+        ['Concerns: log / update', true, true, true],
+        ['Move-out: notice, inspection, compute', true, true, false],
+        ['Move-out: approve refund / release', true, false, false],
+        ['Reports', true, true, false],
+        ['User accounts', true, false, false],
+        ['Settings (rates and rules)', true, false, false],
+        ['Backup and restore', true, false, false],
+        ['My password', true, true, true],
+    ],
+
 ];

@@ -45,6 +45,15 @@
             </div>
             <p class="muted">Encoded by the {{ $lease->user->role }}.</p>
 
+            <div class="moveout-link">
+                @if ($lease->moveout)
+                    Move-out: <x-moveout-status :moveout="$lease->moveout" />
+                    <a href="{{ route('moveouts.show', $lease->moveout) }}" class="btn sec">Open the move-out settlement</a>
+                @elseif ($lease->status === 'Active')
+                    <a href="{{ route('moveouts.create', ['lease' => $lease->lease_id]) }}" class="btn sec">Give move-out notice</a>
+                @endif
+            </div>
+
             @if ($canCancel)
                 <form method="POST" action="{{ route('leases.cancel', $lease) }}" class="danger-zone"
                       onsubmit="return confirm('Cancel this MOA? Room {{ $lease->room->room_no }} will be Vacant again. Use this only for an MOA encoded by mistake or cancelled before any bill.')">

@@ -6,6 +6,7 @@ use App\Models\Appliance;
 use App\Models\Concern;
 use App\Models\Inquiry;
 use App\Models\Lease;
+use App\Models\Moveout;
 use App\Models\Room;
 use App\Models\Setting;
 use App\Models\Tenant;
@@ -16,6 +17,7 @@ use App\Services\ConcernService;
 use App\Services\LeaseService;
 use App\Services\PaymentService;
 use App\Services\PenaltyService;
+use App\Services\SettlementService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
@@ -25,14 +27,14 @@ use Illuminate\Support\Carbon;
  *   php artisan migrate:fresh --seed
  *   php artisan db:seed --class=DemoSeeder
  *
- * Gives the same data every time: 13 rooms (201-213), 10 occupied by "Sample Tenant 1-10" (encoded through
+ * Gives the same data every time: 15 rooms (201-215), 12 leases for "Sample Tenant 1-12" (encoded through
  * LeaseService so every rule applies), 3 vacant with matching waiting inquiries. Dates are fixed offsets from
  * today (e.g. "5 months ago on the 5th"), so due days never change; nothing is random.
  *
  * Module 5: move-in meter readings for metered rooms and every bill already due (through BillingService).
  * Module 6: payments (Cash and GCash, some late with a penalty), a few unpaid and Overdue bills.
  * Module 7: concerns (open, in progress, resolved, repeated; one charge billed, one waiting to be picked).
- * Module 8 adds move-outs here.
+ * Module 8: move-outs: a notice only (206), one awaiting the Owner's approval (214), one settled with a refund (215).
  */
 class DemoSeeder extends Seeder
 {
@@ -51,6 +53,8 @@ class DemoSeeder extends Seeder
         '211' => ['Basic', 3000.00, 2],
         '212' => ['Aircon', 3800.00, 2],
         '213' => ['Basic', 2500.00, 1],
+        '214' => ['Aircon', 3700.00, 2],
+        '215' => ['Basic', 3200.00, 2],
     ];
 
     /**
@@ -68,6 +72,8 @@ class DemoSeeder extends Seeder
         8 => ['211', 1, 10, false, [['Rice cooker', 'Declared', 0], ['Laptop', 'CCTV', 5]]],
         9 => ['212', 2, 30, false, []],
         10 => ['213', 1, 3, false, [['Electric kettle', 'Declared', 0]]],
+        11 => ['214', 7, 8, true, []],                                  // moves out (awaiting approval)
+        12 => ['215', 6, 20, false, [['Rice cooker', 'Declared', 0]]],  // moved out and settled
     ];
 
     public function run(): void
@@ -94,10 +100,12 @@ class DemoSeeder extends Seeder
         $this->seedLeases($owner);
         $this->seedInquiries($owner);
         $this->seedConcerns($owner);
+        $this->seedMoveoutNotices($owner);   // before billing: no regular bill after a move-out date
         $bills = $this->seedBills($owner);
         $paid = $this->seedPayments($owner);
+        $this->seedSettlements($owner);      // final bills, inspection items, compute, approve
 
-        $this->command?->info("Demo data ready: 13 rooms (10 occupied, 3 vacant), 10 sample tenants, sample inquiries, {$bills} past bills ({$paid} paid).");
+        $this->command?->info("Demo data ready: 15 rooms, 12 sample tenants (3 move-outs), inquiries, concerns, {$bills} past bills ({$paid} paid).");
     }
 
     private function seedRooms(): void
@@ -241,7 +249,8 @@ class DemoSeeder extends Seeder
             $n = (int) preg_replace('/\D/', '', $lease->tenant->full_name); // Sample Tenant n
             $month = 0;
 
-            while (($due = $billing->nextDueDate($lease))->lte(today())) {
+            $actual = $lease->moveout?->actual_date;
+            while (($due = $billing->nextDueDate($lease))->lte(today()) && ($actual === null || $due->lte($actual))) {
                 $reading = null;
                 if ($lease->room->is_metered) {
                     $previous = (float) $billing->lastReading($lease->room_id)->current_reading;
@@ -309,6 +318,61 @@ class DemoSeeder extends Seeder
         $payments->refreshOverdue();
 
         return $count;
+    }
+
+    /** Notices and move-out dates (before billing, so no regular bill is made after a move-out). */
+    private function seedMoveoutNotices(User $owner): void
+    {
+        $settlements = app(SettlementService::class);
+        $leaseOf = fn (string $roomNo) => Lease::whereHas('room', fn ($q) => $q->where('room_no', $roomNo))->firstOrFail();
+
+        // [room, notice (days ago), planned (days from today, negative = past), moved out (days ago) or null]
+        foreach ([['206', 5, 14, null], ['214', 35, -3, 3], ['215', 50, -20, 20]] as [$roomNo, $noticeAgo, $plannedIn, $actualAgo]) {
+            $moveout = $settlements->giveNotice($leaseOf($roomNo), today()->subDays($noticeAgo)->toDateString(),
+                today()->addDays($plannedIn)->toDateString(), $owner);
+            if ($actualAgo !== null) {
+                $settlements->updateDates($moveout, [
+                    'notice_date' => $moveout->notice_date->toDateString(),
+                    'planned_date' => $moveout->planned_date->toDateString(),
+                    'actual_date' => today()->subDays($actualAgo)->toDateString(),
+                ], $owner);
+            }
+        }
+    }
+
+    /** Final bills, inspection items and computed settlements; room 215 is approved and its refund released. */
+    private function seedSettlements(User $owner): void
+    {
+        $settlements = app(SettlementService::class);
+        $billing = app(BillingService::class);
+        $items = [
+            '214' => [['Wall paint scratches near the bed', 650.00], ['Missing key copy', 250.00]],
+            '215' => [['Adhesive hook marks (MOA item 12)', 500.00]],
+        ];
+
+        foreach (Moveout::with('lease.room')->whereNotNull('actual_date')->get() as $moveout) {
+            $room = $moveout->lease->room;
+            $reading = null;
+            if ($room->is_metered) {
+                $previous = (float) $billing->lastReading($room->room_id)->current_reading;
+                $reading = ['previous_reading' => $previous, 'current_reading' => $previous + 45,
+                    'reading_date' => $moveout->actual_date->toDateString(), 'source' => 'Meter'];
+            }
+            if ($billing->finalPeriod($moveout->lease, $moveout->actual_date)) {
+                $billing->generateFinal($moveout, $reading, [], $owner);
+            }
+            foreach ($items[$room->room_no] ?? [] as [$text, $cost]) {
+                $settlements->addItem($moveout, $text, $cost);
+            }
+            $settlements->compute($moveout, $owner);
+
+            if ($room->room_no === '215') {
+                $moveout = $settlements->approve($moveout, $owner);
+                if ($moveout->status === 'Refunded') {
+                    $settlements->markRefundReleased($moveout, $owner);
+                }
+            }
+        }
     }
 
     /** One month's deposit split into the 4 parts; the parts always add up exactly to the rent. */

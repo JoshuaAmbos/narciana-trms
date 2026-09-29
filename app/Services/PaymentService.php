@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AuditLog;
 use App\Models\Bill;
+use App\Models\Moveout;
 use App\Models\Payment;
 use App\Models\Setting;
 use App\Models\User;
@@ -104,6 +105,9 @@ class PaymentService
 
             AuditLog::record('Payment recorded', 'tbl_payment', $payment->payment_id, $receiver->user_id);
 
+            // Paying a move-out excess bill settles that move-out (decision 16).
+            app(SettlementService::class)->settleIfExcessPaid($bill, $receiver);
+
             return $payment;
         });
     }
@@ -129,7 +133,9 @@ class PaymentService
         $bill = $payment->bill;
 
         return $bill->status === 'Paid'
-            && ! Bill::where('lease_id', $bill->lease_id)->where('status', 'Paid')->where('due_date', '>', $bill->due_date)->exists();
+            && ! Bill::where('lease_id', $bill->lease_id)->where('status', 'Paid')->where('due_date', '>', $bill->due_date)->exists()
+            // The payment of an excess bill settled a move-out (lease ended, room freed): it cannot be undone.
+            && ! Moveout::where('excess_bill_id', $bill->bill_id)->exists();
     }
 
     public function void(Payment $payment, User $owner): void

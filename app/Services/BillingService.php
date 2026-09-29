@@ -7,6 +7,7 @@ use App\Models\Bill;
 use App\Models\Concern;
 use App\Models\Lease;
 use App\Models\MeterReading;
+use App\Models\Moveout;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -98,8 +99,12 @@ class BillingService
 
     public function canGenerateNow(Lease $lease, ?Carbon $today = null): bool
     {
+        $next = $this->nextDueDate($lease);
+        $actual = $lease->moveout?->actual_date;
+
         return $lease->status === 'Active'
-            && $this->nextDueDate($lease)->lte(($today ?? today())->copy()->addDays(self::DAYS_AHEAD));
+            && $next->lte(($today ?? today())->copy()->addDays(self::DAYS_AHEAD))
+            && ($actual === null || $next->lte($actual)); // no regular bill after the tenant moved out
     }
 
     public function occupantCount(Lease $lease, Carbon $start, Carbon $end): int
@@ -130,39 +135,10 @@ class BillingService
      */
     public function preview(Lease $lease, ?array $reading = null, array $concernIds = []): array
     {
-        $lease->loadMissing('room');
-        $settings = Setting::current();
         $dueDate = $this->nextDueDate($lease);
         [$start, $end] = $this->periodFor($lease->move_in_date, $lease->due_day, $dueDate);
-        $metered = (bool) $lease->room->is_metered;
 
-        $occupants = $this->occupantCount($lease, $start, $end);
-        $appliances = $metered ? 0 : $this->applianceCount($lease, $start, $end);
-        $kwh = ($metered && $reading) ? round((float) $reading['current_reading'] - (float) $reading['previous_reading'], 2) : 0.0;
-        // Only this lease's chargeable concerns count, whatever ids were sent.
-        $charges = app(ConcernService::class)->chargeable($lease)->whereIn('concern_id', array_map('intval', $concernIds))->values();
-
-        return [
-            'due_date' => $dueDate,
-            'period_start' => $start,
-            'period_end' => $end,
-            'rent_from' => $dueDate,
-            'rent_to' => $this->dueDateIn($lease->due_day, $dueDate->copy()->startOfMonth()->addMonthNoOverflow())->subDay(),
-            'metered' => $metered,
-            'occupants' => $occupants,
-            'appliances' => $appliances,
-            'water_rate' => (float) $settings->water_rate,
-            'appliance_fee' => (float) $settings->appliance_fee,
-            'kwh_rate' => (float) $settings->kwh_rate,
-            'kwh_used' => $kwh,
-            'reading' => $reading,
-            'charges' => $charges,
-            'amounts' => $this->computeAmounts(
-                (float) $lease->monthly_rent, (float) $settings->water_rate, $occupants, $metered,
-                $kwh, (float) $settings->kwh_rate, (float) $settings->appliance_fee, $appliances,
-                (float) $charges->sum(fn (Concern $c) => (float) $c->cost),
-            ),
-        ];
+        return $this->statement($lease, $dueDate, $start, $end, false, $reading, $concernIds);
     }
 
     /**
@@ -181,58 +157,166 @@ class BillingService
                 throw ValidationException::withMessages(['lease' => 'This bill was already generated (or the page is out of date). Open Billing again.']);
             }
             if (! $this->canGenerateNow($lease, $today)) {
-                throw ValidationException::withMessages(['lease' => 'This bill can be generated from '.self::DAYS_AHEAD.' days before its due date.']);
+                throw ValidationException::withMessages(['lease' => 'This bill can be generated from '.self::DAYS_AHEAD.' days before its due date (and not after the tenant moved out).']);
             }
 
-            $metered = (bool) $lease->room->is_metered;
-            if ($metered && ! $reading) {
-                throw ValidationException::withMessages(['current_reading' => 'This room has its own meter: enter the meter reading.']);
+            return $this->createBill($lease, fn (?array $r, array $ids) => $this->preview($lease, $r, $ids),
+                $reading, $concernIds, $by, 'Bill generated');
+        });
+    }
+
+    // ---------- Final bill at move-out (decision 16) ----------
+
+    /**
+     * Unbilled utilities period at move-out: from the last due date (or the move-in date) to the actual move-out date.
+     * Null when no final bill is needed (the tenant left before that period starts).
+     *
+     * @return array{0: Carbon, 1: Carbon}|null
+     */
+    public function finalPeriod(Lease $lease, Carbon $actualDate): ?array
+    {
+        $last = $lease->bills()->whereNotIn('bill_id', Moveout::whereNotNull('excess_bill_id')->pluck('excess_bill_id'))
+            ->orderByDesc('due_date')->first();
+        $start = $last ? $last->due_date->copy() : $lease->move_in_date->copy();
+
+        return $actualDate->lt($start) ? null : [$start, $actualDate->copy()];
+    }
+
+    /** Regular bills due on or before the actual date must exist before the final bill. */
+    public function regularBillsDone(Lease $lease, Carbon $actualDate): bool
+    {
+        return $this->nextDueDate($lease)->gt($actualDate);
+    }
+
+    public function finalPreview(Lease $lease, Carbon $actualDate, ?array $reading = null, array $concernIds = []): ?array
+    {
+        $period = $this->finalPeriod($lease, $actualDate);
+
+        return $period ? $this->statement($lease, $actualDate, $period[0], $period[1], true, $reading, $concernIds) : null;
+    }
+
+    public function generateFinal(Moveout $moveout, ?array $reading, array $concernIds, User $by): Bill
+    {
+        return DB::transaction(function () use ($moveout, $reading, $concernIds, $by) {
+            $moveout = Moveout::whereKey($moveout->moveout_id)->lockForUpdate()->firstOrFail();
+            $lease = Lease::whereKey($moveout->lease_id)->lockForUpdate()->firstOrFail();
+
+            if (! $moveout->isPending() || ! $moveout->actual_date) {
+                throw ValidationException::withMessages(['final' => 'Record the actual move-out date first (settlement still pending).']);
+            }
+            if ($moveout->final_bill_id) {
+                throw ValidationException::withMessages(['final' => 'The final bill was already generated.']);
+            }
+            if (! $this->regularBillsDone($lease, $moveout->actual_date)) {
+                throw ValidationException::withMessages(['final' => 'Generate the regular bill due '.$this->nextDueDate($lease)->format('j M Y').' first (Billing).']);
+            }
+            if (! $this->finalPeriod($lease, $moveout->actual_date)) {
+                throw ValidationException::withMessages(['final' => 'No final bill is needed: the tenant left before the unbilled period started.']);
             }
 
-            // Lock the ticked concerns and check each one is still chargeable for this lease.
-            $concernIds = array_values(array_unique(array_map('intval', $concernIds)));
-            if ($concernIds) {
-                $locked = Concern::whereKey($concernIds)->lockForUpdate()->get();
-                $ok = app(ConcernService::class)->chargeable($lease)->pluck('concern_id')->all();
-                if ($locked->count() !== count($concernIds) || array_diff($concernIds, $ok)) {
-                    throw ValidationException::withMessages([
-                        'concerns' => 'A ticked concern can no longer be charged on this bill (already billed, changed, or of another tenant). Open the bill again.',
-                    ]);
-                }
-            }
-
-            $preview = $this->preview($lease, $metered ? $reading : null, $concernIds);
-
-            $readingModel = null;
-            if ($metered) {
-                $readingModel = MeterReading::create([
-                    'room_id' => $lease->room_id,
-                    'reading_date' => $reading['reading_date'],
-                    'previous_reading' => $reading['previous_reading'],
-                    'current_reading' => $reading['current_reading'],
-                    'rate_per_kwh' => $preview['kwh_rate'],
-                    'source' => $reading['source'],
-                    'user_id' => $by->user_id,
-                ]);
-            }
-
-            $bill = Bill::create($preview['amounts'] + [
-                'lease_id' => $lease->lease_id,
-                'reading_id' => $readingModel?->reading_id,
-                'period_start' => $preview['period_start']->toDateString(),
-                'due_date' => $preview['due_date']->toDateString(),
-                'status' => 'Unpaid',
-                'user_id' => $by->user_id,
-            ]);
-
-            if ($concernIds) {
-                Concern::whereKey($concernIds)->update(['bill_id' => $bill->bill_id]);
-            }
-
-            AuditLog::record('Bill generated', 'tbl_bill', $bill->bill_id, $by->user_id);
+            $actual = $moveout->actual_date->copy();
+            $bill = $this->createBill($lease, fn (?array $r, array $ids) => $this->finalPreview($lease, $actual, $r, $ids),
+                $reading, $concernIds, $by, 'Final bill generated');
+            $moveout->update(['final_bill_id' => $bill->bill_id]);
 
             return $bill;
         });
+    }
+
+    // ---------- Shared building blocks ----------
+
+    /** Statement figures for one period. A final bill charges no rent (rent was charged ahead). */
+    private function statement(Lease $lease, Carbon $dueDate, Carbon $start, Carbon $end, bool $final, ?array $reading, array $concernIds): array
+    {
+        $lease->loadMissing('room');
+        $settings = Setting::current();
+        $metered = (bool) $lease->room->is_metered;
+
+        $occupants = $this->occupantCount($lease, $start, $end);
+        $appliances = $metered ? 0 : $this->applianceCount($lease, $start, $end);
+        $kwh = ($metered && $reading) ? round((float) $reading['current_reading'] - (float) $reading['previous_reading'], 2) : 0.0;
+        // Only this lease's chargeable concerns count, whatever ids were sent.
+        $charges = app(ConcernService::class)->chargeable($lease)->whereIn('concern_id', array_map('intval', $concernIds))->values();
+
+        return [
+            'final' => $final,
+            'excess' => null,
+            'due_date' => $dueDate,
+            'period_start' => $start,
+            'period_end' => $end,
+            'rent_from' => $final ? null : $dueDate,
+            'rent_to' => $final ? null : $this->dueDateIn($lease->due_day, $dueDate->copy()->startOfMonth()->addMonthNoOverflow())->subDay(),
+            'metered' => $metered,
+            'occupants' => $occupants,
+            'appliances' => $appliances,
+            'water_rate' => (float) $settings->water_rate,
+            'appliance_fee' => (float) $settings->appliance_fee,
+            'kwh_rate' => (float) $settings->kwh_rate,
+            'kwh_used' => $kwh,
+            'reading' => $reading,
+            'charges' => $charges,
+            'amounts' => $this->computeAmounts(
+                $final ? 0.0 : (float) $lease->monthly_rent, (float) $settings->water_rate, $occupants, $metered,
+                $kwh, (float) $settings->kwh_rate, (float) $settings->appliance_fee, $appliances,
+                (float) $charges->sum(fn (Concern $c) => (float) $c->cost),
+            ),
+        ];
+    }
+
+    /**
+     * Save a bill (inside the caller's transaction): check and lock ticked concerns, save the meter reading,
+     * the bill, link the concerns, write the audit row. $build(?reading, concernIds) returns the statement.
+     */
+    private function createBill(Lease $lease, callable $build, ?array $reading, array $concernIds, User $by, string $auditAction): Bill
+    {
+        $metered = (bool) $lease->room->is_metered;
+        if ($metered && ! $reading) {
+            throw ValidationException::withMessages(['current_reading' => 'This room has its own meter: enter the meter reading.']);
+        }
+
+        // Lock the ticked concerns and check each one is still chargeable for this lease.
+        $concernIds = array_values(array_unique(array_map('intval', $concernIds)));
+        if ($concernIds) {
+            $locked = Concern::whereKey($concernIds)->lockForUpdate()->get();
+            $ok = app(ConcernService::class)->chargeable($lease)->pluck('concern_id')->all();
+            if ($locked->count() !== count($concernIds) || array_diff($concernIds, $ok)) {
+                throw ValidationException::withMessages([
+                    'concerns' => 'A ticked concern can no longer be charged on this bill (already billed, changed, or of another tenant). Open the bill again.',
+                ]);
+            }
+        }
+
+        $statement = $build($metered ? $reading : null, $concernIds);
+
+        $readingModel = null;
+        if ($metered) {
+            $readingModel = MeterReading::create([
+                'room_id' => $lease->room_id,
+                'reading_date' => $reading['reading_date'],
+                'previous_reading' => $reading['previous_reading'],
+                'current_reading' => $reading['current_reading'],
+                'rate_per_kwh' => $statement['kwh_rate'],
+                'source' => $reading['source'],
+                'user_id' => $by->user_id,
+            ]);
+        }
+
+        $bill = Bill::create($statement['amounts'] + [
+            'lease_id' => $lease->lease_id,
+            'reading_id' => $readingModel?->reading_id,
+            'period_start' => $statement['period_start']->toDateString(),
+            'due_date' => $statement['due_date']->toDateString(),
+            'status' => 'Unpaid',
+            'user_id' => $by->user_id,
+        ]);
+
+        if ($concernIds) {
+            Concern::whereKey($concernIds)->update(['bill_id' => $bill->bill_id]);
+        }
+
+        AuditLog::record($auditAction, 'tbl_bill', $bill->bill_id, $by->user_id);
+
+        return $bill;
     }
 
     /**
@@ -242,21 +326,24 @@ class BillingService
      */
     public function statementForBill(Bill $bill): array
     {
-        $bill->loadMissing(['lease.room', 'meterReading', 'concerns']);
+        $bill->loadMissing(['lease.room', 'meterReading', 'concerns', 'finalOf', 'excessOf']);
         $lease = $bill->lease;
+        $final = $bill->finalOf !== null;
         $start = $bill->period_start->copy();
-        $end = $bill->due_date->copy()->subDay();
+        $end = $final ? $bill->due_date->copy() : $bill->due_date->copy()->subDay(); // final period ends on the move-out date
         $metered = $bill->reading_id !== null; // every metered bill is saved with its meter reading
         $occupants = $this->occupantCount($lease, $start, $end);
         $appliances = $metered ? 0 : $this->applianceCount($lease, $start, $end);
         $reading = $bill->meterReading;
 
         return [
+            'final' => $final,
+            'excess' => $bill->excessOf,
             'due_date' => $bill->due_date,
             'period_start' => $start,
             'period_end' => $end,
-            'rent_from' => $bill->due_date,
-            'rent_to' => $this->dueDateIn($lease->due_day, $bill->due_date->copy()->startOfMonth()->addMonthNoOverflow())->subDay(),
+            'rent_from' => $final ? null : $bill->due_date,
+            'rent_to' => $final ? null : $this->dueDateIn($lease->due_day, $bill->due_date->copy()->startOfMonth()->addMonthNoOverflow())->subDay(),
             'metered' => $metered,
             'occupants' => $occupants,
             'appliances' => $appliances,
@@ -280,7 +367,8 @@ class BillingService
 
     public function canDelete(Bill $bill): bool
     {
-        return $bill->status === 'Unpaid' && $bill->payments()->doesntExist();
+        return $bill->status === 'Unpaid' && $bill->payments()->doesntExist()
+            && ! Moveout::where('excess_bill_id', $bill->bill_id)->exists(); // an excess bill belongs to its settlement
     }
 
     /** Delete an Unpaid bill with no payment (and the meter reading made for it). */

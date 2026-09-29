@@ -106,7 +106,9 @@ class LeaseService
 
     public function canCancel(Lease $lease): bool
     {
-        return $lease->status === 'Active' && $lease->bills()->doesntExist(); // no bills means no payments either
+        return $lease->status === 'Active'
+            && $lease->bills()->doesntExist()      // no bills means no payments either
+            && $lease->moveout()->doesntExist();   // once notice is given, use Move-out Settlement
     }
 
     public function cancel(Lease $lease, User $by): void

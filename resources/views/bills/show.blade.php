@@ -19,6 +19,9 @@
         @if ($payment)
             <p class="paid-note">Paid on {{ $payment->payment_date->format('j M Y') }} by {{ $payment->mode }}
                 — acknowledgment <a href="{{ route('payments.show', $payment) }}">{{ $payment->ack_no }}</a>.</p>
+        @elseif ($bill->status === 'Paid' && $bill->lease->moveout)
+            <p class="paid-note">Settled from the deposit at move-out —
+                <a href="{{ route('moveouts.show', $bill->lease->moveout) }}">see the settlement</a>.</p>
         @elseif ($dueToday)
             <div class="due-box no-print">
                 @if ($dueToday['days_late'] > 0)

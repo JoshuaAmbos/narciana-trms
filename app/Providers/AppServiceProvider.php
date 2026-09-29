@@ -30,5 +30,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Owner and Manager encode and view MOAs (rent, deposits, occupants). Never the Caretaker (decision 10).
         Gate::define('manage-leases', fn (User $user) => $user->hasRole('Owner', 'Manager'));
+
+        // Only the Owner approves a move-out settlement and releases refunds (decision 4 and 16).
+        Gate::define('approve-settlements', fn (User $user) => $user->hasRole('Owner'));
     }
 }

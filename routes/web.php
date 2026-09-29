@@ -5,11 +5,14 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\ConcernController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FinalBillController;
 use App\Http\Controllers\HouseholdController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\KeepAliveController;
 use App\Http\Controllers\LeaseController;
 use App\Http\Controllers\MeterReadingController;
+use App\Http\Controllers\MoveoutController;
+use App\Http\Controllers\MoveoutItemController;
 use App\Http\Controllers\OccupantController;
 use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\PaymentController;
@@ -64,6 +67,16 @@ Route::middleware(['auth', 'active'])->group(function () {
 
         // Payments (voiding is Owner-only, checked by PaymentPolicy)
         Route::resource('payments', PaymentController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
+
+        // Move-out Settlement (approve / release refund: Owner only, checked by the approve-settlements gate)
+        Route::resource('moveouts', MoveoutController::class)->only(['index', 'create', 'store', 'show', 'update', 'destroy']);
+        Route::post('/moveouts/{moveout}/compute', [MoveoutController::class, 'compute'])->name('moveouts.compute');
+        Route::patch('/moveouts/{moveout}/approve', [MoveoutController::class, 'approve'])->name('moveouts.approve');
+        Route::patch('/moveouts/{moveout}/release', [MoveoutController::class, 'release'])->name('moveouts.release');
+        Route::resource('moveouts.items', MoveoutItemController::class)->only(['store']);
+        Route::delete('/moveout-items/{item}', [MoveoutItemController::class, 'destroy'])->name('moveout-items.destroy');
+        Route::get('/moveouts/{moveout}/final-bill', [FinalBillController::class, 'create'])->name('moveouts.final-bill.create');
+        Route::post('/moveouts/{moveout}/final-bill', [FinalBillController::class, 'store'])->name('moveouts.final-bill.store');
     });
 
     // ---------- Owner only ----------

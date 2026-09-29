@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /** Move-out notice and settlement. */
 class Moveout extends Model
 {
+    public const STATUSES = ['Pending', 'Refunded', 'Excess billed', 'Settled'];
+
     protected $table = 'tbl_moveout';
 
     protected $primaryKey = 'moveout_id';
@@ -26,6 +28,8 @@ class Moveout extends Model
         'refund_amount',
         'excess_amount',
         'refund_due_date',
+        'final_bill_id',
+        'excess_bill_id',
         'status',
         'user_id',
     ];
@@ -53,6 +57,23 @@ class Moveout extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /** Final bill: the last month's utilities (decision 16). */
+    public function finalBill(): BelongsTo
+    {
+        return $this->belongsTo(Bill::class, 'final_bill_id');
+    }
+
+    /** Excess bill: what the tenant still owes after the deposit. */
+    public function excessBill(): BelongsTo
+    {
+        return $this->belongsTo(Bill::class, 'excess_bill_id');
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === 'Pending';
     }
 
     public function items(): HasMany

@@ -8,6 +8,7 @@ use App\Models\Concern;
 use App\Models\Inquiry;
 use App\Models\Lease;
 use App\Models\MeterReading;
+use App\Models\Moveout;
 use App\Models\Payment;
 use App\Models\Room;
 use App\Models\Tenant;
@@ -32,11 +33,13 @@ class DemoSeederTest extends TestCase
         $this->seed(DemoSeeder::class);
     }
 
-    public function test_thirteen_rooms_ten_occupied_three_vacant(): void
+    public function test_fifteen_rooms_occupied_vacating_and_vacant(): void
     {
-        $this->assertSame(array_map('strval', range(201, 213)), Room::orderBy('room_no')->pluck('room_no')->all());
-        $this->assertSame(10, Room::where('status', 'Occupied')->count());
-        $this->assertSame(['203', '205', '208'], Room::where('status', 'Vacant')->orderBy('room_no')->pluck('room_no')->all());
+        $this->assertSame(array_map('strval', range(201, 215)), Room::orderBy('room_no')->pluck('room_no')->all());
+        $this->assertSame(9, Room::where('status', 'Occupied')->count());
+        $this->assertSame(['206', '214'], Room::where('status', 'Vacating')->orderBy('room_no')->pluck('room_no')->all());
+        // 203, 205, 208 were never leased; 215 was freed by a settled move-out.
+        $this->assertSame(['203', '205', '208', '215'], Room::where('status', 'Vacant')->orderBy('room_no')->pluck('room_no')->all());
 
         // Aircon rooms have their own meter, Basic rooms do not.
         $this->assertSame(0, Room::where('room_type', 'Aircon')->where('is_metered', false)->count());
@@ -44,16 +47,54 @@ class DemoSeederTest extends TestCase
         $this->assertGreaterThan(0, Room::where('room_type', 'Aircon')->count());
     }
 
-    public function test_ten_sample_tenants_with_active_leases_and_varied_due_days(): void
+    public function test_twelve_sample_tenants_with_varied_due_days(): void
     {
-        $this->assertSame(10, Tenant::where('full_name', 'like', 'Sample Tenant %')->count());
-        $this->assertSame(10, Lease::where('status', 'Active')->count());
+        $this->assertSame(12, Tenant::where('full_name', 'like', 'Sample Tenant %')->count());
+        $this->assertSame(11, Lease::where('status', 'Active')->count());
+        $this->assertSame(1, Lease::where('status', 'Ended')->count());
         $this->assertGreaterThanOrEqual(8, Lease::distinct()->count('due_day'), 'Due days should differ');
 
-        foreach (Lease::with('room')->get() as $lease) {
+        foreach (Lease::with(['room', 'moveout'])->get() as $lease) {
             $this->assertTrue($lease->move_in_date->lt(today()), 'Move-in dates are in the past');
             $this->assertSame($lease->move_in_date->day, $lease->due_day, 'Due day = move-in day');
-            $this->assertSame('Occupied', $lease->room->status);
+            $expected = $lease->status === 'Ended' ? 'Vacant' : ($lease->moveout ? 'Vacating' : 'Occupied');
+            $this->assertSame($expected, $lease->room->status, "Room {$lease->room->room_no}");
+        }
+    }
+
+    public function test_move_outs_notice_awaiting_approval_and_settled(): void
+    {
+        $moveouts = Moveout::with(['lease.room', 'finalBill', 'items'])->get()->keyBy(fn ($m) => $m->lease->room->room_no);
+        $this->assertSame(['206', '214', '215'], $moveouts->keys()->map(fn ($k) => (string) $k)->sort()->values()->all());
+
+        // 206: notice only.
+        $this->assertSame('Pending', $moveouts['206']->status);
+        $this->assertNull($moveouts['206']->actual_date);
+
+        // 214: moved out, final bill (with the final reading), 2 items, computed, waiting for the Owner.
+        $m = $moveouts['214'];
+        $this->assertSame('Pending', $m->status);
+        $this->assertNotNull($m->finalBill?->reading_id);
+        $this->assertSame('0.00', $m->finalBill->rent_amount);
+        $this->assertCount(2, $m->items);
+        $this->assertSame(round((float) $m->items->sum('cost'), 2), (float) $m->damage_total);
+        $this->assertGreaterThan(0, (float) $m->refund_amount);
+
+        // 215: settled with a refund; its final bill was settled from the deposit (no payment).
+        $m = $moveouts['215'];
+        $this->assertSame('Settled', $m->status);
+        $this->assertGreaterThan(0, (float) $m->refund_amount);
+        $this->assertSame('Paid', $m->finalBill->status);
+        $this->assertSame(0, $m->finalBill->payments()->count());
+        $this->assertSame('Ended', $m->lease->status);
+
+        // Refundable deposit − unpaid − damage = refund (no early departures among the moved-out ones).
+        foreach (['214', '215'] as $room) {
+            $m = $moveouts[$room];
+            $lease = $m->lease;
+            $expected = round((float) $lease->deposit_damage + (float) $lease->deposit_bills + (float) $lease->deposit_keys
+                - (float) $m->unpaid_balance - (float) $m->damage_total, 2);
+            $this->assertSame($expected, (float) $m->refund_amount, "Room {$room}");
         }
     }
 
@@ -98,13 +139,13 @@ class DemoSeederTest extends TestCase
     {
         $billing = app(BillingService::class);
 
-        foreach (Lease::with('room')->get() as $lease) {
+        foreach (Lease::with(['room', 'moveout'])->get() as $lease) {
             $bills = $lease->bills()->orderBy('due_date')->get();
             $this->assertNotEmpty($bills, "Lease {$lease->lease_id} should have past bills");
 
-            // Oldest bill = first due date; the next one to generate is in the future.
+            // Oldest bill = first due date; the next one to generate is in the future (or after the move-out date).
             $this->assertSame($billing->firstDueDate($lease->move_in_date, $lease->due_day)->toDateString(), $bills->first()->due_date->toDateString());
-            $this->assertTrue($billing->nextDueDate($lease)->gt(today()));
+            $this->assertTrue($billing->nextDueDate($lease)->gt($lease->moveout?->actual_date ?? today()));
             $this->assertTrue($bills->every(fn ($b) => $b->due_date->lte(today())));
 
             foreach ($bills as $bill) {
@@ -185,13 +226,13 @@ class DemoSeederTest extends TestCase
     public function test_running_it_again_changes_nothing(): void
     {
         $counts = fn () => [Room::count(), Lease::count(), Tenant::count(), Inquiry::count(), Appliance::count(),
-            Visitor::count(), Bill::count(), MeterReading::count(), Payment::count(), Concern::count()];
+            Visitor::count(), Bill::count(), MeterReading::count(), Payment::count(), Concern::count(), Moveout::count()];
         $before = $counts();
 
         $this->seed(DemoSeeder::class);
 
         $this->assertSame($before, $counts());
-        $this->assertSame(10, Room::where('status', 'Occupied')->count(), 'Occupied rooms are not reset');
+        $this->assertSame(9, Room::where('status', 'Occupied')->count(), 'Room statuses are not reset');
     }
 
 }

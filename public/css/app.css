@@ -405,6 +405,12 @@ tr.tot-row td { border-top: 2px solid var(--text); font-weight: 600; }
 .charge-list label { display: flex; align-items: center; gap: 10px; min-height: var(--tap); cursor: pointer; }
 .charge-list input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--navy-2); }
 
+/* ---------- Module 8: move-out ---------- */
+.sum tr.subtotal td { border-top: 1px solid var(--border); font-weight: 600; padding-top: 7px; }
+.settle-actions { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.settle-actions p { margin: 0; }
+.moveout-link { margin-top: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
 @media print {
     .top, .alert { display: none !important; }
     .printable { border: 0; padding: 0; max-width: none; }

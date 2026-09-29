@@ -1,4 +1,4 @@
-{{-- Itemized billing statement. Needs: $statement (BillingService::preview or ::statementForBill), $lease --}}
+{{-- Itemized billing statement. Needs: $statement (BillingService::preview / finalPreview / statementForBill), $lease --}}
 @php($a = $statement['amounts'])
 <div class="statement">
     <div class="statement-head">
@@ -7,14 +7,30 @@
             <span class="muted">Km. 6 Carnation St., Buhangin, Davao City</span>
         </div>
         <div class="r">
-            <b>Billing statement</b><br>
+            <b>{{ ($statement['excess'] ?? null) ? 'Move-out balance' : (($statement['final'] ?? false) ? 'Final billing statement' : 'Billing statement') }}</b><br>
             <span class="muted">Room {{ $lease->room->room_no }} · {{ $lease->tenant->full_name }}</span>
         </div>
     </div>
 
+    @if ($statement['excess'] ?? null)
+        {{-- Excess bill: what the tenant still owes after the deposit (decision 16). --}}
+        <table class="sum">
+            <tr><td>Amount still owed after the move-out settlement
+                <span class="sub">Unpaid bills and damage costs above the refundable deposit. See the settlement statement.</span></td>
+                <td class="money">@peso($a['other_charges'])</td></tr>
+            @if ((float) $a['penalty_amount'] > 0)
+                <tr><td>Penalty</td><td class="money">@peso($a['penalty_amount'])</td></tr>
+            @endif
+            <tr class="tot"><td>Total due on {{ $statement['due_date']->format('j M Y') }}</td><td class="money">@peso($a['total_amount'])</td></tr>
+        </table>
+    @else
     <table class="sum">
         <tr>
-            <td>Monthly rent <span class="sub">{{ $statement['rent_from']->format('j M') }} – {{ $statement['rent_to']->format('j M Y') }}</span></td>
+            @if ($statement['final'] ?? false)
+                <td>Monthly rent <span class="sub">final bill: this month's rent was already charged ahead</span></td>
+            @else
+                <td>Monthly rent <span class="sub">{{ $statement['rent_from']->format('j M') }} – {{ $statement['rent_to']->format('j M Y') }}</span></td>
+            @endif
             <td class="money">@peso($a['rent_amount'])</td>
         </tr>
         <tr>
@@ -54,4 +70,5 @@
         </tr>
         <tr class="tot"><td>Total due on {{ $statement['due_date']->format('j M Y') }}</td><td class="money">@peso($a['total_amount'])</td></tr>
     </table>
+    @endif
 </div>

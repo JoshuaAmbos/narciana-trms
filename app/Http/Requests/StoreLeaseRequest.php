@@ -32,6 +32,9 @@ class StoreLeaseRequest extends LeaseRequest
             'contact_no' => ['nullable', $new, 'string', 'max:15', 'regex:/^[0-9+\- ]+$/'],
             'valid_id_type' => ['nullable', $new, 'string', 'max:50'],
             'valid_id_no' => ['nullable', $new, 'string', 'max:50'],
+            'provincial_address' => ['nullable', $new, 'string', 'max:255'],
+            'occupation' => ['nullable', $new, 'string', 'max:100'],
+            'prev_building' => ['nullable', 'string', 'max:150'],
             'room_id' => ['required', Rule::exists('tbl_room', 'room_id')->where('status', 'Vacant')],
             'co_tenant_name' => ['nullable', 'string', 'max:255'],
             // Optional; used only when the room has its own meter.
@@ -51,7 +54,8 @@ class StoreLeaseRequest extends LeaseRequest
     {
         return $this->input('tenant_mode') === 'existing'
             ? ['tenant_id' => (int) $this->validated('tenant_id')]
-            : $this->safe()->only(['full_name', 'contact_no', 'valid_id_type', 'valid_id_no']);
+            : $this->safe()->only(['full_name', 'contact_no', 'valid_id_type', 'valid_id_no',
+                'provincial_address', 'occupation', 'prev_building']);
     }
 
     public function leaseData(): array
@@ -73,7 +77,8 @@ class StoreLeaseRequest extends LeaseRequest
     {
         return parent::attributes() + [
             'tenant_id' => 'returning tenant', 'full_name' => 'tenant name', 'contact_no' => 'contact number',
-            'valid_id_type' => 'valid ID type', 'valid_id_no' => 'valid ID number', 'room_id' => 'room', 'co_tenant_name' => 'co-tenant',
+            'valid_id_type' => 'valid ID type', 'valid_id_no' => 'valid ID number',
+            'provincial_address' => 'provincial address', 'prev_building' => 'previous building name', 'room_id' => 'room', 'co_tenant_name' => 'co-tenant',
         ];
     }
 }

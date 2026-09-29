@@ -76,6 +76,11 @@ class DemoSeeder extends Seeder
         12 => ['215', 6, 20, false, [['Rice cooker', 'Declared', 0]]],  // moved out and settled
     ];
 
+    /** Renter's Profile samples, picked by tenant number (no randomness). */
+    private const PROVINCES = ['Davao del Norte', 'Davao de Oro', 'Cotabato', 'Bukidnon', 'Surigao del Sur'];
+
+    private const OCCUPATIONS = ['Student', 'Call center agent', 'Sales clerk', 'Nurse', 'Office staff', 'Teacher'];
+
     public function run(): void
     {
         if (app()->environment('production')) {
@@ -138,6 +143,9 @@ class DemoSeeder extends Seeder
                     'contact_no' => '0918 000 '.str_pad((string) $n, 4, '0', STR_PAD_LEFT),
                     'valid_id_type' => $n % 2 ? 'Student ID' : "Driver's License",
                     'valid_id_no' => 'SAMPLE-'.str_pad((string) $n, 3, '0', STR_PAD_LEFT),
+                    'provincial_address' => "Purok {$n}, Sample Barangay, ".self::PROVINCES[$n % count(self::PROVINCES)],
+                    'occupation' => self::OCCUPATIONS[$n % count(self::OCCUPATIONS)],
+                    'prev_building' => $n % 3 ? "Sample Apartment {$n}" : null, // optional on the form
                 ],
                 ['room_id' => $room->room_id, 'moa_date' => $moveIn->copy()->subDay()->toDateString(),
                     'move_in_date' => $moveIn->toDateString(), 'due_day' => $moveIn->day, 'monthly_rent' => $rent,

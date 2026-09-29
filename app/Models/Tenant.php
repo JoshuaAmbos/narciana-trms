@@ -19,6 +19,9 @@ class Tenant extends Model
         'contact_no',
         'valid_id_type',
         'valid_id_no',
+        'provincial_address',
+        'occupation',
+        'prev_building',
         'created_at',
     ];
 

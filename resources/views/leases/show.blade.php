@@ -21,6 +21,9 @@
                 <div><dt>Principal renter</dt><dd>{{ $lease->tenant->full_name }} <a href="{{ route('tenants.edit', $lease->tenant) }}" class="small-link">Edit tenant</a></dd></div>
                 <div><dt>Contact number</dt><dd>{{ $lease->tenant->contact_no }}</dd></div>
                 <div><dt>Valid ID</dt><dd>{{ $lease->tenant->valid_id_type }} {{ $lease->tenant->valid_id_no }}</dd></div>
+                <div><dt>Provincial address</dt><dd>{{ $lease->tenant->provincial_address ?? 'Not recorded' }}</dd></div>
+                <div><dt>Occupation</dt><dd>{{ $lease->tenant->occupation ?? 'Not recorded' }}</dd></div>
+                <div><dt>Previous apartment/room</dt><dd>{{ $lease->tenant->prev_building ?? 'None given' }}</dd></div>
                 <div><dt>Room</dt><dd>{{ $lease->room->room_type }}, {{ $lease->room->is_metered ? 'own meter' : 'no meter' }}</dd></div>
                 <div><dt>MOA signed</dt><dd>{{ $lease->moa_date->format('j M Y') }}</dd></div>
                 <div><dt>Move-in date</dt><dd>{{ $lease->move_in_date->format('j M Y') }}</dd></div>

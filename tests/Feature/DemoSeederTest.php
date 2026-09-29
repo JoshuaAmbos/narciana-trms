@@ -53,6 +53,8 @@ class DemoSeederTest extends TestCase
         $this->assertSame(11, Lease::where('status', 'Active')->count());
         $this->assertSame(1, Lease::where('status', 'Ended')->count());
         $this->assertGreaterThanOrEqual(8, Lease::distinct()->count('due_day'), 'Due days should differ');
+        $this->assertSame(0, Tenant::whereNull('provincial_address')->orWhereNull('occupation')->count(), "Renter's Profile filled in");
+        $this->assertSame(4, Tenant::whereNull('prev_building')->count(), 'Previous building is optional (tenants 3, 6, 9, 12)');
 
         foreach (Lease::with(['room', 'moveout'])->get() as $lease) {
             $this->assertTrue($lease->move_in_date->lt(today()), 'Move-in dates are in the past');

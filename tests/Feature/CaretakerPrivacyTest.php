@@ -10,7 +10,7 @@ use Tests\TestCase;
 
 /**
  * Decision 10: the Caretaker opens Tenants & MOA only for appliances and visitors and must never
- * view or edit MOA, deposit, rent, tenant ID/contact or co-tenant details.
+ * view or edit MOA, deposit, rent, tenant ID/contact/profile or co-tenant details.
  */
 class CaretakerPrivacyTest extends TestCase
 {
@@ -33,7 +33,8 @@ class CaretakerPrivacyTest extends TestCase
         $this->lease = $this->makeLease($room, $owner, 'Sample Secret Co-tenant', 'Sample Visible Tenant');
         $this->lease->update(['monthly_rent' => 4321.99, 'advance_amount' => 4321.99, 'deposit_maintenance' => 1111.11,
             'deposit_damage' => 2222.22, 'deposit_bills' => 777.77, 'deposit_keys' => 210.89]);
-        $this->lease->tenant->update(['contact_no' => '0999 888 7777', 'valid_id_no' => 'SECRET-ID-42']);
+        $this->lease->tenant->update(['contact_no' => '0999 888 7777', 'valid_id_no' => 'SECRET-ID-42',
+            'provincial_address' => 'Secret Provincial Address', 'occupation' => 'Secret Occupation', 'prev_building' => 'Secret Building']);
     }
 
     public function test_caretaker_gets_403_on_every_moa_route(): void
@@ -61,6 +62,7 @@ class CaretakerPrivacyTest extends TestCase
         $secrets = [
             '4,321.99', '4321.99', '1,111.11', '2,222.22', '777.77', '210.89', // rent, advance, deposits
             '0999 888 7777', 'SECRET-ID-42', 'Sample Secret Co-tenant',          // contact, ID, co-tenant
+            'Secret Provincial Address', 'Secret Occupation', 'Secret Building', // Renter's Profile
             'MOA signed', 'Maintenance (non-refundable)', 'Every 25th', '24 Jun 2026', '25 Jun 2026',
         ];
 

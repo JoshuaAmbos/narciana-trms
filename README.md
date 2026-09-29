@@ -81,7 +81,10 @@ php artisan db:seed --class=DemoSeeder
 
 3. Install and configure:
 ```
-composer install npm install cp .env.example .env php artisan key:generate
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
 ```
 
 4. Create the tables and the staff accounts + default settings:

@@ -44,7 +44,14 @@
             </tr>
         @endif
         <tr><td>Penalty</td><td class="money">@peso($a['penalty_amount'])</td></tr>
-        <tr><td>Other charges</td><td class="money">@peso($a['other_charges'])</td></tr>
+        <tr>
+            <td>Other charges
+                @foreach ($statement['charges'] ?? [] as $charge)
+                    <span class="sub">{{ $charge->description }} ({{ $charge->category }}): @peso($charge->cost)</span>
+                @endforeach
+            </td>
+            <td class="money">@peso($a['other_charges'])</td>
+        </tr>
         <tr class="tot"><td>Total due on {{ $statement['due_date']->format('j M Y') }}</td><td class="money">@peso($a['total_amount'])</td></tr>
     </table>
 </div>

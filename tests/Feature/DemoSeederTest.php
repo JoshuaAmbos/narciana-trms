@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Appliance;
 use App\Models\Bill;
+use App\Models\Concern;
 use App\Models\Inquiry;
 use App\Models\Lease;
 use App\Models\MeterReading;
@@ -12,6 +13,7 @@ use App\Models\Room;
 use App\Models\Tenant;
 use App\Models\Visitor;
 use App\Services\BillingService;
+use App\Services\ConcernService;
 use App\Services\RoomAvailabilityService;
 use App\Services\VisitorService;
 use Database\Seeders\DemoSeeder;
@@ -160,10 +162,30 @@ class DemoSeederTest extends TestCase
         $this->assertSame('ACK-'.$payments->first()->payment_date->year.'-'.str_pad((string) $acks->count(), 4, '0', STR_PAD_LEFT), $acks->last());
     }
 
+    public function test_concerns_open_in_progress_resolved_and_charged(): void
+    {
+        $this->assertGreaterThan(0, Concern::where('status', 'Open')->where('priority', 'Urgent')->count());
+        $this->assertGreaterThan(0, Concern::where('status', 'In progress')->count());
+        $this->assertGreaterThan(0, Concern::where('status', 'Resolved')->where('charged_to_tenant', false)->count());
+        $this->assertGreaterThan(0, Concern::whereNull('room_id')->where('category', 'Shared area')->count());
+        $this->assertTrue(Concern::where('status', 'Resolved')->get()->every(fn ($c) => $c->resolved_at && $c->resolution));
+
+        // One charge already on a bill (and counted in its other charges), one waiting to be picked.
+        $billed = Concern::whereNotNull('bill_id')->with('bill')->get();
+        $this->assertCount(1, $billed);
+        $this->assertSame($billed->first()->cost, $billed->first()->bill->other_charges);
+        $waiting = Concern::where('charged_to_tenant', true)->whereNull('bill_id')->with('lease')->get();
+        $this->assertCount(1, $waiting);
+        $this->assertCount(1, app(ConcernService::class)->chargeable($waiting->first()->lease));
+
+        // A repeated issue in one room.
+        $this->assertTrue(Concern::whereNotNull('room_id')->get()->groupBy(fn ($c) => $c->room_id.$c->category)->contains(fn ($g) => $g->count() > 1));
+    }
+
     public function test_running_it_again_changes_nothing(): void
     {
         $counts = fn () => [Room::count(), Lease::count(), Tenant::count(), Inquiry::count(), Appliance::count(),
-            Visitor::count(), Bill::count(), MeterReading::count(), Payment::count()];
+            Visitor::count(), Bill::count(), MeterReading::count(), Payment::count(), Concern::count()];
         $before = $counts();
 
         $this->seed(DemoSeeder::class);

@@ -7,6 +7,7 @@ use App\Models\Bill;
 use App\Models\Lease;
 use App\Models\MeterReading;
 use App\Services\BillingService;
+use App\Services\ConcernService;
 use App\Services\PaymentService;
 use App\Services\PenaltyService;
 use Illuminate\Http\RedirectResponse;
@@ -46,7 +47,7 @@ class BillController extends Controller
     }
 
     /** Generate form + statement preview. For a metered room the reading is entered, then "Show statement". */
-    public function create(Request $request): View|RedirectResponse
+    public function create(Request $request, ConcernService $concerns): View|RedirectResponse
     {
         $lease = Lease::with(['room', 'tenant'])->findOrFail($request->integer('lease'));
 
@@ -71,13 +72,19 @@ class BillController extends Controller
             $validator->fails() ? $errors = $validator->errors() : $reading = $validator->validated();
         }
 
+        // Chargeable concerns: offered as checkboxes, never ticked automatically (decision 15).
+        $chargeable = $concerns->chargeable($lease);
+        $ticked = array_map('intval', (array) $request->input('concerns', []));
+
         return view('bills.create', [
             'lease' => $lease,
             'metered' => $metered,
+            'chargeable' => $chargeable,
+            'ticked' => $ticked,
             'lastReading' => $last,
             'input' => $input,
             'readingErrors' => $errors,
-            'statement' => $this->billing->preview($lease, $reading),
+            'statement' => $this->billing->preview($lease, $reading, $ticked),
             'ready' => ! $metered || $reading !== null,
             'sources' => MeterReading::SOURCES,
         ]);
@@ -86,7 +93,8 @@ class BillController extends Controller
     public function store(BillRequest $request): RedirectResponse
     {
         $lease = Lease::findOrFail($request->validated('lease_id'));
-        $bill = $this->billing->generate($lease, $request->reading(), $request->validated('due_date'), $request->user());
+        $bill = $this->billing->generate($lease, $request->reading(), $request->validated('due_date'), $request->user(),
+            null, (array) $request->validated('concerns', []));
 
         return redirect()->route('bills.show', $bill)
             ->with('status', 'Bill generated: ₱'.number_format((float) $bill->total_amount, 2).' due on '.$bill->due_date->format('j M Y').'.');

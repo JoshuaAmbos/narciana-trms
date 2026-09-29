@@ -22,6 +22,9 @@ class BillRequest extends FormRequest
         return [
             'lease_id' => ['required', Rule::exists('tbl_lease', 'lease_id')->where('status', 'Active')],
             'due_date' => ['required', 'date_format:Y-m-d'],
+            // Concerns ticked as other charges (checked again in BillingService::generate).
+            'concerns' => ['nullable', 'array'],
+            'concerns.*' => ['integer', 'distinct'],
         ] + ($lease?->room->is_metered ? self::readingRules() : []);
     }
 

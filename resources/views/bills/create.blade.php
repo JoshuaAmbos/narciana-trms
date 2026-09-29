@@ -16,10 +16,11 @@
                     <dd>{{ $metered ? 'Own meter (billed per kWh)' : $statement['appliances'] }}</dd></div>
             </dl>
 
+            {{-- Step 1: reading and/or other charges, then "Show statement" (GET, saves nothing).
+                 Step 2: "Save bill" (POST, right). --}}
+            <form method="GET" action="{{ route('bills.create') }}" novalidate>
+                <input type="hidden" name="lease" value="{{ $lease->lease_id }}">
             @if ($metered)
-                {{-- Step 1: enter the reading and "Show statement" (GET). Step 2: "Save bill" (POST, right). --}}
-                <form method="GET" action="{{ route('bills.create') }}" novalidate>
-                    <input type="hidden" name="lease" value="{{ $lease->lease_id }}">
                     <div class="row">
                         <div class="f {{ $readingErrors?->has('previous_reading') || $errors->has('previous_reading') ? 'has-err' : '' }}">
                             <label for="previous_reading">Previous reading (kWh)</label>
@@ -57,12 +58,30 @@
                         </div>
                     </div>
                     <p class="muted">Rate: @peso($statement['kwh_rate']) per kWh (from Settings).</p>
-                    <button type="submit" class="btn sec">Show statement</button>
-                </form>
             @else
                 <p class="muted">This room has no meter: electricity is included in the rent and each appliance is charged
                     @peso($statement['appliance_fee']) a month.</p>
             @endif
+
+            @if ($chargeable->isNotEmpty())
+                <fieldset class="resolution-box charge-list">
+                    <legend>Other charges: concerns charged to the tenant</legend>
+                    @error('concerns') <div class="err">{{ $message }}</div> @enderror
+                    @foreach ($chargeable as $c)
+                        <label>
+                            <input type="checkbox" name="concerns[]" value="{{ $c->concern_id }}" @checked(in_array($c->concern_id, $ticked, true))>
+                            <span>{{ $c->description }} <span class="sub">{{ $c->category }} · resolved {{ $c->resolved_at->format('j M Y') }}</span></span>
+                            <b class="money">@peso($c->cost)</b>
+                        </label>
+                    @endforeach
+                    <p class="muted">Tick the ones to add to this bill, then press "Show statement". Nothing is added automatically.</p>
+                </fieldset>
+            @endif
+
+            @if ($metered || $chargeable->isNotEmpty())
+                <button type="submit" class="btn sec">Show statement</button>
+            @endif
+            </form>
         </div>
 
         <div class="panel">
@@ -79,6 +98,9 @@
                             <input type="hidden" name="{{ $field }}" value="{{ $statement['reading'][$field] }}">
                         @endforeach
                     @endif
+                    @foreach ($statement['charges'] as $c)
+                        <input type="hidden" name="concerns[]" value="{{ $c->concern_id }}">
+                    @endforeach
                     <button type="submit" class="btn">Save bill</button>
                     <a href="{{ route('bills.index') }}" class="btn sec">Cancel</a>
                 </form>

@@ -21,7 +21,8 @@
                     </tr>
                     @foreach ($rooms as $room)
                         <tr>
-                            <td><b>{{ $room->room_no }}</b></td>
+                            <td><b>{{ $room->room_no }}</b>
+                                <a href="{{ route('concerns.index', ['room' => $room->room_id]) }}" class="sub">concern history</a></td>
                             <td>
                                 {{ $room->room_type }}
                                 <div class="sub nowrap">{{ $room->is_metered ? 'Own meter' : 'No meter' }} · max {{ $room->max_occupants }}</div>

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AuditLog;
 use App\Models\Bill;
+use App\Models\Concern;
 use App\Models\Lease;
 use App\Models\MeterReading;
 use App\Models\Setting;
@@ -20,7 +21,8 @@ use Illuminate\Validation\ValidationException;
  *   water       = water_rate × occupants staying at any time in the period (previous due date → D − 1)
  *   metered room (is_metered = 1):  electricity = (current − previous reading) × rate per kWh, no appliances
  *   other rooms  (is_metered = 0):  appliances  = appliance_fee × appliances present in the period, no electricity
- *   penalty = 0 (Module 6), other charges = 0 (Module 7)
+ *   other charges = concerns the Manager ticks (Resolved, charged to tenant, not billed yet; never automatic)
+ *   penalty = 0 at generation (added when paid, Module 6)
  */
 class BillingService
 {
@@ -67,7 +69,7 @@ class BillingService
      */
     public function computeAmounts(
         float $rent, float $waterRate, int $occupants, bool $isMetered,
-        float $kwhUsed, float $kwhRate, float $applianceFee, int $appliances,
+        float $kwhUsed, float $kwhRate, float $applianceFee, int $appliances, float $otherCharges = 0.0,
     ): array {
         $amounts = [
             'rent_amount' => round($rent, 2),
@@ -75,7 +77,7 @@ class BillingService
             'electricity_amount' => $isMetered ? round($kwhUsed * $kwhRate, 2) : 0.0,
             'appliance_amount' => $isMetered ? 0.0 : round($applianceFee * $appliances, 2),
             'penalty_amount' => 0.0,
-            'other_charges' => 0.0,
+            'other_charges' => round($otherCharges, 2),
         ];
         $amounts['total_amount'] = round(array_sum($amounts), 2);
 
@@ -126,7 +128,7 @@ class BillingService
      * Everything the statement shows, without saving. $reading = ['previous_reading', 'current_reading',
      * 'reading_date', 'source'] for metered rooms (may be null before the reading is entered).
      */
-    public function preview(Lease $lease, ?array $reading = null): array
+    public function preview(Lease $lease, ?array $reading = null, array $concernIds = []): array
     {
         $lease->loadMissing('room');
         $settings = Setting::current();
@@ -137,6 +139,8 @@ class BillingService
         $occupants = $this->occupantCount($lease, $start, $end);
         $appliances = $metered ? 0 : $this->applianceCount($lease, $start, $end);
         $kwh = ($metered && $reading) ? round((float) $reading['current_reading'] - (float) $reading['previous_reading'], 2) : 0.0;
+        // Only this lease's chargeable concerns count, whatever ids were sent.
+        $charges = app(ConcernService::class)->chargeable($lease)->whereIn('concern_id', array_map('intval', $concernIds))->values();
 
         return [
             'due_date' => $dueDate,
@@ -152,9 +156,11 @@ class BillingService
             'kwh_rate' => (float) $settings->kwh_rate,
             'kwh_used' => $kwh,
             'reading' => $reading,
+            'charges' => $charges,
             'amounts' => $this->computeAmounts(
                 (float) $lease->monthly_rent, (float) $settings->water_rate, $occupants, $metered,
                 $kwh, (float) $settings->kwh_rate, (float) $settings->appliance_fee, $appliances,
+                (float) $charges->sum(fn (Concern $c) => (float) $c->cost),
             ),
         ];
     }
@@ -163,9 +169,9 @@ class BillingService
      * Generate the next bill of the lease in one transaction (reading + bill + audit).
      * $expectedDueDate guards against a double submit or a stale form.
      */
-    public function generate(Lease $lease, ?array $reading, string $expectedDueDate, User $by, ?Carbon $today = null): Bill
+    public function generate(Lease $lease, ?array $reading, string $expectedDueDate, User $by, ?Carbon $today = null, array $concernIds = []): Bill
     {
-        return DB::transaction(function () use ($lease, $reading, $expectedDueDate, $by, $today) {
+        return DB::transaction(function () use ($lease, $reading, $expectedDueDate, $by, $today, $concernIds) {
             $lease = Lease::whereKey($lease->lease_id)->lockForUpdate()->firstOrFail();
 
             if ($lease->status !== 'Active') {
@@ -183,7 +189,19 @@ class BillingService
                 throw ValidationException::withMessages(['current_reading' => 'This room has its own meter: enter the meter reading.']);
             }
 
-            $preview = $this->preview($lease, $metered ? $reading : null);
+            // Lock the ticked concerns and check each one is still chargeable for this lease.
+            $concernIds = array_values(array_unique(array_map('intval', $concernIds)));
+            if ($concernIds) {
+                $locked = Concern::whereKey($concernIds)->lockForUpdate()->get();
+                $ok = app(ConcernService::class)->chargeable($lease)->pluck('concern_id')->all();
+                if ($locked->count() !== count($concernIds) || array_diff($concernIds, $ok)) {
+                    throw ValidationException::withMessages([
+                        'concerns' => 'A ticked concern can no longer be charged on this bill (already billed, changed, or of another tenant). Open the bill again.',
+                    ]);
+                }
+            }
+
+            $preview = $this->preview($lease, $metered ? $reading : null, $concernIds);
 
             $readingModel = null;
             if ($metered) {
@@ -207,6 +225,10 @@ class BillingService
                 'user_id' => $by->user_id,
             ]);
 
+            if ($concernIds) {
+                Concern::whereKey($concernIds)->update(['bill_id' => $bill->bill_id]);
+            }
+
             AuditLog::record('Bill generated', 'tbl_bill', $bill->bill_id, $by->user_id);
 
             return $bill;
@@ -220,7 +242,7 @@ class BillingService
      */
     public function statementForBill(Bill $bill): array
     {
-        $bill->loadMissing(['lease.room', 'meterReading']);
+        $bill->loadMissing(['lease.room', 'meterReading', 'concerns']);
         $lease = $bill->lease;
         $start = $bill->period_start->copy();
         $end = $bill->due_date->copy()->subDay();
@@ -242,6 +264,7 @@ class BillingService
             'appliance_fee' => $appliances ? round((float) $bill->appliance_amount / $appliances, 2) : 0.0,
             'kwh_rate' => $reading ? (float) $reading->rate_per_kwh : 0.0,
             'kwh_used' => $reading ? round((float) $reading->current_reading - (float) $reading->previous_reading, 2) : 0.0,
+            'charges' => $bill->concerns,
             'reading' => $reading ? [
                 'previous_reading' => $reading->previous_reading, 'current_reading' => $reading->current_reading,
                 'reading_date' => $reading->reading_date->toDateString(), 'source' => $reading->source,
@@ -274,6 +297,7 @@ class BillingService
 
             $readingId = $bill->reading_id;
             $billId = $bill->bill_id;
+            Concern::where('bill_id', $billId)->update(['bill_id' => null]); // released: can be charged on the next bill
             $bill->delete();
             if ($readingId && ! Bill::where('reading_id', $readingId)->exists()) {
                 MeterReading::whereKey($readingId)->delete();

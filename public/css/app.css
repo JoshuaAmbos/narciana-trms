@@ -393,6 +393,18 @@ tr.tot-row td { border-top: 2px solid var(--text); font-weight: 600; }
 .ack-no { font-size: 18px; font-weight: 700; color: var(--navy); }
 .small { font-size: 12px; }
 
+/* ---------- Module 7: concerns ---------- */
+.f textarea { min-height: 70px; resize: vertical; }
+.resolution-box { border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px 4px; margin: 6px 0 12px; }
+.resolution-box legend { font-size: 13px; font-weight: 700; color: var(--muted); padding: 0 6px; }
+.photo-current { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.photo-current img { width: 96px; height: 96px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
+.inline-check { display: inline-flex !important; align-items: center; gap: 6px; font-weight: 400 !important; color: var(--text) !important; }
+.concern-text { font-size: 16px; margin: 0 0 12px; }
+.concern-photo { width: 100%; max-height: 420px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border); background: #f4f7fb; }
+.charge-list label { display: flex; align-items: center; gap: 10px; min-height: var(--tap); cursor: pointer; }
+.charge-list input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--navy-2); }
+
 @media print {
     .top, .alert { display: none !important; }
     .printable { border: 0; padding: 0; max-width: none; }

@@ -3,6 +3,7 @@
 use App\Http\Controllers\ApplianceController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BillController;
+use App\Http\Controllers\ConcernController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HouseholdController;
 use App\Http\Controllers\InquiryController;
@@ -45,6 +46,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::patch('/appliances/{appliance}/remove', [ApplianceController::class, 'remove'])->name('appliances.remove');
     Route::resource('leases.visitors', VisitorController::class)->only(['store']);
     Route::patch('/visitors/{visitor}/depart', [VisitorController::class, 'depart'])->name('visitors.depart');
+
+    // Concerns: every role logs and updates (cost / charged to tenant: Owner/Manager, enforced in ConcernService).
+    Route::resource('concerns', ConcernController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update']);
 
     // ---------- Owner and Manager ----------
     Route::middleware('role:Owner,Manager')->group(function () {

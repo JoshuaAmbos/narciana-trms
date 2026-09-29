@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Appliance;
+use App\Models\Concern;
 use App\Models\Inquiry;
 use App\Models\Lease;
 use App\Models\Room;
@@ -11,6 +12,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Visitor;
 use App\Services\BillingService;
+use App\Services\ConcernService;
 use App\Services\LeaseService;
 use App\Services\PaymentService;
 use App\Services\PenaltyService;
@@ -29,7 +31,8 @@ use Illuminate\Support\Carbon;
  *
  * Module 5: move-in meter readings for metered rooms and every bill already due (through BillingService).
  * Module 6: payments (Cash and GCash, some late with a penalty), a few unpaid and Overdue bills.
- * Later modules add concerns and move-outs here.
+ * Module 7: concerns (open, in progress, resolved, repeated; one charge billed, one waiting to be picked).
+ * Module 8 adds move-outs here.
  */
 class DemoSeeder extends Seeder
 {
@@ -90,6 +93,7 @@ class DemoSeeder extends Seeder
         $this->seedRooms();
         $this->seedLeases($owner);
         $this->seedInquiries($owner);
+        $this->seedConcerns($owner);
         $bills = $this->seedBills($owner);
         $paid = $this->seedPayments($owner);
 
@@ -189,6 +193,42 @@ class DemoSeeder extends Seeder
     }
 
     /**
+     * Concerns through ConcernService: open (one urgent), in progress (a shared area), resolved, a repeated issue,
+     * one charge already billed (door knob) and one charge not billed yet (stained wall).
+     */
+    private function seedConcerns(User $owner): void
+    {
+        $service = app(ConcernService::class);
+        $manager = User::where('role', 'Manager')->firstOrFail();
+        $caretaker = User::where('role', 'Caretaker')->firstOrFail();
+        $at = fn (int $daysAgo, string $time) => today()->subDays($daysAgo)->setTimeFromTimeString($time);
+        $leaseOf = fn (string $roomNo) => Lease::whereHas('room', fn ($q) => $q->where('room_no', $roomNo))->where('status', 'Active')->first();
+        $roomId = fn (string $roomNo) => Room::where('room_no', $roomNo)->value('room_id');
+
+        $samples = [
+            // [room, category, priority, channel, description, assigned, status, reported, resolved, resolution, cost, charged]
+            ['209', 'Professional repair', 'Urgent', 'Group chat', 'Tripping breaker', $manager, 'Open', $at(1, '21:40'), null, null, null, false],
+            ['209', 'Professional repair', 'Routine', 'Verbal', 'Tripping breaker when the aircon and kettle run together', $manager, 'Resolved', $at(80, '19:10'), $at(79, '10:00'), 'Electrician tightened the breaker terminals', 850.00, false],
+            [null, 'Shared area', 'Routine', 'Text', 'Clogged drain in the 2nd-floor CR', $caretaker, 'In progress', $at(2, '07:15'), null, null, null, false],
+            ['203', 'Maintenance', 'Routine', 'Verbal', 'Busted bulb (vacant room)', $caretaker, 'Open', $at(3, '18:02'), null, null, null, false],
+            ['210', 'Disturbance', 'Routine', 'Group chat', 'Noise after 10 PM', $manager, 'Resolved', $at(9, '23:30'), $at(8, '09:00'), 'Talked to the tenant; quiet hours reminded', null, false],
+            ['202', 'Damage', 'Routine', 'Verbal', 'Broken door knob', $caretaker, 'Resolved', $at(52, '08:20'), $at(50, '15:00'), 'Door knob replaced', 350.00, true],
+            ['204', 'Damage', 'Routine', 'Verbal', 'Stained wall near the bed', $caretaker, 'Resolved', $at(6, '10:00'), $at(5, '16:00'), 'Wall cleaned and repainted', 600.00, true],
+            ['211', 'Billing', 'Routine', 'Text', 'Asked why the water charge is for 1 occupant', $manager, 'Resolved', $at(12, '12:00'), $at(12, '15:30'), 'Explained: water is per occupant staying in the period', null, false],
+        ];
+
+        foreach ($samples as [$roomNo, $category, $priority, $channel, $text, $assigned, $status, $reported, $resolved, $resolution, $cost, $charged]) {
+            $service->create([
+                'room_id' => $roomNo ? $roomId($roomNo) : null,
+                'lease_id' => $roomNo ? $leaseOf($roomNo)?->lease_id : null,
+                'reported_at' => $reported, 'channel' => $channel, 'category' => $category, 'priority' => $priority,
+                'description' => $text, 'assigned_to' => $assigned->user_id, 'status' => $status,
+                'resolved_at' => $resolved, 'resolution' => $resolution, 'cost' => $cost, 'charged_to_tenant' => $charged,
+            ], $owner); // logged as the Owner so cost and charge are kept
+        }
+    }
+
+    /**
      * Every bill already due (due date today or earlier), generated through BillingService in order.
      * Bills due in the next few days are left for the "To bill" list. kWh used follows a fixed formula.
      */
@@ -213,7 +253,11 @@ class DemoSeeder extends Seeder
                         'source' => 'Meter',
                     ];
                 }
-                $billing->generate($lease, $reading, $due->toDateString(), $owner);
+                // Charged concerns resolved before this due date are picked (as the Manager would tick them).
+                $charges = app(ConcernService::class)->chargeable($lease)
+                    ->filter(fn (Concern $c) => $c->resolved_at->lt($due))->pluck('concern_id')->all();
+
+                $billing->generate($lease, $reading, $due->toDateString(), $owner, null, $charges);
                 $count++;
                 $month++;
             }

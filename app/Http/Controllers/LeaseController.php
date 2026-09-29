@@ -50,6 +50,7 @@ class LeaseController extends Controller
             $request->leaseData(),
             $request->validated('co_tenant_name'),
             $request->user(),
+            $request->moveInReading(),
         );
 
         return redirect()->route('leases.show', $lease)

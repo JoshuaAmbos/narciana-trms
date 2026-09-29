@@ -22,7 +22,7 @@ return [
         ['rooms.index', 'Rooms & Inquiries', ['Owner', 'Manager', 'Caretaker'], 'door-open', ['inquiries.*']],
         // Caretaker sees this page only for appliances and visitors, not the MOA details.
         ['tenants.index', 'Tenants & MOA', ['Owner', 'Manager', 'Caretaker'], 'users', ['leases.*']],
-        ['billing.index', 'Billing', ['Owner', 'Manager'], 'receipt'],
+        ['bills.index', 'Billing', ['Owner', 'Manager'], 'receipt', ['meter-readings.*']],
         ['payments.index', 'Payments', ['Owner', 'Manager'], 'wallet'],
         ['concerns.index', 'Concerns', ['Owner', 'Manager', 'Caretaker'], 'wrench'],
         ['moveouts.index', 'Move-out Settlement', ['Owner', 'Manager'], 'package'],

@@ -45,13 +45,20 @@
                     <select id="room_id" name="room_id">
                         <option value="">Choose…</option>
                         @foreach ($rooms as $room)
-                            <option value="{{ $room->room_id }}" data-rent="{{ $room->monthly_rent }}" data-max="{{ $room->max_occupants }}"
+                            <option value="{{ $room->room_id }}" data-rent="{{ $room->monthly_rent }}" data-max="{{ $room->max_occupants }}" data-metered="{{ $room->is_metered ? 1 : 0 }}"
                                     @selected((string) old('room_id', $selectedRoomId) === (string) $room->room_id)>
                                 Room {{ $room->room_no }} — {{ $room->room_type }}, {{ $room->is_metered ? 'own meter' : 'no meter' }}, max {{ $room->max_occupants }}, ₱{{ number_format((float) $room->monthly_rent, 2) }}
                             </option>
                         @endforeach
                     </select>
                     @error('room_id') <div class="err">{{ $message }}</div> @enderror
+                </div>
+                <div class="f @error('move_in_reading') has-err @enderror" id="move-in-reading"
+                     @if (! $rooms->firstWhere('room_id', old('room_id', $selectedRoomId))?->is_metered) hidden @endif>
+                    <label for="move_in_reading">Electric meter reading at move-in (kWh, optional)</label>
+                    <input id="move_in_reading" name="move_in_reading" type="number" min="0" step="0.01" inputmode="decimal" value="{{ old('move_in_reading') }}">
+                    <div class="hint">Becomes the "previous reading" of this tenant's first bill.</div>
+                    @error('move_in_reading') <div class="err">{{ $message }}</div> @enderror
                 </div>
                 @include('leases._moa_fields', ['lease' => $lease])
             </div>
@@ -91,6 +98,7 @@
                     var room = document.getElementById('room_id');
                     room.addEventListener('change', function () {
                         var opt = room.options[room.selectedIndex];
+                        document.getElementById('move-in-reading').hidden = !(opt && opt.dataset.metered === '1');
                         var rent = document.getElementById('monthly_rent');
                         var adv = document.getElementById('advance_amount');
                         if (opt && opt.dataset.rent) {

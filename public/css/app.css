@@ -375,3 +375,18 @@ tr.removed td:first-child { text-decoration: line-through; }
 .chip.disabled { opacity: .45; pointer-events: none; }
 label.chip { cursor: pointer; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+
+/* ---------- Module 5: billing ---------- */
+.statement { border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; background: #fff; }
+.statement-head { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 10px; margin-bottom: 8px; border-bottom: 1px solid var(--row-line); }
+.statement .sum td { vertical-align: top; }
+.statement .sum td .sub { font-size: 12px; }
+.month-nav { display: inline-flex; gap: 6px; }
+tr.tot-row td { border-top: 2px solid var(--text); font-weight: 600; }
+
+@media print {
+    .top, .alert { display: none !important; }
+    .printable { border: 0; padding: 0; max-width: none; }
+    .statement { border: 1px solid #999; }
+    .print-note { font-size: 11px; }
+}

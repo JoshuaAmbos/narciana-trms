@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /** Monthly billing statement for a lease. */
 class Bill extends Model
 {
+    public const STATUSES = ['Unpaid', 'Paid', 'Overdue'];
+
     protected $table = 'tbl_bill';
 
     protected $primaryKey = 'bill_id';

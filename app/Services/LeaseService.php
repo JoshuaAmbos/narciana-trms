@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Models\AuditLog;
 use App\Models\Lease;
+use App\Models\MeterReading;
 use App\Models\Occupant;
 use App\Models\Room;
+use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -27,10 +29,11 @@ class LeaseService
      *
      * @param  array  $tenant  either ['tenant_id' => id] for a returning tenant, or the new tenant's fields
      * @param  array  $lease  lease fields (room_id, moa_date, move_in_date, due_day, monthly_rent, ...)
+     * @param  float|null  $moveInReading  optional meter reading (kWh) at move-in; saved only for metered rooms
      */
-    public function create(array $tenant, array $lease, ?string $coTenantName, User $by): Lease
+    public function create(array $tenant, array $lease, ?string $coTenantName, User $by, ?float $moveInReading = null): Lease
     {
-        return DB::transaction(function () use ($tenant, $lease, $coTenantName, $by) {
+        return DB::transaction(function () use ($tenant, $lease, $coTenantName, $by, $moveInReading) {
             // Lock the room row so two people saving at the same time cannot both lease it.
             $room = Room::whereKey($lease['room_id'])->lockForUpdate()->firstOrFail();
 
@@ -67,6 +70,19 @@ class LeaseService
                     'full_name' => $coTenantName,
                     'is_principal' => false,
                     'date_added' => $leaseModel->move_in_date,
+                ]);
+            }
+
+            // Move-in meter reading (decision 13): becomes the "previous reading" of the first bill.
+            if ($moveInReading !== null && $room->is_metered) {
+                MeterReading::create([
+                    'room_id' => $room->room_id,
+                    'reading_date' => $leaseModel->move_in_date,
+                    'previous_reading' => $moveInReading,
+                    'current_reading' => $moveInReading,
+                    'rate_per_kwh' => Setting::current()->kwh_rate,
+                    'source' => 'Meter',
+                    'user_id' => $by->user_id,
                 ]);
             }
 

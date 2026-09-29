@@ -34,7 +34,16 @@ class StoreLeaseRequest extends LeaseRequest
             'valid_id_no' => ['nullable', $new, 'string', 'max:50'],
             'room_id' => ['required', Rule::exists('tbl_room', 'room_id')->where('status', 'Vacant')],
             'co_tenant_name' => ['nullable', 'string', 'max:255'],
+            // Optional; used only when the room has its own meter.
+            'move_in_reading' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
         ];
+    }
+
+    public function moveInReading(): ?float
+    {
+        $value = $this->validated('move_in_reading');
+
+        return $value === null || $value === '' ? null : (float) $value;
     }
 
     /** ['tenant_id' => id] for a returning tenant, otherwise the new tenant's fields. */

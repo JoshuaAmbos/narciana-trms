@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\ApplianceController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\BillController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HouseholdController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\KeepAliveController;
 use App\Http\Controllers\LeaseController;
+use App\Http\Controllers\MeterReadingController;
 use App\Http\Controllers\OccupantController;
 use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\RoomController;
@@ -50,6 +52,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::patch('/leases/{lease}/cancel', [LeaseController::class, 'cancel'])->name('leases.cancel');
         Route::resource('leases.occupants', OccupantController::class)->only(['store']);
         Route::patch('/occupants/{occupant}/remove', [OccupantController::class, 'remove'])->name('occupants.remove');
+
+        // Billing
+        Route::resource('bills', BillController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
+        Route::resource('meter-readings', MeterReadingController::class)->only(['index']);
     });
 
     // ---------- Owner only ----------

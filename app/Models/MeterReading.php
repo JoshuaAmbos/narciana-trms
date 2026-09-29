@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /** Electric meter reading for an aircon room. */
 class MeterReading extends Model
 {
+    public const SOURCES = ['Meter', 'Davao Light bill'];
+
     protected $table = 'tbl_meter_reading';
 
     protected $primaryKey = 'reading_id';

@@ -10,6 +10,7 @@ use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Visitor;
+use App\Services\BillingService;
 use App\Services\LeaseService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -24,7 +25,8 @@ use Illuminate\Support\Carbon;
  * LeaseService so every rule applies), 3 vacant with matching waiting inquiries. Dates are fixed offsets from
  * today (e.g. "5 months ago on the 5th"), so due days never change; nothing is random.
  *
- * Later modules add sample meter readings, bills and payments here.
+ * Module 5: move-in meter readings for metered rooms and every bill already due (through BillingService).
+ * Later modules add payments, concerns and move-outs here.
  */
 class DemoSeeder extends Seeder
 {
@@ -85,8 +87,9 @@ class DemoSeeder extends Seeder
         $this->seedRooms();
         $this->seedLeases($owner);
         $this->seedInquiries($owner);
+        $bills = $this->seedBills($owner);
 
-        $this->command?->info('Demo data ready: 13 rooms (10 occupied, 3 vacant), 10 sample tenants, sample inquiries.');
+        $this->command?->info("Demo data ready: 13 rooms (10 occupied, 3 vacant), 10 sample tenants, sample inquiries, {$bills} past bills.");
     }
 
     private function seedRooms(): void
@@ -125,6 +128,7 @@ class DemoSeeder extends Seeder
                     'min_stay_months' => Lease::DEFAULT_MIN_STAY_MONTHS, 'advance_amount' => $rent] + $this->deposits($rent),
                 $withCoTenant ? "Sample Co-tenant {$n}" : null,
                 $owner,
+                $room->is_metered ? 1000.0 + 250 * $n : null, // move-in meter reading (kWh)
             );
 
             foreach ($appliances as [$name, $source, $daysAfter]) {
@@ -178,6 +182,40 @@ class DemoSeeder extends Seeder
                 'remarks' => $remarks,
             ]);
         }
+    }
+
+    /**
+     * Every bill already due (due date today or earlier), generated through BillingService in order.
+     * Bills due in the next few days are left for the "To bill" list. kWh used follows a fixed formula.
+     */
+    private function seedBills(User $owner): int
+    {
+        $billing = app(BillingService::class);
+        $count = 0;
+
+        foreach (Lease::with('room', 'tenant')->orderBy('lease_id')->get() as $lease) {
+            $n = (int) preg_replace('/\D/', '', $lease->tenant->full_name); // Sample Tenant n
+            $month = 0;
+
+            while (($due = $billing->nextDueDate($lease))->lte(today())) {
+                $reading = null;
+                if ($lease->room->is_metered) {
+                    $previous = (float) $billing->lastReading($lease->room_id)->current_reading;
+                    $kwh = 60 + 7 * $n + (9 * $month) % 40;
+                    $reading = [
+                        'previous_reading' => $previous,
+                        'current_reading' => $previous + $kwh,
+                        'reading_date' => $due->copy()->subDay()->toDateString(),
+                        'source' => 'Meter',
+                    ];
+                }
+                $billing->generate($lease, $reading, $due->toDateString(), $owner);
+                $count++;
+                $month++;
+            }
+        }
+
+        return $count;
     }
 
     /** One month's deposit split into the 4 parts; the parts always add up exactly to the rent. */

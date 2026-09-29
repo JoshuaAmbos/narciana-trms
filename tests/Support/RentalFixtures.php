@@ -42,7 +42,7 @@ trait RentalFixtures
     }
 
     /** Encode a lease through the service (room becomes Occupied). */
-    protected function makeLease(Room $room, User $by, ?string $coTenant = null, string $tenantName = 'Sample Tenant A'): Lease
+    protected function makeLease(Room $room, User $by, ?string $coTenant = null, string $tenantName = 'Sample Tenant A', ?float $moveInReading = null): Lease
     {
         return app(LeaseService::class)->create(
             ['full_name' => $tenantName, 'contact_no' => '0918 555 0123', 'valid_id_type' => 'Passport', 'valid_id_no' => 'P1234567'],
@@ -51,6 +51,7 @@ trait RentalFixtures
                 'deposit_damage' => 1500, 'deposit_bills' => 700, 'deposit_keys' => 300],
             $coTenant,
             $by,
+            $moveInReading,
         );
     }
 }

@@ -1,5 +1,5 @@
 {{-- Inquiry form fields, shared by "Log an inquiry" (rooms/index) and "Update inquiry" (inquiries/edit).
-     Needs: $inquiry, $rooms, $types, $channels, $statuses --}}
+     Needs: $inquiry, $rooms, $holds, $types, $channels, $statuses --}}
 @csrf
 
 <div class="row">
@@ -74,11 +74,11 @@
             <option value="">None</option>
             @foreach ($rooms as $room)
                 <option value="{{ $room->room_id }}" @selected((string) old('room_id', $inquiry->room_id) === (string) $room->room_id)>
-                    Room {{ $room->room_no }} ({{ $room->room_type }}, {{ $room->status }})
+                    Room {{ $room->room_no }} ({{ $room->room_type }}, max {{ $room->max_occupants }}, {{ $room->status }}){{ isset($holds[$room->room_id]) ? ' – rented to '.$holds[$room->room_id]->prospect_name.', MOA pending' : '' }}
                 </option>
             @endforeach
         </select>
-        <div class="hint">Required when the outcome is Rented.</div>
+        <div class="hint">Required when the outcome is Rented. Only a Vacant or Vacating room that nobody else has rented can be chosen.</div>
         @error('room_id') <div class="err">{{ $message }}</div> @enderror
     </div>
 </div>

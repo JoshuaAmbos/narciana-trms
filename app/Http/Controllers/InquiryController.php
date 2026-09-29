@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\InquiryRequest;
 use App\Models\Inquiry;
 use App\Models\Room;
+use App\Services\RoomAvailabilityService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -32,30 +33,41 @@ class InquiryController extends Controller
         ]);
     }
 
-    public function store(InquiryRequest $request): RedirectResponse
+    public function store(InquiryRequest $request, RoomAvailabilityService $availability): RedirectResponse
     {
         $inquiry = Inquiry::create($request->validated() + ['user_id' => $request->user()->user_id]);
 
         return redirect()->route('rooms.index')
-            ->with('status', "Inquiry from {$inquiry->prospect_name} was saved ({$inquiry->status}).");
+            ->with('status', "Inquiry from {$inquiry->prospect_name} was saved ({$inquiry->status}).")
+            ->with('warning', $this->typeWarning($inquiry, $availability));
     }
 
-    public function edit(Inquiry $inquiry): View
+    public function edit(Inquiry $inquiry, RoomAvailabilityService $availability): View
     {
         return view('inquiries.edit', [
             'inquiry' => $inquiry->load('user'),
             'rooms' => Room::orderBy('room_no')->get(),
+            'holds' => $availability->rentalHolds(exceptInquiryId: $inquiry->inquiry_id),
             'types' => Inquiry::TYPES,
             'channels' => Inquiry::CHANNELS,
             'statuses' => Inquiry::STATUSES,
         ]);
     }
 
-    public function update(InquiryRequest $request, Inquiry $inquiry): RedirectResponse
+    public function update(InquiryRequest $request, Inquiry $inquiry, RoomAvailabilityService $availability): RedirectResponse
     {
         $inquiry->update($request->validated()); // user_id (who logged it) stays the same
 
         return redirect()->route('inquiries.index')
-            ->with('status', "Inquiry from {$inquiry->prospect_name} was updated ({$inquiry->status}).");
+            ->with('status', "Inquiry from {$inquiry->prospect_name} was updated ({$inquiry->status}).")
+            ->with('warning', $this->typeWarning($inquiry, $availability));
+    }
+
+    /** Warn (do not block) when the chosen room is not the type the prospect asked for. */
+    private function typeWarning(Inquiry $inquiry, RoomAvailabilityService $availability): ?string
+    {
+        $room = $inquiry->room_id ? Room::find($inquiry->room_id) : null;
+
+        return $room ? $availability->typeMismatchWarning($room, $inquiry->preferred_type) : null;
     }
 }

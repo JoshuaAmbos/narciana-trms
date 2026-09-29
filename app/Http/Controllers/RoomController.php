@@ -32,6 +32,7 @@ class RoomController extends Controller
             'waiting' => $availability->waitingProspects(),
             'matches' => $matches,
             'fitsRooms' => $fitsRooms,
+            'holds' => $availability->rentalHolds(),
             'inquiry' => new Inquiry(['inquiry_date' => today(), 'status' => 'Waiting', 'no_of_occupants' => 1]),
             'types' => Inquiry::TYPES,
             'channels' => Inquiry::CHANNELS,

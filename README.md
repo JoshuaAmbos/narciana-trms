@@ -2,6 +2,7 @@
 
 Web app for Narciana House Space Rental (Laravel 12 + Blade + MySQL/MariaDB), used in Chrome on an Android tablet.
 
+
 ## Local setup (Windows + XAMPP)
 
 1. Start **MySQL** in the XAMPP Control Panel.

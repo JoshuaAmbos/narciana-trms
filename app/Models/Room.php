@@ -8,6 +8,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /** Rentable room and its availability. */
 class Room extends Model
 {
+    public const TYPES = ['Aircon', 'Basic'];
+
+    public const STATUSES = ['Vacant', 'Occupied', 'Vacating'];
+
+    /** Business rule: at most 2 occupants per room. */
+    public const MAX_OCCUPANTS = 2;
+
     protected $table = 'tbl_room';
 
     protected $primaryKey = 'room_id';
@@ -32,6 +39,12 @@ class Room extends Model
             'monthly_rent' => 'decimal:2',
             'expected_vacant_date' => 'date',
         ];
+    }
+
+    /** Vacant or Vacating rooms can be offered to waiting prospects. */
+    public function isAvailable(): bool
+    {
+        return in_array($this->status, ['Vacant', 'Vacating'], true);
     }
 
     public function leases(): HasMany

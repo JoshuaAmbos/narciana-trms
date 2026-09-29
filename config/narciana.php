@@ -14,11 +14,12 @@ return [
         'caretaker' => env('SEED_CARETAKER_PASSWORD'),
     ],
 
-    // Sidebar menu: [route name, label, roles that may see it, Lucide icon name] (same roles as 'role_access' below).
-    // Items whose route does not exist yet link to "#". Hiding by role starts in Module 2.
+    // Sidebar menu: [route name, label, roles that may see it, Lucide icon name, optional extra route patterns to highlight on]
+    // (same roles as 'role_access' below).
+    // Items are hidden from roles not listed. Items whose route does not exist yet link to "#".
     'nav' => [
         ['dashboard', 'Dashboard', ['Owner', 'Manager', 'Caretaker'], 'layout-dashboard'],
-        ['rooms.index', 'Rooms & Inquiries', ['Owner', 'Manager', 'Caretaker'], 'door-open'],
+        ['rooms.index', 'Rooms & Inquiries', ['Owner', 'Manager', 'Caretaker'], 'door-open', ['inquiries.*']],
         // Caretaker sees this page only for appliances and visitors, not the MOA details.
         ['tenants.index', 'Tenants & MOA', ['Owner', 'Manager', 'Caretaker'], 'users'],
         ['billing.index', 'Billing', ['Owner', 'Manager'], 'receipt'],

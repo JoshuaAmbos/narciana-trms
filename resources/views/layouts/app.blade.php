@@ -21,10 +21,11 @@
             </div>
         </div>
         <nav class="nav">
-            @foreach (config('narciana.nav') as [$routeName, $label, $roles, $icon])
+            @foreach (config('narciana.nav') as $item)
+                @php([$routeName, $label, $roles, $icon] = $item)
                 @continue(! $me?->hasRole(...$roles))
                 <a href="{{ Route::has($routeName) ? route($routeName) : '#' }}"
-                   class="{{ request()->routeIs(Str::before($routeName, '.').'*') ? 'on' : '' }}">
+                   class="{{ request()->routeIs(Str::before($routeName, '.').'*', ...($item[4] ?? [])) ? 'on' : '' }}">
                     <x-icon :name="$icon" />{{ $label }}
                 </a>
             @endforeach

@@ -25,9 +25,7 @@
                                 <td>{{ $room->room_type }}</td>
                                 <td>{{ $room->is_metered ? 'Own meter' : 'None' }}</td>
                                 <td class="money">@peso($room->monthly_rent)</td>
-                                <td>
-                                    <span class="tag {{ ['Vacant' => 't-green', 'Occupied' => 't-grey', 'Vacating' => 't-amber'][$room->status] }}">{{ $room->status }}</span>
-                                </td>
+                                <td><x-room-status :room="$room" /></td>
                             </tr>
                         @endforeach
                     </table>

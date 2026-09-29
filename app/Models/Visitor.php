@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** Visitor log entry (MOA two-day visitor rule). */
 class Visitor extends Model
 {
+    public const RELATIONSHIPS = ['Parent', 'Sibling', 'Spouse'];
+
     protected $table = 'tbl_visitor';
 
     protected $primaryKey = 'visitor_id';

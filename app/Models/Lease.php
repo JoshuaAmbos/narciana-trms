@@ -10,6 +10,11 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 /** Signed MOA (Contract of Rent) reference details. */
 class Lease extends Model
 {
+    public const STATUSES = ['Active', 'Ended', 'Cancelled'];
+
+    /** Default minimum stay on the MOA form (decision 3). */
+    public const DEFAULT_MIN_STAY_MONTHS = 4;
+
     protected $table = 'tbl_lease';
 
     protected $primaryKey = 'lease_id';
@@ -62,6 +67,37 @@ class Lease extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /** Sum of the 4 deposit parts (maintenance + damage + bills + keys). */
+    public function depositTotal(): float
+    {
+        return round((float) $this->deposit_maintenance + (float) $this->deposit_damage
+            + (float) $this->deposit_bills + (float) $this->deposit_keys, 2);
+    }
+
+    /** "1st", "2nd", "25th"... for "Every 25th". */
+    public function dueDayLabel(): string
+    {
+        $d = (int) $this->due_day;
+        $suffix = in_array($d % 100, [11, 12, 13], true) ? 'th' : (['th', 'st', 'nd', 'rd'][$d % 10] ?? 'th');
+
+        return $d.$suffix;
+    }
+
+    public function principal(): HasOne
+    {
+        return $this->hasOne(Occupant::class, 'lease_id')->where('is_principal', true);
+    }
+
+    public function activeOccupants(): HasMany
+    {
+        return $this->occupants()->whereNull('date_removed');
+    }
+
+    public function activeAppliances(): HasMany
+    {
+        return $this->appliances()->whereNull('date_removed');
     }
 
     public function occupants(): HasMany

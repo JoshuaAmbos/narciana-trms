@@ -37,6 +37,12 @@ class Setting extends Model
         ];
     }
 
+    /** The single rates-and-rules row (created by SettingSeeder). */
+    public static function current(): self
+    {
+        return self::query()->firstOrFail();
+    }
+
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');

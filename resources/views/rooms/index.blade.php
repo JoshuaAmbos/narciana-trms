@@ -17,7 +17,7 @@
                 <table>
                     <tr>
                         <th>Room</th><th>Type</th><th class="r">Rent</th><th>Status</th><th>Available</th><th>Waiting</th>
-                        @can('manage-rooms')<th></th>@endcan
+                        @canany(['manage-rooms', 'manage-leases'])<th></th>@endcanany
                     </tr>
                     @foreach ($rooms as $room)
                         <tr>
@@ -45,9 +45,18 @@
                                     @endif
                                 @endif
                             </td>
-                            @can('manage-rooms')
-                                <td class="actions"><a href="{{ route('rooms.edit', $room) }}" class="btn sec">Edit</a></td>
-                            @endcan
+                            @canany(['manage-rooms', 'manage-leases'])
+                                <td class="actions">
+                                    @if ($room->status === 'Vacant')
+                                        @can('manage-leases')
+                                            <a href="{{ route('leases.create', ['room_id' => $room->room_id]) }}" class="btn">Encode MOA</a>
+                                        @endcan
+                                    @endif
+                                    @can('manage-rooms')
+                                        <a href="{{ route('rooms.edit', $room) }}" class="btn sec">Edit</a>
+                                    @endcan
+                                </td>
+                            @endcanany
                         </tr>
                     @endforeach
                 </table>

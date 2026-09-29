@@ -27,5 +27,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Only the Owner adds or edits rooms and rents (used for buttons in views; routes also use role:Owner).
         Gate::define('manage-rooms', fn (User $user) => $user->hasRole('Owner'));
+
+        // Owner and Manager encode and view MOAs (rent, deposits, occupants). Never the Caretaker (decision 10).
+        Gate::define('manage-leases', fn (User $user) => $user->hasRole('Owner', 'Manager'));
     }
 }

@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** Appliance registered in a basic room. */
 class Appliance extends Model
 {
+    public const SOURCES = ['Declared', 'CCTV'];
+
     protected $table = 'tbl_appliance';
 
     protected $primaryKey = 'appliance_id';

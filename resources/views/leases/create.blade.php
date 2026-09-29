@@ -1,0 +1,106 @@
+@extends('layouts.app')
+
+@section('title', 'Encode new MOA')
+
+@section('content')
+    @if ($rooms->isEmpty())
+        <div class="panel form-panel">
+            <h2>No Vacant room</h2>
+            <p>A new MOA can only be made for a Vacant room, and there is none right now.</p>
+            <a href="{{ route('rooms.index') }}" class="btn sec">See room availability</a>
+        </div>
+    @else
+        <form method="POST" action="{{ route('leases.store') }}" novalidate class="form-panel">
+            @csrf
+
+            <div class="panel">
+                <h2>1. Principal renter</h2>
+                @php($mode = old('tenant_mode', 'new'))
+                <div class="filters" role="radiogroup">
+                    <label class="chip {{ $mode === 'new' ? 'on' : '' }}"><input type="radio" name="tenant_mode" value="new" @checked($mode === 'new') class="sr-only"> New tenant</label>
+                    <label class="chip {{ $mode === 'existing' ? 'on' : '' }} {{ $returningTenants->isEmpty() ? 'disabled' : '' }}"><input type="radio" name="tenant_mode" value="existing" @checked($mode === 'existing') @disabled($returningTenants->isEmpty()) class="sr-only"> Returning tenant</label>
+                </div>
+
+                <div id="tenant-new" @if ($mode !== 'new') hidden @endif>
+                    @include('tenants._fields', ['tenant' => $tenant])
+                </div>
+                <div id="tenant-existing" @if ($mode !== 'existing') hidden @endif>
+                    <div class="f @error('tenant_id') has-err @enderror">
+                        <label for="tenant_id">Returning tenant</label>
+                        <select id="tenant_id" name="tenant_id">
+                            <option value="">Choose…</option>
+                            @foreach ($returningTenants as $t)
+                                <option value="{{ $t->tenant_id }}" @selected((string) old('tenant_id') === (string) $t->tenant_id)>{{ $t->full_name }} ({{ $t->valid_id_type }} {{ $t->valid_id_no }})</option>
+                            @endforeach
+                        </select>
+                        @error('tenant_id') <div class="err">{{ $message }}</div> @enderror
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>2. Room and MOA details</h2>
+                <div class="f @error('room_id') has-err @enderror">
+                    <label for="room_id">Room (Vacant rooms only)</label>
+                    <select id="room_id" name="room_id">
+                        <option value="">Choose…</option>
+                        @foreach ($rooms as $room)
+                            <option value="{{ $room->room_id }}" data-rent="{{ $room->monthly_rent }}" data-max="{{ $room->max_occupants }}"
+                                    @selected((string) old('room_id', $selectedRoomId) === (string) $room->room_id)>
+                                Room {{ $room->room_no }} — {{ $room->room_type }}, {{ $room->is_metered ? 'own meter' : 'no meter' }}, max {{ $room->max_occupants }}, ₱{{ number_format((float) $room->monthly_rent, 2) }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('room_id') <div class="err">{{ $message }}</div> @enderror
+                </div>
+                @include('leases._moa_fields', ['lease' => $lease])
+            </div>
+
+            <div class="panel">
+                <h2>3. Declared co-tenant (optional)</h2>
+                <div class="f @error('co_tenant_name') has-err @enderror">
+                    <label for="co_tenant_name">Full name of co-tenant</label>
+                    <input id="co_tenant_name" name="co_tenant_name" type="text" maxlength="255" value="{{ old('co_tenant_name') }}">
+                    <div class="hint">Maximum 2 occupants per room (principal renter + 1). Leave blank if the tenant lives alone.</div>
+                    @error('co_tenant_name') <div class="err">{{ $message }}</div> @enderror
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn">Save MOA</button>
+                <a href="{{ route('tenants.index') }}" class="btn sec">Cancel</a>
+            </div>
+            <p class="muted">Saving sets the room to <b>Occupied</b>.</p>
+        </form>
+
+        @push('scripts')
+            <script>
+                (function () {
+                    // New / returning tenant switch
+                    document.querySelectorAll('input[name="tenant_mode"]').forEach(function (radio) {
+                        radio.addEventListener('change', function () {
+                            document.getElementById('tenant-new').hidden = this.value !== 'new';
+                            document.getElementById('tenant-existing').hidden = this.value !== 'existing';
+                            document.querySelectorAll('input[name="tenant_mode"]').forEach(function (r) {
+                                r.parentElement.classList.toggle('on', r.checked);
+                            });
+                        });
+                    });
+
+                    // Picking a room fills in its rent (and the advance) if still empty.
+                    var room = document.getElementById('room_id');
+                    room.addEventListener('change', function () {
+                        var opt = room.options[room.selectedIndex];
+                        var rent = document.getElementById('monthly_rent');
+                        var adv = document.getElementById('advance_amount');
+                        if (opt && opt.dataset.rent) {
+                            if (!rent.value) { rent.value = opt.dataset.rent; }
+                            if (!adv.value) { adv.value = opt.dataset.rent; }
+                            rent.dispatchEvent(new Event('input'));
+                        }
+                    });
+                })();
+            </script>
+        @endpush
+    @endif
+@endsection

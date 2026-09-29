@@ -1,12 +1,18 @@
 <?php
 
+use App\Http\Controllers\ApplianceController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HouseholdController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\KeepAliveController;
+use App\Http\Controllers\LeaseController;
+use App\Http\Controllers\OccupantController;
 use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\RoomController;
+use App\Http\Controllers\TenantController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\VisitorController;
 use Illuminate\Support\Facades\Route;
 
 // ---------- Guests only (not logged in) ----------
@@ -27,6 +33,24 @@ Route::middleware(['auth', 'active'])->group(function () {
     // Rooms & Inquiries: everyone views availability and logs/updates inquiries.
     Route::resource('rooms', RoomController::class)->only(['index']);
     Route::resource('inquiries', InquiryController::class)->only(['index', 'store', 'edit', 'update']);
+
+    // Tenants & MOA: every role opens the list (the Caretaker gets a limited version) and
+    // manages appliances and visitors. MOA, rent, deposits and occupants are Owner/Manager only (below).
+    Route::resource('tenants', TenantController::class)->only(['index']);
+    Route::get('/leases/{lease}/household', [HouseholdController::class, 'show'])->name('leases.household');
+    Route::resource('leases.appliances', ApplianceController::class)->only(['store']);
+    Route::patch('/appliances/{appliance}/remove', [ApplianceController::class, 'remove'])->name('appliances.remove');
+    Route::resource('leases.visitors', VisitorController::class)->only(['store']);
+    Route::patch('/visitors/{visitor}/depart', [VisitorController::class, 'depart'])->name('visitors.depart');
+
+    // ---------- Owner and Manager ----------
+    Route::middleware('role:Owner,Manager')->group(function () {
+        Route::resource('tenants', TenantController::class)->only(['edit', 'update']);
+        Route::resource('leases', LeaseController::class)->only(['create', 'store', 'show', 'edit', 'update']);
+        Route::patch('/leases/{lease}/cancel', [LeaseController::class, 'cancel'])->name('leases.cancel');
+        Route::resource('leases.occupants', OccupantController::class)->only(['store']);
+        Route::patch('/occupants/{occupant}/remove', [OccupantController::class, 'remove'])->name('occupants.remove');
+    });
 
     // ---------- Owner only ----------
     Route::middleware('role:Owner')->group(function () {

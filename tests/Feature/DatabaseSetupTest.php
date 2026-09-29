@@ -87,13 +87,21 @@ class DatabaseSetupTest extends TestCase
         $this->assertSame(0, Room::count());
     }
 
-    public function test_demo_seeder_creates_sample_rooms(): void
+    public function test_demo_seeder_never_runs_in_production(): void
+    {
+        $this->seed();
+        $this->app->detectEnvironment(fn () => 'production');
+
+        // Call the seeder directly: "php artisan db:seed" itself also asks for confirmation in production.
+        $this->app->make(DemoSeeder::class)->run();
+
+        $this->assertSame(0, Room::count(), 'No sample rooms on the live hosting');
+    }
+
+    public function test_demo_seeder_needs_the_main_seeder_first(): void
     {
         $this->seed(DemoSeeder::class);
 
-        $this->assertSame(11, Room::count());
-        $this->assertSame(4, Room::where('room_type', 'Aircon')->where('is_metered', true)->count());
-        $this->assertSame(0, Room::where('room_type', 'Basic')->where('is_metered', true)->count());
-        $this->assertSame(11, Room::where('status', 'Vacant')->where('max_occupants', 2)->count());
+        $this->assertSame(0, Room::count(), 'Without the Owner account and settings, DemoSeeder does nothing');
     }
 }

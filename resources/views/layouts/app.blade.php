@@ -70,13 +70,19 @@
 </div>
 
 @if ($me)
-    {{-- Inactivity logout: the server ends the session after SESSION_LIFETIME minutes without a request.
-         This timer then takes a tablet left open back to the login page so no tenant data stays on screen. --}}
-    <script>
-        setTimeout(function () {
-            window.location.href = @json(route('login', ['timeout' => 1]));
-        }, {{ (int) config('session.lifetime') }} * 60 * 1000 + 5000);
-    </script>
+    {{-- Inactivity logout: warning 1 minute before, then back to the login page (public/js/idle-timer.js). --}}
+    <div id="idle-warning" class="idle-warning" role="alertdialog" aria-live="assertive"
+         aria-labelledby="idle-title" hidden>
+        <div class="idle-box">
+            <div id="idle-title" class="idle-title">Are you still there?</div>
+            <p>For security, you will be logged out in <b id="idle-seconds">60</b> seconds because of inactivity.</p>
+            <button type="button" id="idle-stay" class="btn block">Stay logged in</button>
+        </div>
+    </div>
+    <script src="{{ asset('js/idle-timer.js') }}?v={{ filemtime(public_path('js/idle-timer.js')) }}"
+            data-lifetime="{{ (int) config('session.lifetime') }}"
+            data-keep-alive-url="{{ route('keep-alive') }}"
+            data-login-url="{{ route('login', ['timeout' => 1]) }}"></script>
 @endif
 @stack('scripts')
 </body>

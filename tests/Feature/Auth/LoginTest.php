@@ -137,10 +137,32 @@ class LoginTest extends TestCase
         $this->get(route('login', ['timeout' => 1]))->assertOk()->assertDontSee('minutes of inactivity');
     }
 
-    public function test_pages_include_the_inactivity_timer(): void
+    public function test_pages_include_the_idle_warning_and_timer(): void
     {
         $this->actingAs($this->makeUser())->get('/')
-            ->assertSee('timeout=1', false)
-            ->assertSee('15 * 60 * 1000', false);
+            ->assertSee('id="idle-warning"', false)
+            ->assertSee('Stay logged in')
+            ->assertSee('js/idle-timer.js', false)
+            ->assertSee('data-lifetime="15"', false)
+            ->assertSee('data-keep-alive-url="'.route('keep-alive').'"', false)
+            ->assertSee('timeout=1', false);
+    }
+
+    public function test_login_page_has_no_idle_timer(): void
+    {
+        $this->get('/login')->assertDontSee('idle-timer.js', false);
+    }
+
+    public function test_stay_logged_in_refreshes_the_session(): void
+    {
+        $this->actingAs($this->makeUser())->post('/keep-alive')->assertNoContent();
+    }
+
+    public function test_keep_alive_does_not_work_for_guests_or_deactivated_users(): void
+    {
+        $this->post('/keep-alive')->assertRedirect('/login');
+
+        $this->actingAs($this->makeUser(['is_active' => false]))->post('/keep-alive')->assertRedirect('/login');
+        $this->assertGuest();
     }
 }

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\KeepAliveController;
 use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +16,7 @@ Route::middleware('guest')->group(function () {
 // ---------- Every logged-in, active user ----------
 Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+    Route::post('/keep-alive', KeepAliveController::class)->name('keep-alive');
     Route::get('/', DashboardController::class)->name('dashboard');
 
     Route::get('/my-password', [PasswordController::class, 'edit'])->name('password.edit');

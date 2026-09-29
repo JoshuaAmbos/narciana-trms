@@ -14,7 +14,7 @@ return [
         'caretaker' => env('SEED_CARETAKER_PASSWORD'),
     ],
 
-    // Sidebar menu: [route name, label, roles that may see it, Lucide icon name].
+    // Sidebar menu: [route name, label, roles that may see it, Lucide icon name] (same roles as 'role_access' below).
     // Items whose route does not exist yet link to "#". Hiding by role starts in Module 2.
     'nav' => [
         ['dashboard', 'Dashboard', ['Owner', 'Manager', 'Caretaker'], 'layout-dashboard'],

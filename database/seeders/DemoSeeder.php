@@ -12,6 +12,8 @@ use App\Models\User;
 use App\Models\Visitor;
 use App\Services\BillingService;
 use App\Services\LeaseService;
+use App\Services\PaymentService;
+use App\Services\PenaltyService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
@@ -26,7 +28,8 @@ use Illuminate\Support\Carbon;
  * today (e.g. "5 months ago on the 5th"), so due days never change; nothing is random.
  *
  * Module 5: move-in meter readings for metered rooms and every bill already due (through BillingService).
- * Later modules add payments, concerns and move-outs here.
+ * Module 6: payments (Cash and GCash, some late with a penalty), a few unpaid and Overdue bills.
+ * Later modules add concerns and move-outs here.
  */
 class DemoSeeder extends Seeder
 {
@@ -88,8 +91,9 @@ class DemoSeeder extends Seeder
         $this->seedLeases($owner);
         $this->seedInquiries($owner);
         $bills = $this->seedBills($owner);
+        $paid = $this->seedPayments($owner);
 
-        $this->command?->info("Demo data ready: 13 rooms (10 occupied, 3 vacant), 10 sample tenants, sample inquiries, {$bills} past bills.");
+        $this->command?->info("Demo data ready: 13 rooms (10 occupied, 3 vacant), 10 sample tenants, sample inquiries, {$bills} past bills ({$paid} paid).");
     }
 
     private function seedRooms(): void
@@ -214,6 +218,51 @@ class DemoSeeder extends Seeder
                 $month++;
             }
         }
+
+        return $count;
+    }
+
+    /**
+     * Payments through PaymentService (oldest bill first, exact amounts, ACK numbers):
+     *  - odd Sample Tenant numbers pay Cash (received by the Manager), even numbers GCash (received by the Owner);
+     *  - every 4th payment is made 2 days after the grace period, so it carries a penalty;
+     *  - Sample Tenants 1 and 6 leave their last 2 bills unpaid (the older one is always Overdue);
+     *  - everyone else leaves only a newest bill that is still within its due date + grace unpaid.
+     */
+    private function seedPayments(User $owner): int
+    {
+        $payments = app(PaymentService::class);
+        $penalties = app(PenaltyService::class);
+        $manager = User::where('role', 'Manager')->firstOrFail();
+        $grace = (int) Setting::current()->grace_days;
+        $count = 0;
+
+        foreach (Lease::with('tenant')->orderBy('lease_id')->get() as $lease) {
+            $n = (int) preg_replace('/\D/', '', $lease->tenant->full_name);
+            $bills = $lease->bills()->orderBy('due_date')->get();
+            $leaveUnpaid = in_array($n, [1, 6], true) ? 2 : 0;
+            $last = $bills->last();
+            if ($leaveUnpaid === 0 && $last && $last->due_date->copy()->addDays($grace)->gte(today())) {
+                $leaveUnpaid = 1; // newest bill not overdue yet
+            }
+
+            foreach ($bills->slice(0, max(0, $bills->count() - $leaveUnpaid))->values() as $k => $bill) {
+                $late = ($n + $k) % 4 === 0;
+                $date = $late ? $bill->due_date->copy()->addDays($grace + 2) : $bill->due_date->copy()->subDay();
+                $date = $date->min(today());
+
+                $gcash = $n % 2 === 0;
+                $payments->record($bill, [
+                    'payment_date' => $date->toDateString(),
+                    'mode' => $gcash ? 'GCash' : 'Cash',
+                    'gcash_ref_no' => $gcash ? '9'.str_pad((string) ($n * 100 + $k), 12, '0', STR_PAD_LEFT) : null,
+                    'amount' => $penalties->forBill($bill, $date)['total'],
+                ], $gcash ? $owner : $manager);
+                $count++;
+            }
+        }
+
+        $payments->refreshOverdue();
 
         return $count;
     }

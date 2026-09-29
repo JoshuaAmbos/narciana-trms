@@ -7,6 +7,8 @@ use App\Models\Bill;
 use App\Models\Lease;
 use App\Models\MeterReading;
 use App\Services\BillingService;
+use App\Services\PaymentService;
+use App\Services\PenaltyService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -18,8 +20,9 @@ class BillController extends Controller
 {
     public function __construct(private BillingService $billing) {}
 
-    public function index(Request $request): View
+    public function index(Request $request, PaymentService $payments): View
     {
+        $payments->refreshOverdue();
         $filter = $request->validate(['month' => ['nullable', 'date_format:Y-m']]);
         $month = isset($filter['month']) ? Carbon::createFromFormat('Y-m-d', $filter['month'].'-01') : today()->startOfMonth();
 
@@ -89,13 +92,17 @@ class BillController extends Controller
             ->with('status', 'Bill generated: ₱'.number_format((float) $bill->total_amount, 2).' due on '.$bill->due_date->format('j M Y').'.');
     }
 
-    public function show(Bill $bill): View
+    public function show(Bill $bill, PaymentService $payments, PenaltyService $penalties): View
     {
-        $bill->load(['lease.room', 'lease.tenant', 'user', 'payments']);
+        $payments->refreshOverdue();
+        $bill->refresh()->load(['lease.room', 'lease.tenant', 'user', 'payments']);
 
         return view('bills.show', [
             'bill' => $bill,
             'statement' => $this->billing->statementForBill($bill),
+            'payment' => $bill->payments->first(),
+            'dueToday' => $bill->status === 'Paid' ? null : $penalties->forBill($bill, today()),
+            'canPay' => $payments->canPay($bill),
             'canDelete' => $this->billing->canDelete($bill)
                 && ! $bill->lease->bills()->where('due_date', '>', $bill->due_date)->exists(),
         ]);

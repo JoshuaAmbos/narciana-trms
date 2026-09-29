@@ -384,6 +384,15 @@ label.chip { cursor: pointer; }
 .month-nav { display: inline-flex; gap: 6px; }
 tr.tot-row td { border-top: 2px solid var(--text); font-weight: 600; }
 
+/* ---------- Module 6: payments ---------- */
+.due-box { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--head-bg); }
+.paid-note { margin: 12px 0 0; color: var(--green); font-weight: 600; }
+.date-check { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.date-check .f { margin-bottom: 0; flex: 1 1 180px; }
+.amount-box { margin: 12px 0 14px; }
+.ack-no { font-size: 18px; font-weight: 700; color: var(--navy); }
+.small { font-size: 12px; }
+
 @media print {
     .top, .alert { display: none !important; }
     .printable { border: 0; padding: 0; max-width: none; }

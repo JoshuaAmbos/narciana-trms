@@ -11,6 +11,7 @@ use App\Http\Controllers\LeaseController;
 use App\Http\Controllers\MeterReadingController;
 use App\Http\Controllers\OccupantController;
 use App\Http\Controllers\PasswordController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\UserController;
@@ -56,6 +57,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         // Billing
         Route::resource('bills', BillController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
         Route::resource('meter-readings', MeterReadingController::class)->only(['index']);
+
+        // Payments (voiding is Owner-only, checked by PaymentPolicy)
+        Route::resource('payments', PaymentController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
     });
 
     // ---------- Owner only ----------

@@ -7,6 +7,7 @@ use App\Models\Bill;
 use App\Models\Inquiry;
 use App\Models\Lease;
 use App\Models\MeterReading;
+use App\Models\Payment;
 use App\Models\Room;
 use App\Models\Tenant;
 use App\Models\Visitor;
@@ -102,7 +103,7 @@ class DemoSeederTest extends TestCase
             // Oldest bill = first due date; the next one to generate is in the future.
             $this->assertSame($billing->firstDueDate($lease->move_in_date, $lease->due_day)->toDateString(), $bills->first()->due_date->toDateString());
             $this->assertTrue($billing->nextDueDate($lease)->gt(today()));
-            $this->assertTrue($bills->every(fn ($b) => $b->due_date->lte(today()) && $b->status === 'Unpaid'));
+            $this->assertTrue($bills->every(fn ($b) => $b->due_date->lte(today())));
 
             foreach ($bills as $bill) {
                 $sum = (float) $bill->rent_amount + (float) $bill->water_amount + (float) $bill->electricity_amount
@@ -125,13 +126,49 @@ class DemoSeederTest extends TestCase
         $this->assertSame($metered->count() + Bill::whereNotNull('reading_id')->count(), MeterReading::count());
     }
 
+    public function test_payments_cash_gcash_late_and_overdue(): void
+    {
+        $payments = Payment::with('bill', 'user')->get();
+
+        // Cash received by the Manager, GCash by the Owner.
+        $this->assertGreaterThan(0, $payments->where('mode', 'Cash')->count());
+        $this->assertGreaterThan(0, $payments->where('mode', 'GCash')->count());
+        $this->assertTrue($payments->where('mode', 'Cash')->every(fn ($p) => $p->user->role === 'Manager' && $p->gcash_ref_no === null));
+        $this->assertTrue($payments->where('mode', 'GCash')->every(fn ($p) => $p->user->role === 'Owner' && preg_match('/^\d{13}$/', $p->gcash_ref_no)));
+
+        // Every payment matches its bill, the bill is Paid, some carry a penalty.
+        $this->assertTrue($payments->every(fn ($p) => $p->bill->status === 'Paid' && $p->amount === $p->bill->total_amount));
+        $this->assertGreaterThan(0, Bill::where('penalty_amount', '>', 0)->count());
+        $this->assertSame(0, Bill::where('status', '!=', 'Paid')->where('penalty_amount', '>', 0)->count(), 'Penalty is saved only when paid');
+
+        // A couple of Overdue bills, and a few recent Unpaid ones.
+        $this->assertGreaterThanOrEqual(2, Bill::where('status', 'Overdue')->count());
+        $this->assertSame(0, Bill::where('status', 'Unpaid')->whereDate('due_date', '<', today()->subDays(3))->count(), 'Statuses refreshed');
+
+        // Oldest bill first: no Paid bill after an unpaid one in the same lease.
+        foreach (Lease::all() as $lease) {
+            $statuses = $lease->bills()->orderBy('due_date')->pluck('status')->all();
+            $firstUnpaid = collect($statuses)->search(fn ($s) => $s !== 'Paid');
+            if ($firstUnpaid !== false) {
+                $this->assertNotContains('Paid', array_slice($statuses, $firstUnpaid), "Lease {$lease->lease_id}");
+            }
+        }
+
+        // ACK numbers: unique, per-year sequence without gaps.
+        $acks = $payments->pluck('ack_no')->sort()->values();
+        $this->assertSame($acks->count(), $acks->unique()->count());
+        $this->assertSame('ACK-'.$payments->first()->payment_date->year.'-'.str_pad((string) $acks->count(), 4, '0', STR_PAD_LEFT), $acks->last());
+    }
+
     public function test_running_it_again_changes_nothing(): void
     {
-        $before = [Room::count(), Lease::count(), Tenant::count(), Inquiry::count(), Appliance::count(), Visitor::count(), Bill::count(), MeterReading::count()];
+        $counts = fn () => [Room::count(), Lease::count(), Tenant::count(), Inquiry::count(), Appliance::count(),
+            Visitor::count(), Bill::count(), MeterReading::count(), Payment::count()];
+        $before = $counts();
 
         $this->seed(DemoSeeder::class);
 
-        $this->assertSame($before, [Room::count(), Lease::count(), Tenant::count(), Inquiry::count(), Appliance::count(), Visitor::count(), Bill::count(), MeterReading::count()]);
+        $this->assertSame($before, $counts());
         $this->assertSame(10, Room::where('status', 'Occupied')->count(), 'Occupied rooms are not reset');
     }
 

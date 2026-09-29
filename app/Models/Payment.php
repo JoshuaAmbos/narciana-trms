@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** Payment received against a bill. */
 class Payment extends Model
 {
+    public const MODES = ['Cash', 'GCash'];
+
     protected $table = 'tbl_payment';
 
     protected $primaryKey = 'payment_id';

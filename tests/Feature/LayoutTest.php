@@ -22,7 +22,8 @@ class LayoutTest extends TestCase
             ->assertSee('Narciana House')
             ->assertSee('Rooms &amp; Inquiries', false)
             ->assertSee('Settings &amp; Backup', false)
-            ->assertSee('Present');
+            ->assertSee('Rates and rules')
+            ->assertDontSee('Setup check');
     }
 
     public function test_dashboard_lists_sample_rooms_with_peso_amounts(): void

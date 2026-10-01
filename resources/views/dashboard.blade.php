@@ -34,16 +34,6 @@
         </div>
 
         <div>
-            <div class="panel">
-                <h2>Setup check (Module 1)</h2>
-                <table class="sum">
-                    <tr><td>Database</td><td class="r"><span class="tag t-green">Connected</span></td></tr>
-                    <tr><td>Staff accounts</td><td class="r">{{ $userCount }}</td></tr>
-                    <tr><td>Rooms</td><td class="r">{{ $roomCount }}</td></tr>
-                    <tr><td>Settings row</td><td class="r">{!! $setting ? '<span class="tag t-green">Present</span>' : '<span class="tag t-red">Missing</span>' !!}</td></tr>
-                </table>
-            </div>
-
             @if ($setting)
                 <div class="panel">
                     <h2>Rates and rules</h2>

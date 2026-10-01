@@ -22,11 +22,11 @@ class LayoutTest extends TestCase
             ->assertSee('Narciana House')
             ->assertSee('Rooms &amp; Inquiries', false)
             ->assertSee('Settings &amp; Backup', false)
-            ->assertSee('Rates and rules')
+            ->assertSee('Due and overdue this week')
             ->assertDontSee('Setup check');
     }
 
-    public function test_dashboard_lists_sample_rooms_with_peso_amounts(): void
+    public function test_dashboard_shows_sample_bills_with_peso_amounts(): void
     {
         $this->seed();
         $this->seed(DemoSeeder::class);
@@ -34,8 +34,8 @@ class LayoutTest extends TestCase
         $this->actingAs(User::factory()->role('Manager')->create())
             ->get('/')
             ->assertOk()
-            ->assertSee('208')
-            ->assertSee('₱3,600.00');
+            ->assertSee('Overdue')
+            ->assertSeeInOrder(['Due and overdue this week', '₱']);
     }
 
     public function test_peso_directive_formats_money(): void

@@ -268,14 +268,11 @@ td.actions .btn { margin-left: 4px; }
 .lbox .btn.block { margin-top: 8px; min-height: 48px; font-size: 16px; }
 .login-foot { margin-top: 14px; }
 
-/* ---------- Smaller tablets (portrait) ---------- */
+/* ---------- Smaller tablets (portrait, about 800px): sidebar becomes a slide-in menu (☰) ---------- */
 @media (max-width: 1000px) {
     .cards { grid-template-columns: repeat(2, 1fr); }
     .grid3 { grid-template-columns: minmax(0, 1fr); }
-}
 
-/* ---------- Phones: sidebar becomes a slide-in menu ---------- */
-@media (max-width: 760px) {
     .menu-btn { display: inline-block; }
     .side {
         position: fixed;
@@ -289,9 +286,23 @@ td.actions .btn { margin-left: 4px; }
     body.nav-open .side { transform: none; }
     .scrim { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, .35); z-index: 15; }
     body.nav-open .scrim { display: block; }
+    .top { padding: 0 14px; }
+    .top h1 { flex: 1; }
+    .who .when { display: none; }
+
+    /* Tighter tables; row buttons stack instead of sitting side by side. */
+    th, td { padding: 8px 7px; }
+    td.actions { white-space: normal; }
+    td.actions .btn { display: flex; width: max-content; margin: 3px 0 3px auto; }
+    td.actions form.inline { display: block; }
+    .stack-tablet { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+
+/* ---------- Phones ---------- */
+@media (max-width: 760px) {
     .top { padding: 0 12px; }
-    .top h1 { font-size: 18px; flex: 1; }
-    .who .when, .who-text, .top-btn-label { display: none; }
+    .top h1 { font-size: 18px; }
+    .who-text, .top-btn-label { display: none; }
     .top-btn { padding: 6px 10px; }
     .body { padding: 14px 12px 28px; }
     .grid2 { grid-template-columns: minmax(0, 1fr); }
@@ -417,3 +428,20 @@ tr.tot-row td { border-top: 2px solid var(--text); font-weight: 600; }
     .statement { border: 1px solid #999; }
     .print-note { font-size: 11px; }
 }
+
+/* ---------- Module 9a: dashboard and reports ---------- */
+a.card-link { display: block; color: inherit; text-decoration: none; }
+a.card-link:hover, a.card-link:focus-visible { border-color: var(--navy-2); background: #f8fbff; }
+.sub-head { font-size: 14.5px; margin: 16px 0 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.panel > .sub-head:first-child { margin-top: 0; }
+.report-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0 12px; }
+.report-filters .f { flex: 1 1 170px; }
+.report-filters .f-wide { flex: 2 1 280px; }
+.report-filters > p { flex: 1 1 100%; margin: 0 0 10px; }
+.report-actions { margin: 0 0 12px; }
+.report-head { margin-bottom: 14px; }
+.report-head .sub { font-size: 12px; }
+.repeat-note { margin: 0 0 8px; padding: 8px 12px; border-radius: 8px; background: #fdf3e1; color: var(--amber); border: 1px solid #f1d9a8; font-size: 13.5px; }
+.statement-close { max-width: 420px; margin: 12px 0 0 auto; }
+.report-grid { margin-top: 4px; }
+td.col-who { min-width: 150px; }

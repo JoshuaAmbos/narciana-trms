@@ -16,6 +16,7 @@ use App\Http\Controllers\MoveoutItemController;
 use App\Http\Controllers\OccupantController;
 use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\UserController;
@@ -77,6 +78,17 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::delete('/moveout-items/{item}', [MoveoutItemController::class, 'destroy'])->name('moveout-items.destroy');
         Route::get('/moveouts/{moveout}/final-bill', [FinalBillController::class, 'create'])->name('moveouts.final-bill.create');
         Route::post('/moveouts/{moveout}/final-bill', [FinalBillController::class, 'store'])->name('moveouts.final-bill.store');
+
+        // Reports (printable; filters are GET parameters)
+        Route::controller(ReportController::class)->prefix('reports')->name('reports.')->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/collections', 'collections')->name('collections');
+            Route::get('/due', 'due')->name('due');
+            Route::get('/statement', 'statement')->name('statement');
+            Route::get('/concerns', 'concerns')->name('concerns');
+            Route::get('/inquiries', 'inquiries')->name('inquiries');
+            Route::get('/moveouts', 'moveouts')->name('moveouts');
+        });
     });
 
     // ---------- Owner only ----------

@@ -2,22 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Room;
-use App\Models\Setting;
+use App\Services\DashboardService;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Placeholder dashboard: rooms and the current rates.
- * The real counters (bills due, overdue, concerns, vacant rooms) are built in Module 9.
+ * Dashboard. Owner/Manager: bills due and overdue, open concerns, vacant rooms, refunds due.
+ * Caretaker: open concerns and rooms only (DashboardService::forCaretaker loads no bills or amounts).
  */
 class DashboardController extends Controller
 {
-    public function __invoke(): View
+    public function __invoke(Request $request, DashboardService $dashboard): View
     {
-        return view('dashboard', [
-            'vacantCount' => Room::where('status', 'Vacant')->count(),
-            'setting' => Setting::first(),
-            'rooms' => Room::orderBy('room_no')->get(),
-        ]);
+        $staff = $request->user()->hasRole('Owner', 'Manager');
+
+        return view('dashboard', ['staff' => $staff] + ($staff ? $dashboard->forStaff() : $dashboard->forCaretaker()));
     }
 }

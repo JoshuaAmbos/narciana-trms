@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\ApplianceController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\ConcernController;
 use App\Http\Controllers\DashboardController;
@@ -18,6 +20,7 @@ use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoomController;
+use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VisitorController;
@@ -97,5 +100,17 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::resource('users', UserController::class)->only(['index', 'create', 'store', 'edit', 'update']);
         Route::patch('/users/{user}/deactivate', [UserController::class, 'deactivate'])->name('users.deactivate');
         Route::patch('/users/{user}/activate', [UserController::class, 'activate'])->name('users.activate');
+
+        // Settings (rates and rules: one row, so no {id} in the URL)
+        Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+
+        // Backup and Restore ({backup} = file name, checked by BackupService)
+        Route::resource('backups', BackupController::class)->only(['index', 'store', 'destroy']);
+        Route::get('/backups/{backup}/download', [BackupController::class, 'download'])->name('backups.download');
+        Route::post('/backups/restore', [BackupController::class, 'restore'])->name('backups.restore');
+
+        // Audit Log: view only (no edit or delete routes, on purpose)
+        Route::get('/audit-log', [AuditLogController::class, 'index'])->name('audit-log.index');
     });
 });

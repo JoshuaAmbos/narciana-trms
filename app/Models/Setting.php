@@ -14,6 +14,8 @@ class Setting extends Model
 
     public $timestamps = false;
 
+    public const PENALTY_BASES = ['Per day of rent', 'Flat % of total'];
+
     protected $fillable = [
         'water_rate',
         'appliance_fee',

@@ -64,6 +64,9 @@
             @if (session('warning'))
                 <div class="alert alert-warn">{{ session('warning') }}</div>
             @endif
+            @if (session('error'))
+                <div class="alert alert-err">{{ session('error') }}</div>
+            @endif
             @if ($errors->any())
                 <div class="alert alert-err">Please check the highlighted fields.</div>
             @endif

@@ -28,7 +28,8 @@ return [
         ['moveouts.index', 'Move-out Settlement', ['Owner', 'Manager'], 'package'],
         ['reports.index', 'Reports', ['Owner', 'Manager'], 'chart-column'],
         ['users.index', 'User Accounts', ['Owner'], 'user-cog'],
-        ['settings.index', 'Settings & Backup', ['Owner'], 'settings'],
+        ['settings.index', 'Settings & Backup', ['Owner'], 'settings', ['backups.*']],
+        ['audit-log.index', 'Audit Log', ['Owner'], 'scroll-text'],
     ],
 
     // "Role access" table shown on the User Accounts screen (same as the roles table in the project rules).
@@ -50,7 +51,20 @@ return [
         ['User accounts', true, false, false],
         ['Settings (rates and rules)', true, false, false],
         ['Backup and restore', true, false, false],
+        ['Audit log (view only)', true, false, false],
         ['My password', true, true, true],
+    ],
+
+    // Backups (Module 9b): plain mysqldump / mysql, run by BackupService.
+    // XAMPP:     BACKUP_MYSQLDUMP_PATH=C:/xampp/mysql/bin/mysqldump.exe  BACKUP_MYSQL_PATH=C:/xampp/mysql/bin/mysql.exe
+    // Namecheap: usually just "mysqldump" and "mysql" (they are on the PATH).
+    'backup' => [
+        'mysqldump' => env('BACKUP_MYSQLDUMP_PATH', 'mysqldump'),
+        'mysql' => env('BACKUP_MYSQL_PATH', 'mysql'),
+        'path' => storage_path('app/backups'), // not public: files are only reachable through the Owner's Download button
+        'keep' => 30,                          // newest backups kept; older ones are deleted after each new backup
+        // Laravel's own tables that are not worth backing up (restoring sessions would also clash with the restore itself).
+        'skip_tables' => ['sessions', 'cache', 'cache_locks'],
     ],
 
 ];

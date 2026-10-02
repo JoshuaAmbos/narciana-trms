@@ -445,3 +445,6 @@ a.card-link:hover, a.card-link:focus-visible { border-color: var(--navy-2); back
 .statement-close { max-width: 420px; margin: 12px 0 0 auto; }
 .report-grid { margin-top: 4px; }
 td.col-who { min-width: 150px; }
+
+/* ---------- Module 9b: settings, backup, audit log ---------- */
+td.audit-details { min-width: 220px; font-size: 13.5px; overflow-wrap: anywhere; }

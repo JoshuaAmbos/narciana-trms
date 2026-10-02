@@ -22,6 +22,10 @@ use Illuminate\Validation\ValidationException;
  *   balance >= 0       -> refund = balance, excess = 0
  *   balance <  0       -> refund = 0,       excess = −balance (billed to the tenant)
  *   early departure    -> the deposit is forfeited: refund = 0 (an excess is still owed)
+ *
+ * Steps shown on the settlement screen (decision 18): 1 Notice, 2 Inspection (with the final bill),
+ * 3 Computation, 4 Owner approval, 5 Refund released (or excess paid). The settlement cannot be computed
+ * or approved before the inspection is recorded (inspected_at).
  */
 class SettlementService
 {
@@ -40,12 +44,18 @@ class SettlementService
         $refundable = round($damageDeposit + $billsDeposit + $keysDeposit, 2);
         $balance = round($refundable - $unpaid - $damage, 2);
 
-        return [
+        $result = [
             'refundable' => $refundable,
             'balance' => $balance,
             'refund' => ($balance > 0 && ! $early) ? $balance : 0.0,
             'excess' => $balance < 0 ? round(-$balance, 2) : 0.0,
         ];
+        // The refund is never negative: a shortfall is billed to the tenant as an excess instead.
+        if ($result['refund'] < 0 || $result['excess'] < 0 || ($result['refund'] > 0 && $result['excess'] > 0)) {
+            throw new \LogicException('Settlement figures out of range.');
+        }
+
+        return $result;
     }
 
     /** Leaving before move-in + minimum stay forfeits the deposit. */
@@ -93,7 +103,8 @@ class SettlementService
 
     public function canCancelNotice(Moveout $moveout): bool
     {
-        return $moveout->isPending() && ! $moveout->actual_date && $moveout->items()->doesntExist() && ! $moveout->final_bill_id;
+        return $moveout->isPending() && ! $moveout->actual_date && ! $moveout->inspected_at
+            && $moveout->items()->doesntExist() && ! $moveout->final_bill_id;
     }
 
     public function cancelNotice(Moveout $moveout, User $by): void
@@ -127,6 +138,9 @@ class SettlementService
                 'planned_date' => $data['planned_date'],
                 'actual_date' => $actual,
             ]);
+            if (! $actual) {
+                $moveout->inspected_at = null; // the inspection happens when the tenant leaves
+            }
             $lease = $moveout->lease;
             $moveout->early_departure = $this->isEarly($lease, Carbon::parse($actual ?? $data['planned_date']));
             $moveout->refund_due_date = $actual ? Carbon::parse($actual)->addDays((int) Setting::current()->refund_days) : null;
@@ -137,6 +151,61 @@ class SettlementService
 
             return $moveout;
         });
+    }
+
+    // ---------- Inspection ----------
+
+    /** Record that the room was inspected (with or without damage items). Needs the actual move-out date. */
+    public function markInspected(Moveout $moveout, User $by): Moveout
+    {
+        return DB::transaction(function () use ($moveout, $by) {
+            $moveout = Moveout::whereKey($moveout->moveout_id)->lockForUpdate()->firstOrFail();
+            $this->assertPending($moveout);
+            if (! $moveout->actual_date) {
+                throw ValidationException::withMessages(['moveout' => 'Record the actual move-out date before the inspection.']);
+            }
+            $moveout->update(['inspected_at' => now()]);
+            AuditLog::record('Move-out inspected', 'tbl_moveout', $moveout->moveout_id, $by->user_id,
+                $moveout->items()->count().' damaged or missing item(s), ₱'.number_format((float) $moveout->items()->sum('cost'), 2));
+
+            return $moveout;
+        });
+    }
+
+    /**
+     * The five steps for the settlement screen: [number, label, state (done | current | todo), note].
+     */
+    public function steps(Moveout $moveout): array
+    {
+        $inspected = $moveout->inspected_at !== null && $this->finalBillReady($moveout);
+        $approved = ! $moveout->isPending();
+        $settled = $moveout->status === 'Settled';
+        $owesExcess = (float) $moveout->excess_amount > 0 && $approved;
+
+        $done = [
+            1 => true,
+            2 => $inspected || $approved,
+            3 => $inspected || $approved, // the computation is automatic once the inspection and final bill are in
+            4 => $approved,
+            5 => $settled,
+        ];
+        $current = collect($done)->search(false);
+
+        $notes = [
+            1 => 'Given '.$moveout->notice_date->format('j M Y').'; planned '.$moveout->planned_date->format('j M Y'),
+            2 => $moveout->inspected_at ? 'Done '.$moveout->inspected_at->format('j M Y') : ($moveout->actual_date ? 'Inspect the room' : 'After the tenant moves out'),
+            3 => 'Deposit less unpaid bills and damage',
+            4 => $approved ? 'Approved' : 'Owner approves',
+            5 => $owesExcess ? ($settled ? 'Excess paid' : 'Waiting for the excess payment') : ($settled ? 'Done' : 'Refund handed over'),
+        ];
+
+        return collect([1 => 'Notice', 2 => 'Inspection', 3 => 'Computation', 4 => 'Owner approval', 5 => $owesExcess ? 'Excess paid' : 'Refund released'])
+            ->map(fn ($label, $n) => [
+                'n' => $n,
+                'label' => $label,
+                'state' => $done[$n] ? 'done' : ($n === $current ? 'current' : 'todo'),
+                'note' => $notes[$n],
+            ])->values()->all();
     }
 
     // ---------- Inspection items ----------
@@ -240,6 +309,9 @@ class SettlementService
             $this->assertPending($moveout);
             if (! $moveout->actual_date) {
                 throw ValidationException::withMessages(['moveout' => 'Record the actual move-out date first.']);
+            }
+            if (! $moveout->inspected_at) {
+                throw ValidationException::withMessages(['moveout' => 'Record the inspection (step 2) before computing the settlement.']);
             }
             if (! $this->finalBillReady($moveout)) {
                 throw ValidationException::withMessages(['moveout' => 'Generate the final bill (last month\'s utilities) first.']);

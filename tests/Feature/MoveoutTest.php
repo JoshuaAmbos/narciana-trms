@@ -11,8 +11,10 @@ use App\Models\User;
 use App\Services\BillingService;
 use App\Services\PaymentService;
 use App\Services\PenaltyService;
+use App\Services\SettlementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Testing\TestResponse;
 use Tests\Support\RentalFixtures;
 use Tests\TestCase;
 
@@ -58,7 +60,7 @@ class MoveoutTest extends TestCase
         }
     }
 
-    private function notice(string $noticeDate, string $planned): \Illuminate\Testing\TestResponse
+    private function notice(string $noticeDate, string $planned): TestResponse
     {
         return $this->actingAs($this->manager)->post(route('moveouts.store'), [
             'lease_id' => $this->lease->lease_id, 'notice_date' => $noticeDate, 'planned_date' => $planned,
@@ -80,6 +82,11 @@ class MoveoutTest extends TestCase
     private function finalBill(): void
     {
         $this->actingAs($this->manager)->post(route('moveouts.final-bill.store', $this->moveout()), [])->assertSessionHasNoErrors();
+    }
+
+    private function inspect(): void
+    {
+        $this->actingAs($this->manager)->patch(route('moveouts.inspect', $this->moveout()))->assertSessionHasNoErrors();
     }
 
     private function item(string $description, string $cost): void
@@ -147,6 +154,7 @@ class MoveoutTest extends TestCase
         $this->assertSame('2026-10-28', $final->due_date->toDateString());
 
         $this->item('Wall paint scratches near bed', '300.00');
+        $this->inspect();
 
         // 2,500.00 − 200.00 (final bill) − 300.00 = 2,000.00 refund.
         $this->actingAs($this->manager)->post(route('moveouts.compute', $this->moveout()))->assertSessionHasNoErrors();
@@ -175,7 +183,7 @@ class MoveoutTest extends TestCase
 
         // The statement still shows the approved figures (the final bill is now Paid, but it was deducted).
         $this->actingAs($this->owner)->get(route('moveouts.show', $m))
-            ->assertSeeInOrder(['Less: unpaid bills', 'Bill due 28 Oct 2026', '(₱200.00)', 'Refund to tenant', '₱2,000.00'])
+            ->assertSeeInOrder(['Less: unpaid bills', 'Bill due 28 Oct 2026', '(₱200.00)', 'Final refund to tenant', '₱2,000.00'])
             ->assertDontSee('₱2,200.00');
         $this->assertSame('Ended', $this->lease->refresh()->status);
         $this->room->refresh();
@@ -192,13 +200,18 @@ class MoveoutTest extends TestCase
         $this->recordActual('2026-09-25', '2026-10-28', '2026-10-28');
         $this->finalBill();
         $this->item('Adhesive hook marks', '300.00');
+        $this->inspect();
         $this->actingAs($this->manager)->post(route('moveouts.compute', $this->moveout()));
 
         $this->actingAs($this->owner)->get(route('moveouts.show', $this->moveout()))
             ->assertOk()
-            ->assertSeeInOrder(['Total deposit', '₱3,500.00', 'Less: maintenance deposit', '₱1,000.00', 'Refundable deposit', '₱2,500.00',
-                'Less: unpaid bills', 'Bill due 28 Oct 2026', 'final bill', 'Less: damage (1 item)', 'Adhesive hook marks',
-                'Refund to tenant', 'due by 4 Nov 2026', '₱2,000.00'])
+            ->assertSeeInOrder(['Deposit paid', 'Maintenance deposit', 'kept by the owner', '₱1,000.00', 'Damage deposit', '₱1,500.00',
+                'Bill expenses deposit', '₱700.00', 'Door knob and keys deposit', '₱300.00', 'Total deposit', '₱3,500.00',
+                'Less: maintenance deposit kept', '(₱1,000.00)', 'Refundable deposit', '₱2,500.00',
+                'Less: unpaid bills', 'Bill due 28 Oct 2026', 'final bill', '(₱200.00)',
+                'Less: damaged or missing items', 'Adhesive hook marks', '(₱300.00)',
+                'Balance', '₱2,000.00', 'Final refund to tenant', 'due by 4 Nov 2026', '₱2,000.00'])
+            ->assertSeeInOrder(['1. Notice', '2. Inspection', '3. Computation', '4. Owner approval', '5. Refund released'])
             ->assertSee('Approve settlement (Owner)')
             ->assertSee('Print');
     }
@@ -213,6 +226,7 @@ class MoveoutTest extends TestCase
         $this->recordActual('2026-09-25', '2026-10-28', '2026-10-28');
         $this->finalBill();                                 // 200.00
         $this->item('Broken cabinet door', '600.00');
+        $this->inspect();
 
         // 2,500.00 − (3,700.00 + 200.00) − 600.00 = −2,000.00 -> excess 2,000.00 (25 Oct bill: still within grace on 28 Oct).
         $this->actingAs($this->owner)->patch(route('moveouts.approve', $this->moveout()))->assertSessionHasNoErrors();
@@ -253,6 +267,7 @@ class MoveoutTest extends TestCase
         $this->actingAs($this->manager)->get(route('bills.create', ['lease' => $this->lease->lease_id]))->assertRedirect(route('bills.index'));
 
         $this->finalBill();                                 // 25 Sep – 10 Oct: 200.00
+        $this->inspect();                                   // nothing damaged
         $this->actingAs($this->owner)->patch(route('moveouts.approve', $this->moveout()))->assertSessionHasNoErrors();
 
         $m = $this->moveout();
@@ -264,6 +279,66 @@ class MoveoutTest extends TestCase
     }
 
     // ---------- Order of steps ----------
+
+    // ---------- Inspection (decision 18) ----------
+
+    public function test_cannot_compute_or_approve_before_the_inspection(): void
+    {
+        $this->billsUntil('2026-10-25');
+        $this->travelTo(Carbon::parse('2026-10-28'));
+        $this->notice('2026-09-25', '2026-10-28');
+
+        // The inspection happens after the tenant leaves.
+        $this->actingAs($this->manager)->patch(route('moveouts.inspect', $this->moveout()))
+            ->assertSessionHasErrors(['moveout' => 'Record the actual move-out date before the inspection.']);
+
+        $this->recordActual('2026-09-25', '2026-10-28', '2026-10-28');
+        $this->finalBill();
+        $this->actingAs($this->manager)->get(route('moveouts.show', $this->moveout()))
+            ->assertSee('Inspection done')->assertDontSee('Approve settlement (Owner)');
+
+        $this->actingAs($this->manager)->post(route('moveouts.compute', $this->moveout()))
+            ->assertSessionHasErrors(['moveout' => 'Record the inspection (step 2) before computing the settlement.']);
+        $this->actingAs($this->owner)->patch(route('moveouts.approve', $this->moveout()))->assertSessionHasErrors('moveout');
+        $this->assertSame('Pending', $this->moveout()->status);
+
+        // No damage at all is fine: the inspection is recorded with zero items.
+        $this->inspect();
+        $m = $this->moveout();
+        $this->assertNotNull($m->inspected_at);
+        $this->assertDatabaseHas('tbl_audit_log', ['action' => 'Move-out inspected', 'record_id' => $m->moveout_id, 'details' => '0 damaged or missing item(s), ₱0.00']);
+        $this->actingAs($this->owner)->get(route('moveouts.show', $m))->assertSee('Inspection recorded')->assertSee('Approve settlement (Owner)');
+        $this->actingAs($this->owner)->patch(route('moveouts.approve', $m))->assertSessionHasNoErrors();
+        $this->assertSame('Refunded', $m->refresh()->status);
+    }
+
+    public function test_steps_and_lease_status_follow_the_move_out(): void
+    {
+        $this->billsUntil('2026-10-25');
+        $this->travelTo(Carbon::parse('2026-10-28'));
+        $this->assertSame('Active', $this->lease->refresh()->load('moveout')->displayStatus());
+
+        $this->notice('2026-09-25', '2026-10-28');
+        $states = fn () => array_column(app(SettlementService::class)->steps($this->moveout()), 'state');
+        $this->assertSame(['done', 'current', 'todo', 'todo', 'todo'], $states());
+        $this->assertSame('Moving out', $this->lease->refresh()->load('moveout')->displayStatus());
+        $this->actingAs($this->manager)->get(route('tenants.index', ['status' => 'Moving out']))->assertSee('Sample Tenant A')->assertSee('Moving out');
+        $this->actingAs($this->manager)->get(route('tenants.index', ['status' => 'Active']))->assertDontSee('Sample Tenant A');
+
+        $this->recordActual('2026-09-25', '2026-10-28', '2026-10-28');
+        $this->finalBill();
+        $this->inspect();
+        $this->assertSame(['done', 'done', 'done', 'current', 'todo'], $states());
+
+        $this->actingAs($this->owner)->patch(route('moveouts.approve', $this->moveout()));
+        $this->assertSame(['done', 'done', 'done', 'done', 'current'], $states());
+        $this->actingAs($this->owner)->patch(route('moveouts.release', $this->moveout()));
+        $this->assertSame(['done', 'done', 'done', 'done', 'done'], $states());
+
+        $this->assertSame('Moved out', $this->lease->refresh()->load('moveout')->displayStatus());
+        $this->actingAs($this->manager)->get(route('tenants.index', ['status' => 'Moved out']))->assertSee('Sample Tenant A')->assertSee('Moved out');
+        $this->actingAs($this->manager)->get(route('tenants.index'))->assertDontSee('Sample Tenant A'); // default: current tenants
+    }
 
     public function test_regular_bills_first_then_final_bill_then_compute(): void
     {

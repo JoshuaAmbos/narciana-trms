@@ -70,7 +70,9 @@ class MoveoutController extends Controller
             'nextRegularDue' => $billing->nextDueDate($lease),
             'finalReady' => $this->settlements->finalBillReady($moveout),
             'canCancel' => $this->settlements->canCancelNotice($moveout),
-            'canApprove' => Gate::allows('approve-settlements') && $moveout->isPending() && $actual && $this->settlements->finalBillReady($moveout),
+            'canApprove' => Gate::allows('approve-settlements') && $moveout->isPending() && $actual && $moveout->inspected_at
+                && $this->settlements->finalBillReady($moveout),
+            'steps' => $this->settlements->steps($moveout),
             'canRelease' => Gate::allows('approve-settlements') && $moveout->status === 'Refunded',
             'noticeWarning' => $this->settlements->noticeWarning($moveout->notice_date, $moveout->planned_date),
             'minStayUntil' => $lease->move_in_date->copy()->addMonthsNoOverflow($lease->min_stay_months),
@@ -93,6 +95,14 @@ class MoveoutController extends Controller
         $this->settlements->cancelNotice($moveout, $request->user());
 
         return redirect()->route('leases.show', $lease)->with('status', "The move-out notice was cancelled. Room {$lease->room->room_no} is Occupied again.");
+    }
+
+    /** Step 2: the room was inspected (damage items, if any, are already listed). */
+    public function inspect(Moveout $moveout, Request $request): RedirectResponse
+    {
+        $this->settlements->markInspected($moveout, $request->user());
+
+        return redirect()->route('moveouts.show', $moveout)->with('status', 'Inspection recorded. The settlement can now be computed.');
     }
 
     public function compute(Moveout $moveout, Request $request): RedirectResponse

@@ -9,8 +9,10 @@ use App\Models\User;
 use App\Services\ConcernService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /** Concerns: every role logs and updates (decision 15). */
 class ConcernController extends Controller
@@ -61,14 +63,26 @@ class ConcernController extends Controller
 
     public function store(ConcernRequest $request): RedirectResponse
     {
-        $concern = $this->concerns->create($request->concernData(), $request->user(), $request->file('photo'));
+        $concern = $this->concerns->create($request->concernData(), $request->user(), $this->photos($request));
 
         return redirect()->route('concerns.show', $concern)->with('status', 'Concern logged.');
     }
 
     public function show(Concern $concern): View
     {
-        return view('concerns.show', ['concern' => $concern->load(['room', 'lease.tenant', 'assignedTo', 'bill'])]);
+        return view('concerns.show', [
+            'concern' => $concern->load(['room', 'lease.tenant', 'assignedTo', 'bill', 'reportedBy', 'startedBy', 'resolvedBy']),
+            'timeline' => $concern->timeline(),
+        ]);
+    }
+
+    /** A concern photo from private storage ($kind = reported | resolved), for logged-in users only. */
+    public function photo(Concern $concern, string $kind): StreamedResponse
+    {
+        $path = $concern->{Concern::PHOTO_KINDS[$kind]};
+        abort_unless($path && Storage::disk(ConcernService::PHOTO_DISK)->exists($path), 404);
+
+        return Storage::disk(ConcernService::PHOTO_DISK)->response($path, null, ['Cache-Control' => 'private, max-age=3600']);
     }
 
     public function edit(Concern $concern): View
@@ -78,9 +92,20 @@ class ConcernController extends Controller
 
     public function update(ConcernRequest $request, Concern $concern): RedirectResponse
     {
-        $this->concerns->update($concern, $request->concernData(), $request->user(), $request->file('photo'), $request->boolean('remove_photo'));
+        $this->concerns->update($concern, $request->concernData(), $request->user(), $this->photos($request));
 
         return redirect()->route('concerns.show', $concern)->with('status', 'Concern updated.');
+    }
+
+    /** The uploaded photos and "remove" ticks, for ConcernService. */
+    private function photos(ConcernRequest $request): array
+    {
+        return [
+            'photo' => $request->file('photo'),
+            'remove_photo' => $request->boolean('remove_photo'),
+            'resolution_photo' => $request->file('resolution_photo'),
+            'remove_resolution_photo' => $request->boolean('remove_resolution_photo'),
+        ];
     }
 
     /** Rooms with their current tenant (to fill in the lease), active users to assign, and the choice lists. */
@@ -100,7 +125,8 @@ class ConcernController extends Controller
             'currentLease' => $concern->lease?->loadMissing('tenant'),
             'users' => User::where('is_active', true)->orderBy('role')->orderBy('full_name')->get(),
             'channels' => Concern::CHANNELS,
-            'categories' => Concern::CATEGORIES,
+            'categories' => Concern::CATEGORIES, // name => description
+            'sharedCategory' => Concern::SHARED_CATEGORY,
             'priorities' => Concern::PRIORITIES,
             'statuses' => Concern::STATUSES,
             'canSetMoney' => request()->user()->hasRole('Owner', 'Manager'),

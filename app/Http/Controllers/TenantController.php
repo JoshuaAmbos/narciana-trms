@@ -24,17 +24,18 @@ class TenantController extends Controller
             return view('tenants.caretaker', ['rows' => $rows]);
         }
 
-        $filter = $request->validate(['status' => ['nullable', Rule::in(Lease::STATUSES)]]);
-        $status = $filter['status'] ?? 'Active';
+        $filter = $request->validate(['status' => ['nullable', Rule::in([...Lease::DISPLAY_STATUSES, 'All current'])]]);
+        // Default: everyone still renting (Active and Moving out); the chips narrow it down.
+        $status = $filter['status'] ?? 'All current';
 
-        $leases = Lease::with(['room', 'tenant'])
+        $leases = Lease::with(['room', 'tenant', 'moveout'])
             ->withCount('activeOccupants')
-            ->where('status', $status)
+            ->when($status === 'All current', fn ($q) => $q->where('status', 'Active'), fn ($q) => $q->displayStatus($status))
             ->get()
             ->sortBy(fn (Lease $l) => $l->room->room_no)
             ->values();
 
-        return view('tenants.index', ['leases' => $leases, 'status' => $status, 'statuses' => Lease::STATUSES]);
+        return view('tenants.index', ['leases' => $leases, 'status' => $status, 'statuses' => ['All current', ...Lease::DISPLAY_STATUSES]]);
     }
 
     public function edit(Tenant $tenant): View

@@ -10,7 +10,7 @@
         <div class="panel">
             <h2>
                 <span>MOA details: Room {{ $lease->room->room_no }}
-                    <span class="tag {{ ['Active' => 't-green', 'Ended' => 't-grey', 'Cancelled' => 't-amber'][$lease->status] }}">{{ $lease->status }}</span>
+                    <x-lease-status :lease="$lease" />
                 </span>
                 @if ($lease->status === 'Active')
                     <a href="{{ route('leases.edit', $lease) }}" class="btn sec">Edit MOA</a>

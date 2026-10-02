@@ -10,12 +10,30 @@
                 <a href="{{ route('concerns.edit', $concern) }}" class="btn">Update</a>
             </h2>
             <p class="concern-text">{{ $concern->description }}</p>
+
+            {{-- Progress timeline: Reported -> In progress -> Resolved --}}
+            <ol class="timeline" aria-label="Progress">
+                @foreach ($timeline as $step)
+                    <li class="{{ $step['done'] ? 'done' : (($step['skipped'] ?? false) ? 'skipped' : 'todo') }}">
+                        <b>{{ $step['label'] }}</b>
+                        @if ($step['done'])
+                            <span class="sub">{{ $step['at']->format('j M Y, g:i A') }}</span>
+                            <span class="sub">by {{ $step['by']?->full_name ?? '—' }}{{ $step['by'] ? ' ('.$step['by']->role.')' : '' }}</span>
+                        @elseif ($step['skipped'] ?? false)
+                            <span class="sub">skipped (resolved directly)</span>
+                        @else
+                            <span class="sub">not yet</span>
+                        @endif
+                    </li>
+                @endforeach
+            </ol>
+
             <dl class="facts">
                 <div><dt>Category</dt><dd>{{ $concern->category }}</dd></div>
                 <div><dt>Reported</dt><dd>{{ $concern->reported_at->format('j M Y, g:i A') }} ({{ $concern->channel }})</dd></div>
                 <div><dt>Tenant</dt><dd>{{ $concern->lease?->tenant->full_name ?? '–' }}</dd></div>
                 <div><dt>Assigned to</dt><dd>{{ $concern->assignedTo->role }}</dd></div>
-                <div><dt>Resolved</dt><dd>{{ $concern->resolved_at?->format('j M Y, g:i A') ?? 'Not yet' }}</dd></div>
+                <div><dt>Priority</dt><dd>{{ $concern->priority }}</dd></div>
                 <div><dt>Cost</dt><dd>{{ $concern->cost !== null ? '₱'.number_format((float) $concern->cost, 2) : '–' }}
                     @if ($concern->charged_to_tenant) <span class="tag t-amber">charged to tenant</span> @endif</dd></div>
             </dl>
@@ -36,12 +54,15 @@
             </p>
         </div>
         <div class="panel">
-            <h2>Photo</h2>
-            @if ($concern->photo_path)
-                <a href="{{ $concern->photoUrl() }}" target="_blank"><img src="{{ $concern->photoUrl() }}" alt="Photo of the concern" class="concern-photo"></a>
-            @else
-                <p class="muted">No photo.</p>
-            @endif
+            <h2>Photos</h2>
+            @foreach (['reported' => 'When reported (the problem)', 'resolved' => 'When resolved (the fix)'] as $kind => $caption)
+                <h3 class="sub-head">{{ $caption }}</h3>
+                @if ($url = $concern->photoUrl($kind))
+                    <a href="{{ $url }}" target="_blank"><img src="{{ $url }}" alt="{{ $caption }}" class="concern-photo"></a>
+                @else
+                    <p class="muted">No photo.</p>
+                @endif
+            @endforeach
         </div>
     </div>
 @endsection

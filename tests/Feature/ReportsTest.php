@@ -199,25 +199,25 @@ class ReportsTest extends TestCase
             'status' => $cost === null ? 'Open' : 'Resolved', 'resolution' => $cost === null ? null : 'Fixed',
             'cost' => $cost, 'charged_to_tenant' => $charged, 'resolved_at' => $cost === null ? null : $at,
         ]);
-        $concern($room, 'Professional repair', '2026-03-14 10:00:00', 850);
-        $concern($room, 'Professional repair', '2026-09-28 21:40:00');
-        $concern($room, 'Maintenance', '2026-06-02 08:00:00', 150, true);
-        $concern($other, 'Maintenance', '2026-06-02 08:00:00');
-        $concern(null, 'Shared area', '2026-09-27 07:15:00');
+        $concern($room, 'Electrical', '2026-03-14 10:00:00', 850);
+        $concern($room, 'Electrical', '2026-09-28 21:40:00');
+        $concern($room, 'Plumbing', '2026-06-02 08:00:00', 150, true);
+        $concern($other, 'Plumbing', '2026-06-02 08:00:00');
+        $concern(null, 'Cleanliness (shared areas)', '2026-09-27 07:15:00');
 
         $r = $this->reports()->concernHistory($room->room_id, null, null);
         $this->assertSame(3, $r['count']);
         $this->assertSame(1, $r['open']);
         $this->assertSame(1000.0, $r['cost']);
         $this->assertSame(150.0, $r['charged']);
-        $this->assertSame(['Professional repair' => 2], $r['groups']->first()['repeated']->all());
+        $this->assertSame(['Electrical' => 2], $r['groups']->first()['repeated']->all());
 
         $this->assertSame(['Room 206', 'Room 207', 'Shared area'], $this->reports()->concernHistory(null, null, null)['groups']->pluck('label')->all());
         $this->assertSame(1, $this->reports()->concernHistory('shared', null, null)['count']);
         $this->assertSame(2, $this->reports()->concernHistory($room->room_id, Carbon::parse('2026-06-01'), null)['count']);
 
         $this->actingAs($this->manager)->get(route('reports.concerns', ['room' => $room->room_id]))->assertOk()
-            ->assertSee('Repeated issue')->assertSee('Professional repair reported 2 times');
+            ->assertSee('Repeated issue')->assertSee('Electrical reported 2 times');
     }
 
     // ---------- 5. Inquiries ----------

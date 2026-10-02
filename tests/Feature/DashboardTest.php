@@ -122,13 +122,17 @@ class DashboardTest extends TestCase
         $moveout->update(['status' => 'Refunded', 'refund_due_date' => today()->subDay()]);
 
         $d = app(DashboardService::class)->forStaff();
-        $this->assertSame(3, $d['counts']['open_concerns']);
+        $this->assertSame(6, $d['counts']['open_concerns']);               // 4 open + 2 in progress
         $this->assertSame(1, $d['counts']['urgent_concerns']);
         $this->assertSame('Urgent', $d['concerns']->first()->priority);   // urgent first
-        $this->assertCount(1, $d['refunds']);
+        $this->assertCount(2, $d['refunds']);                             // 215 (made late above) and 216
+
+        // Tenants moving out: every move-out not settled yet (206, 214, 216, 217; 215 was set back to Refunded above).
+        $this->assertEqualsCanonicalizing(['206', '214', '215', '216', '217'], $d['movingOut']->map(fn ($m) => $m->lease->room->room_no)->all());
 
         $this->actingAs($owner)->get('/')->assertOk()
             ->assertSee('Open concerns (1 urgent)')
+            ->assertSee('Moving out')
             ->assertSee('Refunds due')
             ->assertSee('₱'.number_format((float) $moveout->refund_amount, 2))
             ->assertSee('Past due');

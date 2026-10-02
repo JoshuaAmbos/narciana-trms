@@ -49,6 +49,7 @@ class DashboardService
             'unbilled' => $this->unbilledDueSoon($today),
             'concerns' => $concerns,
             'refunds' => $this->refundsDue(),
+            'movingOut' => $this->movingOut(),
         ];
     }
 
@@ -93,6 +94,13 @@ class DashboardService
     {
         return Concern::with(['room', 'assignedTo'])->where('status', '!=', 'Resolved')
             ->orderByRaw("priority = 'Urgent' desc")->orderBy('reported_at')->get();
+    }
+
+    /** Tenants moving out (notice given, not settled yet), earliest move-out first (decision 18). */
+    public function movingOut(): Collection
+    {
+        return Moveout::with(['lease.room', 'lease.tenant'])->where('status', '!=', 'Settled')->get()
+            ->sortBy(fn (Moveout $m) => ($m->actual_date ?? $m->planned_date)->toDateString())->values();
     }
 
     /** Approved refunds not handed over yet (status Refunded), earliest refund due date first. */

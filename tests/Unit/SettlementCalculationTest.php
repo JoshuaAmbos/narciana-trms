@@ -90,4 +90,22 @@ class SettlementCalculationTest extends TestCase
             $this->settlement->noticeWarning(Carbon::parse('2026-09-29'), Carbon::parse('2026-10-11')),
         );
     }
+
+    public function test_refund_is_never_negative_a_shortfall_becomes_excess(): void
+    {
+        $service = $this->settlement;
+        // Refundable 2,500.00; unpaid 3,900.00 + damage 600.00 = 4,500.00 -> balance −2,000.00.
+        $r = $service->calculate(1500, 700, 300, 3900, 600, false);
+        $this->assertSame(0.0, $r['refund']);
+        $this->assertSame(2000.0, $r['excess']);
+
+        foreach ([[0, 0, 0, 0, 0], [1500, 700, 300, 0, 0], [1500, 700, 300, 2500, 0], [100, 0, 0, 99999, 5000]] as [$d, $b, $k, $u, $dmg]) {
+            foreach ([false, true] as $early) {
+                $r = $service->calculate($d, $b, $k, $u, $dmg, $early);
+                $this->assertGreaterThanOrEqual(0, $r['refund']);
+                $this->assertGreaterThanOrEqual(0, $r['excess']);
+                $this->assertFalse($r['refund'] > 0 && $r['excess'] > 0);
+            }
+        }
+    }
 }

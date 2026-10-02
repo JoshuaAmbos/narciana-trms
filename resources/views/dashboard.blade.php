@@ -102,6 +102,29 @@
         </div>
 
         @if ($staff)
+            <div>
+            <div class="panel">
+                <h2>Moving out <a href="{{ route('moveouts.index') }}" class="btn sec">Move-outs</a></h2>
+                @if ($movingOut->isEmpty())
+                    <p class="muted">No tenant is moving out.</p>
+                @else
+                    <div class="table-wrap">
+                        <table class="fit">
+                            <tr><th>Room</th><th>Tenant</th><th>Move-out</th><th>Step</th></tr>
+                            @foreach ($movingOut as $m)
+                                <tr>
+                                    <td><b>{{ $m->lease->room->room_no }}</b></td>
+                                    <td><a href="{{ route('moveouts.show', $m) }}">{{ $m->lease->tenant->full_name }}</a>
+                                        <span class="sub"><x-lease-status :lease="$m->lease" /></span></td>
+                                    <td class="nowrap">{{ ($m->actual_date ?? $m->planned_date)->format('j M Y') }}
+                                        <span class="sub">{{ $m->actual_date ? 'moved out' : 'planned' }}</span></td>
+                                    <td><x-moveout-status :moveout="$m" /></td>
+                                </tr>
+                            @endforeach
+                        </table>
+                    </div>
+                @endif
+            </div>
             <div class="panel">
                 <h2>Refunds due <a href="{{ route('moveouts.index') }}" class="btn sec">Move-outs</a></h2>
                 @if ($refunds->isEmpty())
@@ -122,6 +145,7 @@
                         </table>
                     </div>
                 @endif
+            </div>
             </div>
         @else
             <div class="panel">

@@ -15,11 +15,12 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Tenant concerns (decision 15).
+ * Tenant concerns (decisions 15 and 18).
  *  - Anyone logs and updates; only Owner/Manager set cost and charged_to_tenant.
- *  - Resolved: resolved_at is filled in automatically; back to Open/In progress clears it.
+ *  - Timeline: who reported, who started (In progress) and who resolved, with the times.
+ *  - Two private photos: proof of the problem and proof it was fixed.
  *  - Once billed (bill_id set) cost, charge and status are locked.
- *  - Audited: Concern logged / updated / resolved / charged.
+ *  - Audited: Concern logged / started / updated / resolved / charged.
  */
 class ConcernService
 {
@@ -29,20 +30,33 @@ class ConcernService
     /** Fields only the Owner/Manager may set. */
     private const MONEY_FIELDS = ['cost', 'charged_to_tenant'];
 
-    public function create(array $data, User $by, ?UploadedFile $photo = null): Concern
+    /** Private disk for concern photos (storage/app/private/concerns, decision 18). */
+    public const PHOTO_DISK = 'local';
+
+    /**
+     * Log a concern. $photos: ['photo' => proof of the problem, 'resolution_photo' => proof it was fixed]
+     * (UploadedFile or null).
+     */
+    public function create(array $data, User $by, array $photos = []): Concern
     {
-        return DB::transaction(function () use ($data, $by, $photo) {
+        return DB::transaction(function () use ($data, $by, $photos) {
             $data = $this->onlyAllowed($data, $by);
             $data['charged_to_tenant'] = (bool) ($data['charged_to_tenant'] ?? false);
-            $data = $this->withResolvedAt($data, null);
+            $data['reported_by'] = $by->user_id;
+            $data = $this->withProgress($data, null, $by);
 
-            if ($photo) {
-                $data['photo_path'] = $this->storePhoto($photo);
+            foreach (Concern::PHOTO_KINDS as $kind => $column) {
+                if ($file = $photos[$this->field($kind)] ?? null) {
+                    $data[$column] = $this->storePhoto($file);
+                }
             }
 
             $concern = Concern::create($data);
 
             AuditLog::record('Concern logged', 'tbl_concern', $concern->concern_id, $by->user_id);
+            if ($concern->status === 'In progress') {
+                AuditLog::record('Concern started', 'tbl_concern', $concern->concern_id, $by->user_id);
+            }
             if ($concern->status === 'Resolved') {
                 AuditLog::record('Concern resolved', 'tbl_concern', $concern->concern_id, $by->user_id);
             }
@@ -54,9 +68,13 @@ class ConcernService
         });
     }
 
-    public function update(Concern $concern, array $data, User $by, ?UploadedFile $photo = null, bool $removePhoto = false): Concern
+    /**
+     * Update a concern. $photos may hold 'photo' / 'resolution_photo' (new uploads) and
+     * 'remove_photo' / 'remove_resolution_photo' (true = delete the current one).
+     */
+    public function update(Concern $concern, array $data, User $by, array $photos = []): Concern
     {
-        return DB::transaction(function () use ($concern, $data, $by, $photo, $removePhoto) {
+        return DB::transaction(function () use ($concern, $data, $by, $photos) {
             $concern = Concern::whereKey($concern->concern_id)->lockForUpdate()->firstOrFail();
             $data = $this->onlyAllowed($data, $by);
 
@@ -70,25 +88,34 @@ class ConcernService
                 $data['charged_to_tenant'] = (bool) $data['charged_to_tenant'];
             }
 
-            $wasResolved = $concern->status === 'Resolved';
+            $statusBefore = $concern->status;
             $moneyBefore = [(string) $concern->cost, (bool) $concern->charged_to_tenant];
-            $data = $this->withResolvedAt($data, $concern);
+            $data = $this->withProgress($data, $concern, $by);
 
-            $oldPhoto = $concern->photo_path;
-            if ($photo) {
-                $data['photo_path'] = $this->storePhoto($photo);
-            } elseif ($removePhoto) {
-                $data['photo_path'] = null;
+            $oldPhotos = [];
+            foreach (Concern::PHOTO_KINDS as $kind => $column) {
+                $field = $this->field($kind);
+                if ($file = $photos[$field] ?? null) {
+                    $data[$column] = $this->storePhoto($file);
+                } elseif ($photos['remove_'.$field] ?? false) {
+                    $data[$column] = null;
+                }
+                $oldPhotos[$column] = $concern->{$column};
             }
 
             $concern->update($data);
 
-            if ($oldPhoto && $concern->photo_path !== $oldPhoto) {
-                DB::afterCommit(fn () => Storage::disk('public')->delete($oldPhoto));
+            foreach ($oldPhotos as $column => $old) {
+                if ($old && $concern->{$column} !== $old) {
+                    DB::afterCommit(fn () => Storage::disk(self::PHOTO_DISK)->delete($old));
+                }
             }
 
             AuditLog::record('Concern updated', 'tbl_concern', $concern->concern_id, $by->user_id);
-            if (! $wasResolved && $concern->status === 'Resolved') {
+            if ($statusBefore === 'Open' && $concern->status === 'In progress') {
+                AuditLog::record('Concern started', 'tbl_concern', $concern->concern_id, $by->user_id);
+            }
+            if ($statusBefore !== 'Resolved' && $concern->status === 'Resolved') {
                 AuditLog::record('Concern resolved', 'tbl_concern', $concern->concern_id, $by->user_id);
             }
             if ($moneyBefore !== [(string) $concern->cost, (bool) $concern->charged_to_tenant]) {
@@ -121,15 +148,14 @@ class ConcernService
 
     /**
      * Save an uploaded photo: turned upright (camera EXIF orientation), shrunk to at most PHOTO_MAX_SIDE px,
-     * stored as JPEG on the public disk with a random name. Returns the path on the disk.
+     * stored as JPEG on the private disk with a random name. Returns the path on the disk.
      */
     public function storePhoto(UploadedFile $file): string
     {
         $path = $file->getRealPath();
         $image = match ($file->getMimeType()) {
-            'image/png' => imagecreatefrompng($path),
-            'image/webp' => imagecreatefromwebp($path),
-            default => imagecreatefromjpeg($path),
+            'image/png' => @imagecreatefrompng($path),
+            default => @imagecreatefromjpeg($path),
         };
 
         if ($image === false) {
@@ -142,7 +168,7 @@ class ConcernService
         $name = 'concerns/'.Str::random(32).'.jpg';
         ob_start();
         imagejpeg($image, null, 82);
-        Storage::disk('public')->put($name, ob_get_clean());
+        Storage::disk(self::PHOTO_DISK)->put($name, ob_get_clean());
         imagedestroy($image);
 
         return $name;
@@ -185,17 +211,40 @@ class ConcernService
         return $by->hasRole('Owner', 'Manager') ? $data : array_diff_key($data, array_flip(self::MONEY_FIELDS));
     }
 
-    /** Resolved gets a resolved_at (given or now); any other status clears it. */
-    private function withResolvedAt(array $data, ?Concern $concern): array
+    /**
+     * Progress stamps for the timeline (decision 18):
+     *  - In progress: started_at / started_by set the first time (kept when later resolved);
+     *  - Resolved: resolved_at (given or now) and resolved_by;
+     *  - going back clears the later steps (back to Open clears all; back to In progress clears Resolved).
+     */
+    private function withProgress(array $data, ?Concern $concern, User $by): array
     {
         $status = $data['status'] ?? $concern?->status ?? 'Open';
 
+        if ($status === 'Open') {
+            $data['started_at'] = null;
+            $data['started_by'] = null;
+        } elseif ($status === 'In progress' && ! $concern?->started_at) {
+            $data['started_at'] = Carbon::now();
+            $data['started_by'] = $by->user_id;
+        }
+
         if ($status !== 'Resolved') {
             $data['resolved_at'] = null;
-        } elseif (empty($data['resolved_at'])) {
-            $data['resolved_at'] = $concern?->resolved_at ?? Carbon::now();
+            $data['resolved_by'] = null;
+        } else {
+            if (empty($data['resolved_at'])) {
+                $data['resolved_at'] = $concern?->resolved_at ?? Carbon::now();
+            }
+            $data['resolved_by'] = $concern?->status === 'Resolved' ? $concern->resolved_by : $by->user_id;
         }
 
         return $data;
+    }
+
+    /** reported -> photo, resolved -> resolution_photo (the form field names). */
+    private function field(string $kind): string
+    {
+        return $kind === 'reported' ? 'photo' : 'resolution_photo';
     }
 }

@@ -19,6 +19,7 @@ use App\Services\PaymentService;
 use App\Services\PenaltyService;
 use App\Services\SettlementService;
 use Illuminate\Database\Seeder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 
 /**
@@ -27,7 +28,7 @@ use Illuminate\Support\Carbon;
  *   php artisan migrate:fresh --seed
  *   php artisan db:seed --class=DemoSeeder
  *
- * Gives the same data every time: 15 rooms (201-215), 12 leases for "Sample Tenant 1-12" (encoded through
+ * Gives the same data every time: 17 rooms (201-217), 14 leases for "Sample Tenant 1-14" (encoded through
  * LeaseService so every rule applies), 3 vacant with matching waiting inquiries. Dates are fixed offsets from
  * today (e.g. "5 months ago on the 5th"), so due days never change; nothing is random.
  *
@@ -35,6 +36,9 @@ use Illuminate\Support\Carbon;
  * Module 6: payments (Cash and GCash, some late with a penalty), a few unpaid and Overdue bills.
  * Module 7: concerns (open, in progress, resolved, repeated; one charge billed, one waiting to be picked).
  * Module 8: move-outs: a notice only (206), one awaiting the Owner's approval (214), one settled with a refund (215).
+ * Instructor review (decision 18): one move-out in every status: Pending (206 notice, 214 inspected), Refunded (216,
+ * refund not handed over yet), Excess billed (217, damage above the deposit) and Settled (215); concerns in the new
+ * categories with a timeline and sample photos.
  */
 class DemoSeeder extends Seeder
 {
@@ -55,6 +59,8 @@ class DemoSeeder extends Seeder
         '213' => ['Basic', 2500.00, 1],
         '214' => ['Aircon', 3700.00, 2],
         '215' => ['Basic', 3200.00, 2],
+        '216' => ['Aircon', 3700.00, 2],
+        '217' => ['Basic', 3200.00, 2],
     ];
 
     /**
@@ -74,6 +80,8 @@ class DemoSeeder extends Seeder
         10 => ['213', 1, 3, false, [['Electric kettle', 'Declared', 0]]],
         11 => ['214', 7, 8, true, []],                                  // moves out (awaiting approval)
         12 => ['215', 6, 20, false, [['Rice cooker', 'Declared', 0]]],  // moved out and settled
+        13 => ['216', 7, 14, false, []],                                // moved out, refund approved (Refunded)
+        14 => ['217', 5, 22, true, [['Rice cooker', 'Declared', 0], ['Flat iron', 'CCTV', 30]]], // damage above the deposit (Excess billed)
     ];
 
     /** Renter's Profile samples, picked by tenant number (no randomness). */
@@ -110,7 +118,7 @@ class DemoSeeder extends Seeder
         $paid = $this->seedPayments($owner);
         $this->seedSettlements($owner);      // final bills, inspection items, compute, approve
 
-        $this->command?->info("Demo data ready: 15 rooms, 12 sample tenants (3 move-outs), inquiries, concerns, {$bills} past bills ({$paid} paid).");
+        $this->command?->info('Demo data ready: '.count(self::ROOMS).' rooms, '.count(self::LEASES)." sample tenants (5 move-outs, one per status), inquiries, concerns, {$bills} past bills ({$paid} paid).");
     }
 
     private function seedRooms(): void
@@ -209,39 +217,99 @@ class DemoSeeder extends Seeder
     }
 
     /**
-     * Concerns through ConcernService: open (one urgent), in progress (a shared area), resolved, a repeated issue,
+     * Concerns through ConcernService, one per common boarding-house problem (decision 18). Each step happens "at" its
+     * own past time, so the timeline shows who reported, who started and who resolved it, and when:
+     * open (one urgent), in progress (one in a shared area), resolved, a repeated issue in room 209,
      * one charge already billed (door knob) and one charge not billed yet (stained wall).
+     * Two concerns carry sample photos (plain grey pictures, labelled as samples).
      */
     private function seedConcerns(User $owner): void
     {
         $service = app(ConcernService::class);
         $manager = User::where('role', 'Manager')->firstOrFail();
         $caretaker = User::where('role', 'Caretaker')->firstOrFail();
-        $at = fn (int $daysAgo, string $time) => today()->subDays($daysAgo)->setTimeFromTimeString($time);
+        $at = fn (?int $daysAgo, string $time = '09:00') => $daysAgo === null ? null : today()->subDays($daysAgo)->setTimeFromTimeString($time);
         $leaseOf = fn (string $roomNo) => Lease::whereHas('room', fn ($q) => $q->where('room_no', $roomNo))->where('status', 'Active')->first();
         $roomId = fn (string $roomNo) => Room::where('room_no', $roomNo)->value('room_id');
 
         $samples = [
-            // [room, category, priority, channel, description, assigned, status, reported, resolved, resolution, cost, charged]
-            ['209', 'Professional repair', 'Urgent', 'Group chat', 'Tripping breaker', $manager, 'Open', $at(1, '21:40'), null, null, null, false],
-            ['209', 'Professional repair', 'Routine', 'Verbal', 'Tripping breaker when the aircon and kettle run together', $manager, 'Resolved', $at(80, '19:10'), $at(79, '10:00'), 'Electrician tightened the breaker terminals', 850.00, false],
-            [null, 'Shared area', 'Routine', 'Text', 'Clogged drain in the 2nd-floor CR', $caretaker, 'In progress', $at(2, '07:15'), null, null, null, false],
-            ['203', 'Maintenance', 'Routine', 'Verbal', 'Busted bulb (vacant room)', $caretaker, 'Open', $at(3, '18:02'), null, null, null, false],
-            ['210', 'Disturbance', 'Routine', 'Group chat', 'Noise after 10 PM', $manager, 'Resolved', $at(9, '23:30'), $at(8, '09:00'), 'Talked to the tenant; quiet hours reminded', null, false],
-            ['202', 'Damage', 'Routine', 'Verbal', 'Broken door knob', $caretaker, 'Resolved', $at(52, '08:20'), $at(50, '15:00'), 'Door knob replaced', 350.00, true],
-            ['204', 'Damage', 'Routine', 'Verbal', 'Stained wall near the bed', $caretaker, 'Resolved', $at(6, '10:00'), $at(5, '16:00'), 'Wall cleaned and repainted', 600.00, true],
-            ['211', 'Billing', 'Routine', 'Text', 'Asked why the water charge is for 1 occupant', $manager, 'Resolved', $at(12, '12:00'), $at(12, '15:30'), 'Explained: water is per occupant staying in the period', null, false],
+            // [room (null = shared area), category, priority, channel, description, logged by, assigned, status,
+            //  reported, started, resolved (days ago, time), resolution, cost, charged, photos]
+            ['209', 'Electrical', 'Urgent', 'Group chat', 'Circuit breaker trips whenever the aircon is turned on', $caretaker, $manager, 'Open',
+                $at(1, '21:40'), null, null, null, null, false, ['reported']],
+            ['209', 'Electrical', 'Routine', 'Verbal', 'Breaker tripped when the aircon and kettle ran together', $manager, $manager, 'Resolved',
+                $at(80, '19:10'), $at(80, '20:00'), $at(79, '10:00'), 'Electrician tightened the breaker terminals; reminded the tenant not to run both together', 850.00, false, []],
+            [null, 'Plumbing', 'Routine', 'Text', 'Clogged drain in the 2nd-floor shared CR', $caretaker, $caretaker, 'In progress',
+                $at(2, '07:15'), $at(1, '08:30'), null, null, null, false, []],
+            ['207', 'Aircon', 'Routine', 'Text', 'Aircon not cooling; the filter looks dusty', $manager, $caretaker, 'In progress',
+                $at(4, '13:00'), $at(3, '10:00'), null, null, null, false, []],
+            ['203', 'Lights', 'Routine', 'Verbal', 'Busted bulb (vacant room)', $caretaker, $caretaker, 'Open',
+                $at(3, '18:02'), null, null, null, null, false, []],
+            [null, 'Pest control', 'Routine', 'Verbal', 'Cockroaches near the shared kitchen sink', $caretaker, $caretaker, 'Open',
+                $at(5, '19:30'), null, null, null, null, false, []],
+            ['213', 'Other', 'Routine', 'Verbal', 'Asked for an extra wall shelf', $caretaker, $manager, 'Open',
+                $at(6, '17:00'), null, null, null, null, false, []],
+            ['212', 'Water supply', 'Urgent', 'Group chat', 'No water in the morning', $manager, $caretaker, 'Resolved',
+                $at(20, '06:10'), $at(20, '06:30'), $at(20, '08:00'), 'Water pump reset and its switch replaced', null, false, []],
+            ['201', 'Plumbing', 'Routine', 'Verbal', 'Leaking faucet in the room sink', $caretaker, $caretaker, 'Resolved',
+                $at(30, '10:00'), $at(29, '09:00'), $at(29, '11:00'), 'Faucet washer replaced', 150.00, false, []],
+            ['210', 'Noise/Disturbance', 'Routine', 'Group chat', 'Noise after 10 PM', $manager, $manager, 'Resolved',
+                $at(9, '23:30'), null, $at(8, '09:00'), 'Talked to the tenant; quiet hours reminded', null, false, []],
+            [null, 'Cleanliness (shared areas)', 'Routine', 'Text', 'Garbage not collected on the stairs landing', $caretaker, $caretaker, 'Resolved',
+                $at(15, '07:00'), $at(15, '07:30'), $at(15, '09:00'), 'Garbage taken out; collection schedule posted', null, false, []],
+            ['202', 'Door/Lock/Keys', 'Routine', 'Verbal', 'Broken door knob', $caretaker, $caretaker, 'Resolved',
+                $at(52, '08:20'), $at(51, '09:00'), $at(50, '15:00'), 'Door knob replaced', 350.00, true, ['reported', 'resolved']],
+            ['204', 'Damage to room or furniture', 'Routine', 'Verbal', 'Stained wall near the bed', $caretaker, $caretaker, 'Resolved',
+                $at(6, '10:00'), $at(6, '14:00'), $at(5, '16:00'), 'Wall cleaned and repainted', 600.00, true, []],
+            ['211', 'Billing concern', 'Routine', 'Text', 'Asked why the water charge is for 1 occupant', $manager, $manager, 'Resolved',
+                $at(12, '12:00'), null, $at(12, '15:30'), 'Explained: water is per occupant staying in the period', null, false, []],
         ];
 
-        foreach ($samples as [$roomNo, $category, $priority, $channel, $text, $assigned, $status, $reported, $resolved, $resolution, $cost, $charged]) {
-            $service->create([
-                'room_id' => $roomNo ? $roomId($roomNo) : null,
-                'lease_id' => $roomNo ? $leaseOf($roomNo)?->lease_id : null,
-                'reported_at' => $reported, 'channel' => $channel, 'category' => $category, 'priority' => $priority,
-                'description' => $text, 'assigned_to' => $assigned->user_id, 'status' => $status,
-                'resolved_at' => $resolved, 'resolution' => $resolution, 'cost' => $cost, 'charged_to_tenant' => $charged,
-            ], $owner); // logged as the Owner so cost and charge are kept
+        try {
+            foreach ($samples as [$roomNo, $category, $priority, $channel, $text, $loggedBy, $assigned, $status,
+                $reported, $started, $resolved, $resolution, $cost, $charged, $photos]) {
+                // 1. Reported (logged by the Caretaker or Manager).
+                Carbon::setTestNow($reported);
+                $concern = $service->create([
+                    'room_id' => $roomNo ? $roomId($roomNo) : null,
+                    'lease_id' => $roomNo ? $leaseOf($roomNo)?->lease_id : null,
+                    'reported_at' => $reported, 'channel' => $channel, 'category' => $category, 'priority' => $priority,
+                    'description' => $text, 'assigned_to' => $assigned->user_id, 'status' => 'Open',
+                ], $loggedBy, ['photo' => in_array('reported', $photos, true) ? $this->samplePhoto('Sample photo: '.$category) : null]);
+
+                // 2. In progress (by the assigned user).
+                if ($started) {
+                    Carbon::setTestNow($started);
+                    $service->update($concern, ['status' => 'In progress'], $assigned);
+                }
+
+                // 3. Resolved (by the assigned user); a cost is set by the Owner/Manager.
+                if ($status === 'Resolved') {
+                    Carbon::setTestNow($resolved);
+                    $service->update($concern, ['status' => 'Resolved', 'resolution' => $resolution], $assigned,
+                        ['resolution_photo' => in_array('resolved', $photos, true) ? $this->samplePhoto('Sample photo: fixed') : null]);
+                    if ($cost !== null) {
+                        $service->update($concern, ['cost' => $cost, 'charged_to_tenant' => $charged], $manager);
+                    }
+                }
+            }
+        } finally {
+            Carbon::setTestNow();
         }
+    }
+
+    /** A plain grey 800x600 JPEG with a label: stands in for a tablet photo (no real pictures in sample data). */
+    private function samplePhoto(string $label): UploadedFile
+    {
+        $image = imagecreatetruecolor(800, 600);
+        imagefill($image, 0, 0, imagecolorallocate($image, 200, 205, 212));
+        imagerectangle($image, 20, 20, 779, 579, imagecolorallocate($image, 120, 128, 140));
+        imagestring($image, 5, 40, 280, $label, imagecolorallocate($image, 40, 48, 60));
+        $path = tempnam(sys_get_temp_dir(), 'nrc').'.jpg';
+        imagejpeg($image, $path, 80);
+        imagedestroy($image);
+
+        return new UploadedFile($path, 'sample.jpg', 'image/jpeg', null, true);
     }
 
     /**
@@ -303,7 +371,8 @@ class DemoSeeder extends Seeder
             $bills = $lease->bills()->orderBy('due_date')->get();
             $leaveUnpaid = in_array($n, [1, 6], true) ? 2 : 0;
             $last = $bills->last();
-            if ($leaveUnpaid === 0 && $last && $last->due_date->copy()->addDays($grace)->gte(today())) {
+            // Sample Tenant 13 paid every bill before leaving, so the settlement ends in a refund (any day of the month).
+            if ($leaveUnpaid === 0 && $n !== 13 && $last && $last->due_date->copy()->addDays($grace)->gte(today())) {
                 $leaveUnpaid = 1; // newest bill not overdue yet
             }
 
@@ -335,7 +404,7 @@ class DemoSeeder extends Seeder
         $leaseOf = fn (string $roomNo) => Lease::whereHas('room', fn ($q) => $q->where('room_no', $roomNo))->firstOrFail();
 
         // [room, notice (days ago), planned (days from today, negative = past), moved out (days ago) or null]
-        foreach ([['206', 5, 14, null], ['214', 35, -3, 3], ['215', 50, -20, 20]] as [$roomNo, $noticeAgo, $plannedIn, $actualAgo]) {
+        foreach ([['206', 5, 14, null], ['214', 35, -3, 3], ['215', 50, -20, 20], ['216', 40, -10, 10], ['217', 45, -6, 6]] as [$roomNo, $noticeAgo, $plannedIn, $actualAgo]) {
             $moveout = $settlements->giveNotice($leaseOf($roomNo), today()->subDays($noticeAgo)->toDateString(),
                 today()->addDays($plannedIn)->toDateString(), $owner);
             if ($actualAgo !== null) {
@@ -348,7 +417,11 @@ class DemoSeeder extends Seeder
         }
     }
 
-    /** Final bills, inspection items and computed settlements; room 215 is approved and its refund released. */
+    /**
+     * Final bills, inspections and computed settlements. 214 waits for the Owner; 215 is approved and its refund handed
+     * over (Settled); 216 is approved with the refund still to hand over (Refunded); 217's damage is more than the
+     * deposit, so an excess bill is waiting for payment (Excess billed).
+     */
     private function seedSettlements(User $owner): void
     {
         $settlements = app(SettlementService::class);
@@ -356,6 +429,8 @@ class DemoSeeder extends Seeder
         $items = [
             '214' => [['Wall paint scratches near the bed', 650.00], ['Missing key copy', 250.00]],
             '215' => [['Adhesive hook marks (MOA item 12)', 500.00]],
+            '216' => [['Aircon remote control missing', 300.00]],
+            '217' => [['Broken bed frame (replaced)', 2200.00], ['Lost door key and knob set', 450.00]],
         ];
 
         foreach (Moveout::with('lease.room')->whereNotNull('actual_date')->get() as $moveout) {
@@ -372,11 +447,12 @@ class DemoSeeder extends Seeder
             foreach ($items[$room->room_no] ?? [] as [$text, $cost]) {
                 $settlements->addItem($moveout, $text, $cost);
             }
+            $settlements->markInspected($moveout, $owner);
             $settlements->compute($moveout, $owner);
 
-            if ($room->room_no === '215') {
+            if (in_array($room->room_no, ['215', '216', '217'], true)) {
                 $moveout = $settlements->approve($moveout, $owner);
-                if ($moveout->status === 'Refunded') {
+                if ($room->room_no === '215' && $moveout->status === 'Refunded') {
                     $settlements->markRefundReleased($moveout, $owner);
                 }
             }

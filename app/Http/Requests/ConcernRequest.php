@@ -18,10 +18,16 @@ class ConcernRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        // The Room list's "No room (shared area)" choice sends room_id=shared.
+        $shared = $this->input('room_id') === 'shared';
+
         $this->merge([
+            'shared' => $shared,
+            'room_id' => $shared ? null : $this->input('room_id'),
             'description' => trim((string) $this->input('description')),
             'charged_to_tenant' => $this->boolean('charged_to_tenant'),
             'remove_photo' => $this->boolean('remove_photo'),
+            'remove_resolution_photo' => $this->boolean('remove_resolution_photo'),
             'cost' => $this->input('cost') === '' ? null : $this->input('cost'),
         ]);
     }
@@ -29,9 +35,10 @@ class ConcernRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category' => ['required', Rule::in(Concern::CATEGORIES)],
-            // A room is required except for a shared-area concern (decision 15).
-            'room_id' => ['nullable', 'required_unless:category,Shared area', Rule::exists('tbl_room', 'room_id')],
+            'category' => ['required', Rule::in(array_keys(Concern::CATEGORIES))],
+            // A room, or "No room (shared area)" for any category (decision 18).
+            'shared' => ['boolean'],
+            'room_id' => ['nullable', 'required_unless:shared,true', Rule::exists('tbl_room', 'room_id')],
             'lease_id' => ['nullable', Rule::exists('tbl_lease', 'lease_id')],
             'reported_at' => ['required', 'date_format:Y-m-d\TH:i', 'before_or_equal:now'],
             'channel' => ['required', Rule::in(Concern::CHANNELS)],
@@ -43,8 +50,11 @@ class ConcernRequest extends FormRequest
             'resolved_at' => ['nullable', 'date_format:Y-m-d\TH:i', 'before_or_equal:now', 'after_or_equal:reported_at'],
             'cost' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
             'charged_to_tenant' => ['boolean'],
-            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            // Proof of the problem / proof it was fixed: JPG or PNG, max 5 MB (decision 18).
+            'photo' => ['nullable', 'file', 'mimes:jpg,jpeg,png', 'mimetypes:image/jpeg,image/png', 'max:5120'],
             'remove_photo' => ['boolean'],
+            'resolution_photo' => ['nullable', 'file', 'mimes:jpg,jpeg,png', 'mimetypes:image/jpeg,image/png', 'max:5120'],
+            'remove_resolution_photo' => ['boolean'],
         ];
     }
 
@@ -58,6 +68,12 @@ class ConcernRequest extends FormRequest
                 }
                 $lease = $this->input('lease_id') ? Lease::find($this->input('lease_id')) : null;
 
+                if ($this->input('category') === Concern::SHARED_CATEGORY && $this->input('room_id')) {
+                    $validator->errors()->add('room_id', 'Cleanliness is for shared areas: choose "No room (shared area)" and say where in the description.');
+                }
+                if ($this->hasFile('resolution_photo') && $this->input('status') !== 'Resolved') {
+                    $validator->errors()->add('resolution_photo', 'Add the "fixed" photo when you mark the concern Resolved.');
+                }
                 if ($lease && (int) $lease->room_id !== (int) $this->input('room_id')) {
                     $validator->errors()->add('lease_id', 'This tenant does not rent the chosen room.');
                 }
@@ -73,21 +89,25 @@ class ConcernRequest extends FormRequest
         ];
     }
 
-    /** Fields saved on tbl_concern (photo is handled separately). */
+    /** Fields saved on tbl_concern (the photos are handled separately). */
     public function concernData(): array
     {
-        return $this->safe()->except(['photo', 'remove_photo']);
+        return $this->safe()->except(['shared', 'photo', 'remove_photo', 'resolution_photo', 'remove_resolution_photo']);
     }
 
     public function messages(): array
     {
         return [
-            'room_id.required_unless' => 'Choose the room (only a shared-area concern can have no room).',
+            'room_id.required_unless' => 'Choose the room, or "No room (shared area)".',
             'resolution.required_if' => 'Describe how the concern was resolved.',
             'reported_at.before_or_equal' => 'The report time cannot be in the future.',
             'resolved_at.after_or_equal' => 'It cannot be resolved before it was reported.',
             'photo.max' => 'The photo must be 5 MB or smaller.',
-            'photo.mimes' => 'Use a JPG, PNG or WebP photo.',
+            'resolution_photo.max' => 'The photo must be 5 MB or smaller.',
+            'photo.mimes' => 'Use a JPG or PNG photo.',
+            'photo.mimetypes' => 'Use a JPG or PNG photo.',
+            'resolution_photo.mimes' => 'Use a JPG or PNG photo.',
+            'resolution_photo.mimetypes' => 'Use a JPG or PNG photo.',
         ];
     }
 

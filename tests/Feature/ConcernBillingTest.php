@@ -7,7 +7,6 @@ use App\Models\Concern;
 use App\Models\Lease;
 use App\Models\Payment;
 use App\Models\User;
-use App\Services\BillingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Testing\TestResponse;
@@ -50,7 +49,7 @@ class ConcernBillingTest extends TestCase
 
         return Concern::create($attributes + [
             'room_id' => $lease->room_id, 'lease_id' => $lease->lease_id, 'reported_at' => '2026-07-01 10:00', 'channel' => 'Verbal',
-            'category' => 'Damage', 'priority' => 'Routine', 'assigned_to' => $this->manager->user_id, 'status' => 'Resolved',
+            'category' => 'Damage to room or furniture', 'priority' => 'Routine', 'assigned_to' => $this->manager->user_id, 'status' => 'Resolved',
             'resolution' => 'Repaired', 'charged_to_tenant' => true, 'resolved_at' => '2026-07-02 10:00',
         ]);
     }
@@ -84,7 +83,7 @@ class ConcernBillingTest extends TestCase
     public function test_ticked_concerns_become_other_charges_and_statement_lines(): void
     {
         $this->actingAs($this->manager)->get(route('bills.create', ['lease' => $this->lease->lease_id, 'concerns' => [$this->knob->concern_id]]))
-            ->assertSee('Broken door knob (Damage): ₱350.00')->assertSee('₱4,050.00');
+            ->assertSee('Broken door knob (Damage to room or furniture): ₱350.00')->assertSee('₱4,050.00');
 
         $this->generate([$this->knob->concern_id, $this->wall->concern_id])->assertSessionHasNoErrors();
 
@@ -95,7 +94,7 @@ class ConcernBillingTest extends TestCase
         $this->assertSame($bill->bill_id, $this->wall->refresh()->bill_id);
 
         $this->actingAs($this->manager)->get(route('bills.show', $bill))
-            ->assertSee('Broken door knob (Damage): ₱350.00')->assertSee('Stained wall (Damage): ₱600.00')->assertSee('₱950.00');
+            ->assertSee('Broken door knob (Damage to room or furniture): ₱350.00')->assertSee('Stained wall (Damage to room or furniture): ₱600.00')->assertSee('₱950.00');
     }
 
     public function test_concern_that_cannot_be_charged_is_refused(): void

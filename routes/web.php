@@ -56,6 +56,8 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // Concerns: every role logs and updates (cost / charged to tenant: Owner/Manager, enforced in ConcernService).
     Route::resource('concerns', ConcernController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update']);
+    Route::get('/concerns/{concern}/photo/{kind}', [ConcernController::class, 'photo'])
+        ->whereIn('kind', ['reported', 'resolved'])->name('concerns.photo'); // private photos (decision 18)
 
     // ---------- Owner and Manager ----------
     Route::middleware('role:Owner,Manager')->group(function () {
@@ -74,6 +76,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
         // Move-out Settlement (approve / release refund: Owner only, checked by the approve-settlements gate)
         Route::resource('moveouts', MoveoutController::class)->only(['index', 'create', 'store', 'show', 'update', 'destroy']);
+        Route::patch('/moveouts/{moveout}/inspect', [MoveoutController::class, 'inspect'])->name('moveouts.inspect');
         Route::post('/moveouts/{moveout}/compute', [MoveoutController::class, 'compute'])->name('moveouts.compute');
         Route::patch('/moveouts/{moveout}/approve', [MoveoutController::class, 'approve'])->name('moveouts.approve');
         Route::patch('/moveouts/{moveout}/release', [MoveoutController::class, 'release'])->name('moveouts.release');

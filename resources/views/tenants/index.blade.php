@@ -17,14 +17,14 @@
         </div>
 
         @if ($leases->isEmpty())
-            <p class="muted">No {{ strtolower($status) }} leases.
-                @if ($status === 'Active') Use "+ Encode new MOA" when a tenant signs. @endif</p>
+            <p class="muted">No leases here ({{ strtolower($status) }}).
+                @if ($status === 'All current' || $status === 'Active') Use "+ Encode new MOA" when a tenant signs. @endif</p>
         @else
             <div class="table-wrap">
                 <table>
                     <tr>
                         <th>Room</th><th>Tenant</th><th>Contact</th><th>Move-in</th><th>Due day</th>
-                        <th class="r">Rent</th><th>Occupants</th><th></th>
+                        <th class="r">Rent</th><th>Occupants</th><th>Status</th><th></th>
                     </tr>
                     @foreach ($leases as $lease)
                         <tr>
@@ -35,6 +35,10 @@
                             <td>Every {{ $lease->dueDayLabel() }}</td>
                             <td class="money">@peso($lease->monthly_rent)</td>
                             <td>{{ $lease->active_occupants_count }}</td>
+                            <td class="nowrap"><x-lease-status :lease="$lease" />
+                                @if ($lease->status === 'Active' && $lease->moveout)
+                                    <span class="sub">{{ $lease->moveout->actual_date ? 'left '.$lease->moveout->actual_date->format('j M') : 'leaving '.$lease->moveout->planned_date->format('j M') }}</span>
+                                @endif</td>
                             <td class="actions"><a href="{{ route('leases.show', $lease) }}" class="btn sec">Open</a></td>
                         </tr>
                     @endforeach

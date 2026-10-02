@@ -1,30 +1,32 @@
-{{-- Shared log/update form. Needs: $concern, $rooms, $currentLease, $users, $channels, $categories, $priorities,
-     $statuses, $canSetMoney --}}
+{{-- Shared log/update form. Needs: $concern, $rooms, $currentLease, $users, $channels, $categories (name => description),
+     $sharedCategory, $priorities, $statuses, $canSetMoney --}}
 @csrf
 @php($billed = $concern->exists && $concern->isBilled())
 
 <div class="row">
     <div class="f @error('category') has-err @enderror">
         <label for="category">Category</label>
-        <select id="category" name="category">
-            @foreach ($categories as $c)
-                <option value="{{ $c }}" @selected(old('category', $concern->category) === $c)>{{ $c }}</option>
+        @php($categoryValue = old('category', $concern->category ?? array_key_first($categories)))
+        <select id="category" name="category" aria-describedby="category-help">
+            @foreach ($categories as $name => $help)
+                <option value="{{ $name }}" data-help="{{ $help }}" @selected($categoryValue === $name)>{{ $name }}</option>
             @endforeach
         </select>
+        <div class="hint category-help" id="category-help">{{ $categories[$categoryValue] ?? '' }}</div>
         @error('category') <div class="err">{{ $message }}</div> @enderror
     </div>
     <div class="f @error('room_id') has-err @enderror">
         <label for="room_id">Room</label>
-        @php($roomValue = (string) old('room_id', $concern->room_id))
-        @php($sharedChosen = $roomValue === '' && ($concern->exists || old('category') === 'Shared area'))
+        {{-- "shared" = no room (a shared area such as the CR or hallway; any category, decision 18). --}}
+        @php($roomValue = (string) old('room_id', $concern->exists && ! $concern->room_id ? 'shared' : $concern->room_id))
         <select id="room_id" name="room_id">
             {{-- Starts on a prompt, so "no room" is always a deliberate choice. --}}
-            <option value="" data-lease="" disabled @selected($roomValue === '' && ! $sharedChosen)>Choose a room…</option>
+            <option value="" data-lease="" disabled @selected($roomValue === '')>Choose a room…</option>
             @foreach ($rooms as $r)
                 <option value="{{ $r['room_id'] }}" data-lease="{{ $r['lease_id'] }}" data-tenant="{{ $r['tenant'] }}"
                         @selected($roomValue === (string) $r['room_id'])>{{ $r['label'] }}{{ $r['tenant'] ? ' — '.$r['tenant'] : ' — vacant' }}</option>
             @endforeach
-            <option value="" data-lease="" @selected($sharedChosen)>No room (shared area)</option>
+            <option value="shared" data-lease="" @selected($roomValue === 'shared')>No room (shared area)</option>
         </select>
         @error('room_id') <div class="err">{{ $message }}</div> @enderror
     </div>
@@ -85,18 +87,8 @@
     @error('description') <div class="err">{{ $message }}</div> @enderror
 </div>
 
-<div class="f @error('photo') has-err @enderror">
-    <label for="photo">Photo (optional)</label>
-    @if ($concern->photo_path)
-        <div class="photo-current">
-            <img src="{{ $concern->photoUrl() }}" alt="Current photo">
-            <label class="inline-check"><input type="checkbox" name="remove_photo" value="1"> Remove this photo</label>
-        </div>
-    @endif
-    <input id="photo" name="photo" type="file" accept="image/*" capture="environment">
-    <div class="hint">Take a photo with the tablet camera or pick one. JPG, PNG or WebP, up to 5 MB.</div>
-    @error('photo') <div class="err">{{ $message }}</div> @enderror
-</div>
+@include('concerns._photo_field', ['field' => 'photo', 'kind' => 'reported', 'column' => 'photo_path',
+    'label' => 'Photo of the problem (optional)', 'hint' => 'Proof of the problem when it was reported.'])
 
 <fieldset class="resolution-box">
     <legend>Progress</legend>
@@ -124,6 +116,9 @@
         @error('resolution') <div class="err">{{ $message }}</div> @enderror
     </div>
 
+    @include('concerns._photo_field', ['field' => 'resolution_photo', 'kind' => 'resolved', 'column' => 'resolution_photo_path',
+        'label' => 'Photo after the fix (optional)', 'hint' => 'Proof it was fixed. Add it when you mark the concern Resolved.'])
+
     <div class="row">
         <div class="f @error('cost') has-err @enderror">
             <label for="cost">Cost of repair (₱)</label>
@@ -150,10 +145,20 @@
 @push('scripts')
     <script>
         // Picking a room fills in its current tenant (or none for a vacant room / shared area).
-        document.getElementById('room_id').addEventListener('change', function () {
+        var roomSelect = document.getElementById('room_id');
+        roomSelect.addEventListener('change', function () {
             var lease = this.options[this.selectedIndex].dataset.lease || '';
             var select = document.getElementById('lease_id');
             if (!select.disabled) { select.value = lease; }
+        });
+
+        // Show what the chosen category covers; Cleanliness is always a shared area.
+        document.getElementById('category').addEventListener('change', function () {
+            document.getElementById('category-help').textContent = this.options[this.selectedIndex].dataset.help || '';
+            if (this.value === @json($sharedCategory) && !roomSelect.disabled) {
+                roomSelect.value = 'shared';
+                roomSelect.dispatchEvent(new Event('change'));
+            }
         });
     </script>
 @endpush

@@ -143,10 +143,19 @@ class DemoSeederTest extends TestCase
 
         foreach (Lease::with(['room', 'moveout'])->get() as $lease) {
             $bills = $lease->bills()->orderBy('due_date')->get();
+            $firstDue = $billing->firstDueDate($lease->move_in_date, $lease->due_day);
+
+            // A recent move-in whose first due date has not come yet (depends on today's date) has no bills.
+            if ($firstDue->gt($lease->moveout?->actual_date ?? today())) {
+                $this->assertEmpty($bills, "Lease {$lease->lease_id} has a bill before its first due date");
+                $this->assertSame($firstDue->toDateString(), $billing->nextDueDate($lease)->toDateString());
+
+                continue;
+            }
             $this->assertNotEmpty($bills, "Lease {$lease->lease_id} should have past bills");
 
             // Oldest bill = first due date; the next one to generate is in the future (or after the move-out date).
-            $this->assertSame($billing->firstDueDate($lease->move_in_date, $lease->due_day)->toDateString(), $bills->first()->due_date->toDateString());
+            $this->assertSame($firstDue->toDateString(), $bills->first()->due_date->toDateString());
             $this->assertTrue($billing->nextDueDate($lease)->gt($lease->moveout?->actual_date ?? today()));
             $this->assertTrue($bills->every(fn ($b) => $b->due_date->lte(today())));
 

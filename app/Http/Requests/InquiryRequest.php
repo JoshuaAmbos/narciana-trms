@@ -23,6 +23,7 @@ class InquiryRequest extends FormRequest
             'prospect_name' => trim((string) $this->input('prospect_name')),
             'contact_no' => trim((string) $this->input('contact_no')),
             'via_representative' => $this->boolean('via_representative'),
+            'wants_contact' => $this->boolean('wants_contact'),
             'status' => $this->input('status', 'Waiting'),
         ]);
     }
@@ -37,6 +38,7 @@ class InquiryRequest extends FormRequest
             'no_of_occupants' => ['required', 'integer', 'between:1,10'],
             'channel' => ['required', Rule::in(Inquiry::CHANNELS)],
             'via_representative' => ['boolean'],
+            'wants_contact' => ['boolean'],
             'inquiry_date' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
             'status' => ['required', Rule::in(Inquiry::STATUSES)],
             'room_id' => ['nullable', 'required_if:status,Rented', Rule::exists('tbl_room', 'room_id')],

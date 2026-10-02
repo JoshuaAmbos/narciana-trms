@@ -21,7 +21,7 @@
                 @error('planned_date') <div class="err">{{ $message }}</div> @enderror
             </div>
             @error('lease') <div class="alert alert-err">{{ $message }}</div> @enderror
-            <p class="muted">Saving sets Room {{ $lease->room->room_no }} to <b>Vacating</b>, so waiting prospects can be matched to it.</p>
+            <p class="muted">Saving sets Room {{ $lease->room->room_no }} to <b>Vacating</b>, with the planned date as its expected vacant date.</p>
             <div class="form-actions">
                 <button type="submit" class="btn">Save notice</button>
                 <a href="{{ route('leases.show', $lease) }}" class="btn sec">Cancel</a>

@@ -207,6 +207,7 @@ class DemoSeeder extends Seeder
                 'no_of_occupants' => $occupants,
                 'channel' => $channel,
                 'via_representative' => $viaRep,
+                'wants_contact' => $status === 'Waiting' && $i < 2, // the two oldest waiting prospects asked to be called
                 'inquiry_date' => $date,
                 'status' => $status,
                 'room_id' => $roomNo ? $rooms[$roomNo] : null,

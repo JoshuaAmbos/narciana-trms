@@ -94,7 +94,8 @@ class EndToEndTest extends TestCase
         ];
         $this->actingAs($this->caretaker)->post(route('inquiries.store'), $inquiry)->assertSessionHasNoErrors();
         $inq = Inquiry::sole();
-        $this->actingAs($this->caretaker)->get(route('rooms.index'))->assertOk()->assertSee('Sample Prospect A'); // fits room 216
+        $this->actingAs($this->caretaker)->get(route('inquiries.index', ['status' => 'Waiting']))->assertOk()
+            ->assertSeeInOrder(['<th>Status</th>', 'Sample Prospect A', 'Waiting'], false);
 
         // ---------- 2. Manager marks it Rented ----------
         $this->on('2026-06-24 09:00');

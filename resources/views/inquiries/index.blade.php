@@ -1,13 +1,20 @@
 @extends('layouts.app')
 
-@section('title', 'Inquiry log')
+@section('title', 'Inquiries')
 
 @section('content')
     <div class="panel">
-        <h2>
-            Inquiry log
-            <a href="{{ route('rooms.index') }}" class="btn">+ Log an inquiry</a>
-        </h2>
+        <h2>Log an inquiry</h2>
+        <form method="POST" action="{{ route('inquiries.store') }}" novalidate>
+            @include('inquiries._fields')
+            <div class="form-actions">
+                <button type="submit" class="btn">Save inquiry</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="panel">
+        <h2>Inquiry log</h2>
 
         <div class="filters">
             <span class="muted">Show:</span>
@@ -22,7 +29,7 @@
         @else
             <div class="table-wrap">
                 <table>
-                    <tr><th>Date</th><th>Name</th><th>Contact</th><th>Wants</th><th>Channel</th><th>Outcome</th><th>Room</th><th>Logged by</th><th></th></tr>
+                    <tr><th>Date</th><th>Name</th><th>Contact</th><th>Wants</th><th>Channel</th><th>Status</th><th>Room</th><th>Logged by</th><th></th></tr>
                     @foreach ($inquiries as $inquiry)
                         <tr>
                             <td>{{ $inquiry->inquiry_date->format('j M Y') }}</td>
@@ -30,7 +37,8 @@
                                 {{ $inquiry->prospect_name }}
                                 @if ($inquiry->remarks)<div class="sub">{{ $inquiry->remarks }}</div>@endif
                             </td>
-                            <td><a href="{{ $inquiry->telHref() }}">{{ $inquiry->contact_no }}</a></td>
+                            <td><a href="{{ $inquiry->telHref() }}">{{ $inquiry->contact_no }}</a>
+                                @if ($inquiry->wants_contact)<div class="sub nowrap">wants to be contacted</div>@endif</td>
                             <td>{{ $inquiry->preferred_type }}, {{ $inquiry->no_of_occupants }}</td>
                             <td>{{ $inquiry->channel }}@if ($inquiry->via_representative)<div class="sub">representative</div>@endif</td>
                             <td><x-inquiry-status :status="$inquiry->status" /></td>

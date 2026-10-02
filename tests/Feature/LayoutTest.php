@@ -20,7 +20,7 @@ class LayoutTest extends TestCase
             ->get('/')
             ->assertOk()
             ->assertSee('Narciana House')
-            ->assertSee('Rooms &amp; Inquiries', false)
+            ->assertSeeInOrder(['icon-door-open', 'Rooms', 'icon-clipboard-list', 'Inquiries'], false)->assertDontSee('Rooms &amp; Inquiries', false)
             ->assertSee('Settings &amp; Backup', false)
             ->assertSee('Due and overdue this week')
             ->assertDontSee('Setup check');
@@ -79,6 +79,25 @@ class LayoutTest extends TestCase
                 $this->assertNotSame('#', $href);
                 $this->actingAs($user)->get($href)->assertOk();
             }
+        }
+    }
+
+    /** Decision 19: one fixed order, by what is checked most and needs action first; each role sees its own items in it. */
+    public function test_sidebar_order_for_each_role(): void
+    {
+        $order = ['Dashboard', 'Billing', 'Payments', 'Tenants &amp; MOA', 'Concerns', 'Rooms', 'Inquiries',
+            'Move-out Settlement', 'Reports', 'User Accounts', 'Settings &amp; Backup', 'Audit Log'];
+        $expected = [
+            'Owner' => $order,
+            'Manager' => array_slice($order, 0, 9),
+            'Caretaker' => ['Dashboard', 'Tenants &amp; MOA', 'Concerns', 'Rooms', 'Inquiries'],
+        ];
+
+        foreach ($expected as $role => $labels) {
+            $html = $this->actingAs(User::factory()->role($role)->create())->get('/')->getContent();
+            preg_match('#<nav class="nav">(.*?)</nav>#s', $html, $nav);
+            preg_match_all('#</svg>([^<]+)</a>#', $nav[1], $items);
+            $this->assertSame($labels, array_map('trim', $items[1]), "{$role} menu order");
         }
     }
 

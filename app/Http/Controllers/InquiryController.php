@@ -11,10 +11,10 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
-/** Inquiry log: every role can log and update inquiries. */
+/** Inquiries: every role logs inquiries (form on the list page) and updates them. */
 class InquiryController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, RoomAvailabilityService $availability): View
     {
         $filter = $request->validate(['status' => ['nullable', Rule::in(Inquiry::STATUSES)]]);
         $status = $filter['status'] ?? null;
@@ -29,6 +29,12 @@ class InquiryController extends Controller
         return view('inquiries.index', [
             'inquiries' => $inquiries,
             'status' => $status,
+            // "Log an inquiry" form
+            'inquiry' => new Inquiry(['inquiry_date' => today(), 'status' => 'Waiting', 'no_of_occupants' => 1]),
+            'rooms' => Room::orderBy('room_no')->get(),
+            'holds' => $availability->rentalHolds(),
+            'types' => Inquiry::TYPES,
+            'channels' => Inquiry::CHANNELS,
             'statuses' => Inquiry::STATUSES,
         ]);
     }
@@ -37,7 +43,7 @@ class InquiryController extends Controller
     {
         $inquiry = Inquiry::create($request->validated() + ['user_id' => $request->user()->user_id]);
 
-        return redirect()->route('rooms.index')
+        return redirect()->route('inquiries.index')
             ->with('status', "Inquiry from {$inquiry->prospect_name} was saved ({$inquiry->status}).")
             ->with('warning', $this->typeWarning($inquiry, $availability));
     }

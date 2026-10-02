@@ -18,13 +18,15 @@ return [
     // (same roles as 'role_access' below).
     // Items are hidden from roles not listed (LayoutTest opens every visible link for each role).
     'nav' => [
+        // Order (decision 19): what users check most and what needs action first.
         ['dashboard', 'Dashboard', ['Owner', 'Manager', 'Caretaker'], 'layout-dashboard'],
-        ['rooms.index', 'Rooms & Inquiries', ['Owner', 'Manager', 'Caretaker'], 'door-open', ['inquiries.*']],
-        // Caretaker sees this page only for appliances and visitors, not the MOA details.
-        ['tenants.index', 'Tenants & MOA', ['Owner', 'Manager', 'Caretaker'], 'users', ['leases.*']],
         ['bills.index', 'Billing', ['Owner', 'Manager'], 'receipt', ['meter-readings.*']],
         ['payments.index', 'Payments', ['Owner', 'Manager'], 'wallet'],
+        // Caretaker sees this page only for appliances and visitors, not the MOA details.
+        ['tenants.index', 'Tenants & MOA', ['Owner', 'Manager', 'Caretaker'], 'users', ['leases.*']],
         ['concerns.index', 'Concerns', ['Owner', 'Manager', 'Caretaker'], 'wrench'],
+        ['rooms.index', 'Rooms', ['Owner', 'Manager', 'Caretaker'], 'door-open'],
+        ['inquiries.index', 'Inquiries', ['Owner', 'Manager', 'Caretaker'], 'clipboard-list'],
         ['moveouts.index', 'Move-out Settlement', ['Owner', 'Manager'], 'package'],
         ['reports.index', 'Reports', ['Owner', 'Manager'], 'chart-column'],
         ['users.index', 'User Accounts', ['Owner'], 'user-cog'],

@@ -4,40 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\RoomRequest;
 use App\Models\AuditLog;
-use App\Models\Inquiry;
 use App\Models\Room;
-use App\Services\RoomAvailabilityService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
-/** Rooms & Inquiries screen (all roles) and adding/editing rooms (Owner). */
+/** Rooms: the availability list (all roles) and adding/editing rooms (Owner). Inquiries have their own module. */
 class RoomController extends Controller
 {
-    public function index(RoomAvailabilityService $availability): View
+    public function index(): View
     {
-        $rooms = Room::orderBy('room_no')->get();
-        $matches = $availability->matchesForAllRooms($rooms);
-
-        // The same matches the other way round: inquiry_id => room numbers it fits (for the waiting list).
-        $fitsRooms = [];
-        foreach ($matches as $roomId => $prospects) {
-            foreach ($prospects as $prospect) {
-                $fitsRooms[$prospect->inquiry_id][] = $rooms->firstWhere('room_id', $roomId)->room_no;
-            }
-        }
-
-        return view('rooms.index', [
-            'rooms' => $rooms,
-            'waiting' => $availability->waitingProspects(),
-            'matches' => $matches,
-            'fitsRooms' => $fitsRooms,
-            'holds' => $availability->rentalHolds(),
-            'inquiry' => new Inquiry(['inquiry_date' => today(), 'status' => 'Waiting', 'no_of_occupants' => 1]),
-            'types' => Inquiry::TYPES,
-            'channels' => Inquiry::CHANNELS,
-            'statuses' => Inquiry::STATUSES,
-        ]);
+        return view('rooms.index', ['rooms' => Room::orderBy('room_no')->get()]);
     }
 
     public function create(): View

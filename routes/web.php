@@ -41,7 +41,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/my-password', [PasswordController::class, 'edit'])->name('password.edit');
     Route::put('/my-password', [PasswordController::class, 'update'])->name('password.update');
 
-    // Rooms & Inquiries: everyone views availability and logs/updates inquiries.
+    // Rooms (availability) and Inquiries (log/update) are separate modules; everyone uses both (decision 19).
     Route::resource('rooms', RoomController::class)->only(['index']);
     Route::resource('inquiries', InquiryController::class)->only(['index', 'store', 'edit', 'update']);
 

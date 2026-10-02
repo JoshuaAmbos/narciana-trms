@@ -27,6 +27,7 @@ class Inquiry extends Model
         'no_of_occupants',
         'channel',
         'via_representative',
+        'wants_contact',
         'inquiry_date',
         'status',
         'room_id',
@@ -39,6 +40,7 @@ class Inquiry extends Model
         return [
             'no_of_occupants' => 'integer',
             'via_representative' => 'boolean',
+            'wants_contact' => 'boolean',
             'inquiry_date' => 'date',
         ];
     }

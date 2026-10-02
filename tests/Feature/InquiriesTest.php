@@ -58,7 +58,7 @@ class InquiriesTest extends TestCase
         foreach (User::ROLES as $i => $role) {
             $user = User::factory()->role($role)->create();
             $this->actingAs($user)->post('/inquiries', $this->validInquiry(['prospect_name' => "Sample Prospect {$i}"]))
-                ->assertRedirect('/rooms')->assertSessionHas('status');
+                ->assertRedirect('/inquiries')->assertSessionHas('status');
 
             $this->assertDatabaseHas('tbl_inquiry', [
                 'prospect_name' => "Sample Prospect {$i}", 'status' => 'Waiting', 'user_id' => $user->user_id,
@@ -223,7 +223,7 @@ class InquiriesTest extends TestCase
         $room = $this->room('3', 'Aircon');
         $this->inquiry(['prospect_name' => 'Sample First', 'status' => 'Rented', 'room_id' => $room->room_id]);
 
-        $this->actingAs($this->caretaker)->get('/rooms')->assertSee('rented to Sample First, MOA pending');
+        $this->actingAs($this->caretaker)->get('/inquiries')->assertSee('rented to Sample First, MOA pending');
     }
 
     public function test_type_mismatch_is_a_warning_not_an_error(): void
@@ -236,7 +236,7 @@ class InquiriesTest extends TestCase
             ->assertSessionHas('warning', 'Note: Room 1 is a Basic room, but the prospect asked for Aircon.');
 
         $this->assertSame(1, Inquiry::where('status', 'Rented')->count());
-        $this->followRedirects($this->actingAs($this->caretaker)->get('/rooms'))->assertOk();
+        $this->followRedirects($this->actingAs($this->caretaker)->get('/inquiries'))->assertOk();
     }
 
     public function test_no_warning_when_type_matches_or_any(): void
@@ -285,20 +285,56 @@ class InquiriesTest extends TestCase
 
     // ---------- Waiting list and matching ----------
 
-    public function test_waiting_list_is_oldest_first_and_shows_fitting_rooms(): void
+    /** Decision 19: Rooms shows availability only; the waiting list and "Waiting" column are gone, the data is not. */
+    public function test_rooms_page_has_no_waiting_list_and_inquiries_are_kept(): void
     {
         $this->room('201', 'Basic');
         $this->room('208', 'Aircon', 'Vacating');
-        $this->room('210', 'Aircon', 'Occupied');
         $this->inquiry(['prospect_name' => 'Sample Newer', 'preferred_type' => 'Aircon', 'inquiry_date' => today()->subDays(1)->toDateString()]);
         $this->inquiry(['prospect_name' => 'Sample Older', 'preferred_type' => 'Basic', 'inquiry_date' => today()->subDays(5)->toDateString()]);
         $this->inquiry(['prospect_name' => 'Sample Declined', 'status' => 'Declined']);
+        $before = Inquiry::orderBy('inquiry_id')->get()->toArray();
 
-        $this->actingAs($this->caretaker)->get('/rooms')
-            ->assertOk()
-            ->assertSeeInOrder(['Prospects waiting', 'Sample Older', '201', 'Sample Newer', '208'])
-            ->assertDontSee('Sample Declined')
-            ->assertSee('tel:09170000000', false);
+        $this->actingAs($this->caretaker)->get('/rooms')->assertOk()
+            ->assertSee('Room availability')->assertSee('201')->assertSee('208')
+            ->assertDontSee('Prospects waiting')->assertDontSee('<th>Waiting</th>', false)->assertDontSee('prospect')
+            ->assertDontSee('Log an inquiry')->assertDontSee('Sample Older')->assertDontSee('Sample Newer');
+
+        // Every inquiry is still there, unchanged, and listed on the Inquiries page under its status.
+        $this->assertSame($before, Inquiry::orderBy('inquiry_id')->get()->toArray());
+        $this->actingAs($this->caretaker)->get('/inquiries?status=Waiting')->assertOk()
+            ->assertSeeInOrder(['Sample Newer', 'Sample Older'])->assertDontSee('Sample Declined');
+    }
+
+    public function test_inquiries_page_has_the_form_and_the_status_column(): void
+    {
+        $this->inquiry(['prospect_name' => 'Sample Referred', 'status' => 'Referred']);
+
+        foreach (User::ROLES as $role) {
+            $this->actingAs(User::factory()->role($role)->create())->get('/inquiries')->assertOk()
+                ->assertSee('Log an inquiry')->assertSee('action="'.route('inquiries.store').'"', false)
+                ->assertSee('<label for="status">Status</label>', false)
+                ->assertSeeInOrder(['Inquiry log', '<th>Status</th>', 'Sample Referred', 'Referred'], false)
+                ->assertSee('Wants to be contacted when a room is available');
+        }
+        foreach (Inquiry::STATUSES as $status) {
+            $this->actingAs($this->caretaker)->get('/inquiries')->assertSee('<option value="'.$status.'"', false);
+        }
+    }
+
+    public function test_wants_to_be_contacted_checkbox(): void
+    {
+        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry(['wants_contact' => '1']))->assertSessionHasNoErrors();
+        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry(['prospect_name' => 'Sample Prospect B']));
+
+        $this->assertTrue(Inquiry::where('prospect_name', 'Sample Prospect A')->value('wants_contact'));
+        $this->assertFalse(Inquiry::where('prospect_name', 'Sample Prospect B')->value('wants_contact'), 'Unticked by default');
+        $this->actingAs($this->caretaker)->get('/inquiries')->assertSee('wants to be contacted');
+
+        // Unticking on update clears it.
+        $inquiry = Inquiry::where('prospect_name', 'Sample Prospect A')->first();
+        $this->actingAs($this->caretaker)->put(route('inquiries.update', $inquiry), $this->validInquiry())->assertSessionHasNoErrors();
+        $this->assertFalse($inquiry->refresh()->wants_contact);
     }
 
     public function test_inquiry_log_filters_by_status(): void

@@ -62,7 +62,7 @@ class UserAccountsTest extends TestCase
             ->assertDontSee('User Accounts')->assertDontSee('Settings &amp; Backup', false);
 
         $this->actingAs(User::factory()->role('Caretaker')->create())->get('/')
-            ->assertSee('Rooms &amp; Inquiries', false)->assertSee('Concerns')
+            ->assertSeeInOrder(['icon-door-open', 'Rooms', 'icon-clipboard-list', 'Inquiries'], false)->assertSee('Concerns')
             ->assertDontSee('Billing')->assertDontSee('Payments')->assertDontSee('User Accounts');
     }
 

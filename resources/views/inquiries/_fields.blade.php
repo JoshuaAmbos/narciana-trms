@@ -1,4 +1,4 @@
-{{-- Inquiry form fields, shared by "Log an inquiry" (rooms/index) and "Update inquiry" (inquiries/edit).
+{{-- Inquiry form fields, shared by "Log an inquiry" (inquiries/index) and "Update inquiry" (inquiries/edit).
      Needs: $inquiry, $rooms, $holds, $types, $channels, $statuses --}}
 @csrf
 
@@ -57,10 +57,17 @@
         Inquiry made by a representative (for someone else)
     </label>
 </div>
+<div class="f check">
+    <label>
+        <input type="checkbox" name="wants_contact" value="1"
+               @checked(old('wants_contact', $inquiry->wants_contact))>
+        Wants to be contacted when a room is available
+    </label>
+</div>
 
 <div class="row">
     <div class="f @error('status') has-err @enderror">
-        <label for="status">Outcome</label>
+        <label for="status">Status</label>
         <select id="status" name="status" required>
             @foreach ($statuses as $status)
                 <option value="{{ $status }}" @selected(old('status', $inquiry->status ?? 'Waiting') === $status)>{{ $status }}</option>

@@ -43,7 +43,7 @@ class RoomsTest extends TestCase
 
         foreach (User::ROLES as $role) {
             $this->actingAs(User::factory()->role($role)->create())->get('/rooms')
-                ->assertOk()->assertSee('Room availability')->assertSee('201')->assertSee('Log an inquiry');
+                ->assertOk()->assertSee('Room availability')->assertSee('201')->assertDontSee('Log an inquiry');
         }
     }
 

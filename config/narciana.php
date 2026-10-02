@@ -16,7 +16,7 @@ return [
 
     // Sidebar menu: [route name, label, roles that may see it, Lucide icon name, optional extra route patterns to highlight on]
     // (same roles as 'role_access' below).
-    // Items are hidden from roles not listed. Items whose route does not exist yet link to "#".
+    // Items are hidden from roles not listed (LayoutTest opens every visible link for each role).
     'nav' => [
         ['dashboard', 'Dashboard', ['Owner', 'Manager', 'Caretaker'], 'layout-dashboard'],
         ['rooms.index', 'Rooms & Inquiries', ['Owner', 'Manager', 'Caretaker'], 'door-open', ['inquiries.*']],

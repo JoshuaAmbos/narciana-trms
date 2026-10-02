@@ -59,6 +59,29 @@ class LayoutTest extends TestCase
             ->get('/')->assertOk()->assertSee('class="on"', false)->assertSee('icon-layout-dashboard', false);
     }
 
+    /** Module 10: for each role, every sidebar link opens (no "#", no 403/404/500) and other roles' items are hidden. */
+    public function test_every_sidebar_link_works_for_each_role(): void
+    {
+        $this->seed();
+        $this->seed(DemoSeeder::class);
+
+        foreach (['owner' => 'Owner', 'manager' => 'Manager', 'caretaker' => 'Caretaker'] as $username => $role) {
+            $user = User::where('username', $username)->firstOrFail();
+            $html = $this->actingAs($user)->get('/')->assertOk()->getContent();
+            preg_match('#<nav class="nav">(.*?)</nav>#s', $html, $nav);
+            preg_match_all('#<a href="([^"]*)"#', $nav[1], $links);
+
+            $expected = collect(config('narciana.nav'))->filter(fn ($item) => in_array($role, $item[2], true))
+                ->map(fn ($item) => route($item[0]))->values()->all();
+            $this->assertSame($expected, $links[1], "{$role} sees exactly their menu items");
+
+            foreach ($links[1] as $href) {
+                $this->assertNotSame('#', $href);
+                $this->actingAs($user)->get($href)->assertOk();
+            }
+        }
+    }
+
     public function test_app_runs_in_manila_time(): void
     {
         $this->assertSame('Asia/Manila', config('app.timezone'));

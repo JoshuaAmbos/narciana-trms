@@ -33,7 +33,8 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Private files (concern photos) are shown only through ConcernController@photo; no /storage/{path} route.
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],

@@ -24,7 +24,7 @@
             @foreach (config('narciana.nav') as $item)
                 @php([$routeName, $label, $roles, $icon] = $item)
                 @continue(! $me?->hasRole(...$roles))
-                <a href="{{ Route::has($routeName) ? route($routeName) : '#' }}"
+                <a href="{{ route($routeName) }}"
                    class="{{ request()->routeIs(Str::before($routeName, '.').'*', ...($item[4] ?? [])) ? 'on' : '' }}">
                     <x-icon :name="$icon" />{{ $label }}
                 </a>

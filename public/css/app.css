@@ -458,7 +458,7 @@ td.audit-details { min-width: 220px; font-size: 13.5px; overflow-wrap: anywhere;
 .timeline li.done::before { background: var(--green); }
 .timeline li.skipped, .timeline li.todo { color: var(--muted); }
 .steps { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; padding: 0; }
-.steps li { flex: 1 1 150px; display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+.steps li { flex: 1 1 128px; display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
 .steps .step-n { flex: 0 0 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; background: var(--border); color: var(--text); }
 .steps li.done .step-n { background: var(--green); color: #fff; }
 .steps li.current { border-color: var(--navy-2); box-shadow: 0 0 0 1px var(--navy-2); }

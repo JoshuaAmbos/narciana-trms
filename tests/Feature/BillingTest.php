@@ -302,4 +302,51 @@ class BillingTest extends TestCase
 
         $this->actingAs($owner)->get(route('bills.index'))->assertOk()->assertSee('Generate');
     }
+
+    public function test_overdue_tag_shown_when_to_bill_due_date_is_past(): void
+    {
+        $lease = $this->makeLease($this->makeRoom('204'), $this->manager);
+
+        // Due date is 2026-07-25. Travel to 2026-07-26 (1 day overdue to generate).
+        $this->travelTo(Carbon::parse('2026-07-26 10:00'));
+        $response = $this->actingAs($this->manager)->get(route('bills.index'));
+
+        $response->assertOk()
+            ->assertSee('<span class="tag t-red">Overdue</span>', false)
+            ->assertDontSee('late to bill');
+    }
+
+    public function test_meter_calculation_and_encoding_shown_in_billing(): void
+    {
+        $lease = $this->makeLease($this->makeRoom('209', 'Aircon'), $this->manager, null, 'Sample Meter Tenant', 1200.00);
+
+        // Before generation: To-bill displays reading needed and meter calculator tool
+        $res = $this->actingAs($this->manager)->get(route('bills.index'));
+        $res->assertOk()
+            ->assertSee('Reading needed')
+            ->assertSee('Encode meter')
+            ->assertSee('Electric Meter Calculator')
+            ->assertSee('1,200.00');
+
+        // Generate the bill with meter reading
+        $this->generate($lease, $this->reading(1200.00, 1350.00))->assertSessionHasNoErrors();
+
+        // After generation: monthly bills table displays the meter calculation
+        $resAfter = $this->actingAs($this->manager)->get(route('bills.index', ['month' => '2026-07']));
+        $resAfter->assertOk()
+            ->assertSee('150.00 kWh')
+            ->assertSee('1,200.00 → 1,350.00');
+    }
+
+    public function test_meter_bill_amount_shown_in_meter_readings_index(): void
+    {
+        $lease = $this->makeLease($this->makeRoom('209', 'Aircon'), $this->manager, null, 'Sample Meter Tenant', 1000.00);
+        $this->generate($lease, $this->reading(1000.00, 1100.00))->assertSessionHasNoErrors();
+
+        $res = $this->actingAs($this->manager)->get(route('meter-readings.index'));
+        $res->assertOk()
+            ->assertSee('Meter bill')
+            ->assertSee('Encode in Billing')
+            ->assertSee('₱1,500.00');
+    }
 }

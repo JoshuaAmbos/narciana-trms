@@ -4,7 +4,13 @@
 
 @section('content')
     <div class="panel">
-        <h2>Meter readings <a href="{{ route('bills.index') }}" class="btn sec">Back to Billing</a></h2>
+        <h2>
+            Meter readings
+            <span>
+                <a href="{{ route('bills.index') }}" class="btn">Encode in Billing</a>
+                <a href="{{ route('bills.index') }}" class="btn sec">Back to Billing</a>
+            </span>
+        </h2>
         <div class="filters">
             <span class="muted">Room:</span>
             <a href="{{ route('meter-readings.index') }}" class="chip {{ $roomId ? '' : 'on' }}">All</a>
@@ -13,11 +19,11 @@
             @endforeach
         </div>
         @if ($readings->isEmpty())
-            <p class="muted">No readings yet. Readings are entered when a bill is generated (or at move-in on the MOA form).</p>
+            <p class="muted">No readings yet. Electric meter bills are encoded directly in <a href="{{ route('bills.index') }}">Billing</a> when a bill is generated (or at move-in on the MOA form).</p>
         @else
             <div class="table-wrap">
                 <table>
-                    <tr><th>Date</th><th>Room</th><th class="r">Previous</th><th class="r">Current</th><th class="r">kWh used</th><th class="r">Rate</th><th>Source</th><th>Used for</th><th>By</th></tr>
+                    <tr><th>Date</th><th>Room</th><th class="r">Previous</th><th class="r">Current</th><th class="r">kWh used</th><th class="r">Rate</th><th class="r">Meter bill</th><th>Source</th><th>Used for</th><th>By</th></tr>
                     @foreach ($readings as $r)
                         <tr>
                             <td class="nowrap">{{ $r->reading_date->format('j M Y') }}</td>
@@ -26,6 +32,7 @@
                             <td class="money">{{ number_format((float) $r->current_reading, 2) }}</td>
                             <td class="money">{{ number_format((float) $r->current_reading - (float) $r->previous_reading, 2) }}</td>
                             <td class="money">@peso($r->rate_per_kwh)</td>
+                            <td class="money"><b>@peso(max(0, (float) $r->current_reading - (float) $r->previous_reading) * (float) $r->rate_per_kwh)</b></td>
                             <td>{{ $r->source }}</td>
                             <td>
                                 @forelse ($r->bills as $b)

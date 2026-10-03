@@ -302,13 +302,18 @@ class DemoSeeder extends Seeder
     /** A plain grey 800x600 JPEG with a label: stands in for a tablet photo (no real pictures in sample data). */
     private function samplePhoto(string $label): UploadedFile
     {
-        $image = imagecreatetruecolor(800, 600);
-        imagefill($image, 0, 0, imagecolorallocate($image, 200, 205, 212));
-        imagerectangle($image, 20, 20, 779, 579, imagecolorallocate($image, 120, 128, 140));
-        imagestring($image, 5, 40, 280, $label, imagecolorallocate($image, 40, 48, 60));
         $path = tempnam(sys_get_temp_dir(), 'nrc').'.jpg';
-        imagejpeg($image, $path, 80);
-        imagedestroy($image);
+        if (function_exists('imagecreatetruecolor')) {
+            $image = imagecreatetruecolor(800, 600);
+            imagefill($image, 0, 0, imagecolorallocate($image, 200, 205, 212));
+            imagerectangle($image, 20, 20, 779, 579, imagecolorallocate($image, 120, 128, 140));
+            imagestring($image, 5, 40, 280, $label, imagecolorallocate($image, 40, 48, 60));
+            imagejpeg($image, $path, 80);
+            imagedestroy($image);
+        } else {
+            // Minimal valid 1x1 JPEG fallback when GD extension is not loaded in PHP
+            file_put_contents($path, base64_decode('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA='));
+        }
 
         return new UploadedFile($path, 'sample.jpg', 'image/jpeg', null, true);
     }

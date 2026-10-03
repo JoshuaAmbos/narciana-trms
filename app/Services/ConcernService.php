@@ -153,6 +153,13 @@ class ConcernService
     public function storePhoto(UploadedFile $file): string
     {
         $path = $file->getRealPath();
+        if (! function_exists('imagecreatefromjpeg')) {
+            $name = 'concerns/'.Str::random(32).'.jpg';
+            Storage::disk(self::PHOTO_DISK)->put($name, file_get_contents($path));
+
+            return $name;
+        }
+
         $image = match ($file->getMimeType()) {
             'image/png' => @imagecreatefrompng($path),
             default => @imagecreatefromjpeg($path),

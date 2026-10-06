@@ -322,8 +322,8 @@ class MoveoutTest extends TestCase
         $states = fn () => array_column(app(SettlementService::class)->steps($this->moveout()), 'state');
         $this->assertSame(['done', 'current', 'todo', 'todo', 'todo'], $states());
         $this->assertSame('Moving out', $this->lease->refresh()->load('moveout')->displayStatus());
-        $this->actingAs($this->manager)->get(route('tenants.index', ['status' => 'Moving out']))->assertSee('Sample Tenant A')->assertSee('Moving out');
-        $this->actingAs($this->manager)->get(route('tenants.index', ['status' => 'Active']))->assertDontSee('Sample Tenant A');
+        $this->actingAs($this->manager)->get(route('leases.index', ['status' => 'Moving out']))->assertSee('Sample Tenant A')->assertSee('Moving out');
+        $this->actingAs($this->manager)->get(route('leases.index', ['status' => 'Active']))->assertDontSee('Sample Tenant A');
 
         $this->recordActual('2026-09-25', '2026-10-28', '2026-10-28');
         $this->finalBill();
@@ -336,8 +336,8 @@ class MoveoutTest extends TestCase
         $this->assertSame(['done', 'done', 'done', 'done', 'done'], $states());
 
         $this->assertSame('Moved out', $this->lease->refresh()->load('moveout')->displayStatus());
-        $this->actingAs($this->manager)->get(route('tenants.index', ['status' => 'Moved out']))->assertSee('Sample Tenant A')->assertSee('Moved out');
-        $this->actingAs($this->manager)->get(route('tenants.index'))->assertDontSee('Sample Tenant A'); // default: current tenants
+        $this->actingAs($this->manager)->get(route('leases.index', ['status' => 'Moved out']))->assertSee('Sample Tenant A')->assertSee('Moved out');
+        $this->actingAs($this->manager)->get(route('leases.index'))->assertDontSee('Sample Tenant A'); // default: current active leases
     }
 
     public function test_regular_bills_first_then_final_bill_then_compute(): void

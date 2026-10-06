@@ -215,7 +215,7 @@ class EndToEndTest extends TestCase
         $this->assertSame('Vacating', $aircon->refresh()->status);
         $this->assertSame('2026-10-28', $aircon->expected_vacant_date->toDateString());
         $this->assertSame('Moving out', $leaseA->refresh()->load('moveout')->displayStatus());
-        $this->actingAs($this->manager)->get(route('tenants.index', ['status' => 'Moving out']))->assertSee('Sample Tenant A');
+        $this->actingAs($this->manager)->get(route('leases.index', ['status' => 'Moving out']))->assertSee('Sample Tenant A');
         $this->actingAs($this->manager)->get('/')->assertSee('Moving out')->assertSee('Sample Tenant A');
 
         // The October bill still falls before the move-out date.
@@ -264,7 +264,7 @@ class EndToEndTest extends TestCase
         $this->assertSame('Vacant', $aircon->status);
         $this->assertNull($aircon->expected_vacant_date);
         $this->assertSame(0, Bill::where('lease_id', $leaseA->lease_id)->where('status', '!=', 'Paid')->count());
-        $this->actingAs($this->manager)->get(route('tenants.index', ['status' => 'Moved out']))->assertSee('Sample Tenant A');
+        $this->actingAs($this->manager)->get(route('leases.index', ['status' => 'Moved out']))->assertSee('Sample Tenant A');
 
         // Every step left its mark in the audit log, by the right person.
         foreach ([

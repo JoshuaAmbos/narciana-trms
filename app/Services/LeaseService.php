@@ -50,7 +50,7 @@ class LeaseService
 
             $tenantModel = isset($tenant['tenant_id'])
                 ? Tenant::findOrFail($tenant['tenant_id'])
-                : Tenant::create($tenant + ['created_at' => now()]);
+                : Tenant::create(collect($tenant)->except(['prev_building'])->all() + ['created_at' => now()]);
 
             $leaseModel = Lease::create($lease + [
                 'tenant_id' => $tenantModel->tenant_id,

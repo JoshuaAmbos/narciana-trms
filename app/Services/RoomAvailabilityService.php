@@ -30,7 +30,7 @@ class RoomAvailabilityService
     /**
      * @param  Collection<int, Room>  $rooms
      * @param  Collection<int, Inquiry>  $inquiries
-     * @return array<int, Collection<int, Inquiry>>  room_id => fitting prospects (oldest first), only for available rooms
+     * @return array<int, Collection<int, Inquiry>> room_id => fitting prospects (oldest first), only for available rooms
      */
     public function match(Collection $rooms, Collection $inquiries): array
     {
@@ -64,7 +64,7 @@ class RoomAvailabilityService
      * Rented inquiries that still "hold" their room: no lease has been encoded for that room
      * with an MOA date on or after the inquiry date. Once the MOA is encoded (Module 4) the hold ends by itself.
      *
-     * @return Collection<int, Inquiry>  room_id => oldest holding inquiry
+     * @return Collection<int, Inquiry> room_id => oldest holding inquiry
      */
     public function rentalHolds(?int $roomId = null, ?int $exceptInquiryId = null): Collection
     {

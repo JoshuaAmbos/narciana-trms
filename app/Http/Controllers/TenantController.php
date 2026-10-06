@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\TenantRequest;
+use App\Http\Requests\StoreTenantRequest;
+use App\Http\Requests\UpdateTenantRequest;
 use App\Models\AuditLog;
 use App\Models\Lease;
 use App\Models\Tenant;
@@ -37,6 +38,8 @@ class TenantController extends Controller
             $s = '%'.$search.'%';
             $query->where(function ($q) use ($s) {
                 $q->where('full_name', 'like', $s)
+                    ->orWhere('first_name', 'like', $s)
+                    ->orWhere('last_name', 'like', $s)
                     ->orWhere('contact_no', 'like', $s)
                     ->orWhere('valid_id_no', 'like', $s)
                     ->orWhere('provincial_address', 'like', $s)
@@ -82,7 +85,7 @@ class TenantController extends Controller
         ]);
     }
 
-    public function store(TenantRequest $request): RedirectResponse
+    public function store(StoreTenantRequest $request): RedirectResponse
     {
         $tenant = Tenant::create($request->validated());
 
@@ -118,7 +121,7 @@ class TenantController extends Controller
         ]);
     }
 
-    public function update(TenantRequest $request, Tenant $tenant): RedirectResponse
+    public function update(UpdateTenantRequest $request, Tenant $tenant): RedirectResponse
     {
         $tenant->update($request->validated());
 

@@ -16,9 +16,9 @@
             @csrf
             @include('tenants._fields', ['tenant' => $tenant])
 
-            <div class="form-actions" style="margin-top: 24px;">
-                <button type="submit" class="btn">Register Tenant</button>
+            <div class="form-actions" style="margin-top: 24px; display: flex; justify-content: flex-end; align-items: center; gap: 12px;">
                 <a href="{{ route('tenants.index') }}" class="btn sec">Cancel</a>
+                <button type="submit" class="btn">Register</button>
             </div>
         </form>
     </div>

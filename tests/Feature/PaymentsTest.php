@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\AuditLog;
 use App\Models\Bill;
 use App\Models\Lease;
 use App\Models\Payment;

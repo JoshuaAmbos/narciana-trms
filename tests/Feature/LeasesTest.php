@@ -218,7 +218,6 @@ class LeasesTest extends TestCase
         $tenant = Tenant::firstOrFail();
         $this->assertSame('Purok 1, Sample Barangay, Davao del Norte', $tenant->provincial_address);
         $this->assertSame('Student', $tenant->occupation);
-        $this->assertNull($tenant->prev_building); // left blank on the form
     }
 
     public function test_moa_requires_provincial_address_and_occupation_for_a_new_tenant(): void
@@ -226,8 +225,8 @@ class LeasesTest extends TestCase
         $room = $this->makeRoom('204');
 
         $this->actingAs($this->manager)->post('/leases', $this->moaForm($room, [
-            'provincial_address' => '', 'occupation' => '', 'prev_building' => str_repeat('x', 151),
-        ]))->assertSessionHasErrors(['provincial_address', 'occupation', 'prev_building']);
+            'provincial_address' => '', 'occupation' => '',
+        ]))->assertSessionHasErrors(['provincial_address', 'occupation']);
 
         $this->assertSame(0, Tenant::count());
     }
@@ -254,13 +253,12 @@ class LeasesTest extends TestCase
             ->assertSessionHasErrors(['provincial_address', 'occupation']);
 
         $this->actingAs($this->manager)->put(route('tenants.update', $lease->tenant), $form + [
-            'provincial_address' => 'Purok 9, Sample Barangay, Cotabato', 'occupation' => 'Teacher', 'prev_building' => '',
+            'provincial_address' => 'Purok 9, Sample Barangay, Cotabato', 'occupation' => 'Teacher',
         ])->assertSessionHasNoErrors();
 
         $tenant = $lease->tenant->refresh();
         $this->assertSame('Purok 9, Sample Barangay, Cotabato', $tenant->provincial_address);
         $this->assertSame('Teacher', $tenant->occupation);
-        $this->assertNull($tenant->prev_building);
     }
 
     public function test_forms_and_moa_page_show_renter_profile_fields(): void
@@ -270,21 +268,19 @@ class LeasesTest extends TestCase
         $m = $this->actingAs($this->manager);
 
         $m->get(route('leases.create'))->assertOk()
-            ->assertSee('name="provincial_address"', false)->assertSee('name="occupation"', false)
-            ->assertSee('Building name of previous apartment/room rented (optional)');
+            ->assertSee('name="provincial_address"', false)->assertSee('name="occupation"', false);
 
         $m->get(route('tenants.edit', $lease->tenant))->assertOk()
-            ->assertSee('value="Purok 2, Sample Barangay, Bukidnon"', false)->assertSee('value="Nurse"', false)
-            ->assertSee('value="Sample Apartment A"', false);
+            ->assertSee('value="Purok 2, Sample Barangay, Bukidnon"', false)->assertSee('value="Nurse"', false);
 
         $m->get(route('leases.show', $lease))->assertOk()
-            ->assertSee('Purok 2, Sample Barangay, Bukidnon')->assertSee('Nurse')->assertSee('Sample Apartment A');
+            ->assertSee('Purok 2, Sample Barangay, Bukidnon')->assertSee('Nurse');
     }
 
     public function test_tenant_encoded_before_the_profile_fields_still_opens(): void
     {
         $lease = $this->makeLease($this->makeRoom('204'), $this->manager);
-        $lease->tenant->update(['provincial_address' => null, 'occupation' => null, 'prev_building' => null]);
+        $lease->tenant->update(['provincial_address' => null, 'occupation' => null]);
 
         $this->actingAs($this->manager)->get(route('leases.show', $lease))->assertOk()->assertSee('Not recorded');
         $this->actingAs($this->manager)->get(route('tenants.edit', $lease->tenant))->assertOk();

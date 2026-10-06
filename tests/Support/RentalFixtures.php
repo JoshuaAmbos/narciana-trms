@@ -34,7 +34,7 @@ trait RentalFixtures
             'tenant_mode' => 'new',
             'full_name' => 'Sample Tenant A', 'contact_no' => '0918 555 0123',
             'valid_id_type' => "Driver's License", 'valid_id_no' => 'N01-23-456789',
-            'provincial_address' => 'Purok 1, Sample Barangay, Davao del Norte', 'occupation' => 'Student', 'prev_building' => '',
+            'provincial_address' => 'Purok 1, Sample Barangay, Davao del Norte', 'occupation' => 'Student',
             'room_id' => $room->room_id,
             'moa_date' => '2026-06-24', 'move_in_date' => '2026-06-25', 'due_day' => '25',
             'monthly_rent' => '3500.00', 'min_stay_months' => '4', 'advance_amount' => '3500.00',
@@ -47,7 +47,7 @@ trait RentalFixtures
     {
         return app(LeaseService::class)->create(
             ['full_name' => $tenantName, 'contact_no' => '0918 555 0123', 'valid_id_type' => 'Passport', 'valid_id_no' => 'P1234567',
-                'provincial_address' => 'Purok 2, Sample Barangay, Bukidnon', 'occupation' => 'Nurse', 'prev_building' => 'Sample Apartment A'],
+                'provincial_address' => 'Purok 2, Sample Barangay, Bukidnon', 'occupation' => 'Nurse'],
             ['room_id' => $room->room_id, 'moa_date' => '2026-06-24', 'move_in_date' => '2026-06-25', 'due_day' => 25,
                 'monthly_rent' => 3500, 'min_stay_months' => 4, 'advance_amount' => 3500, 'deposit_maintenance' => 1000,
                 'deposit_damage' => 1500, 'deposit_bills' => 700, 'deposit_keys' => 300],

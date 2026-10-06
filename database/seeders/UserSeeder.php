@@ -19,6 +19,7 @@ class UserSeeder extends Seeder
 
             if (User::where('username', $username)->exists()) {
                 $this->command?->line("User '{$username}' already exists, skipped.");
+
                 continue;
             }
 

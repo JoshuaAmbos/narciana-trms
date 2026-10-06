@@ -16,7 +16,7 @@ class Tenant extends Model
     public const STATUSES = ['Active', 'Inactive', 'Blacklisted'];
 
     public const ID_TYPES = [
-        'National ID (PhilSys)',
+        'PhilSys National ID (PCN)',
         'Driver\'s License',
         'UMID',
         'Passport',
@@ -24,7 +24,7 @@ class Tenant extends Model
         'Postal ID',
         'Voter\'s ID',
         'Student ID',
-        'Other Valid ID',
+        'Other',
     ];
 
     protected $table = 'tbl_tenant';
@@ -34,13 +34,17 @@ class Tenant extends Model
     public $timestamps = true;
 
     protected $fillable = [
+        'first_name',
+        'middle_name',
+        'last_name',
+        'name_extension',
         'full_name',
         'contact_no',
         'valid_id_type',
+        'other_id_type',
         'valid_id_no',
         'provincial_address',
         'occupation',
-        'prev_building',
         'status',
         'created_at',
         'updated_at',
@@ -52,6 +56,56 @@ class Tenant extends Model
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Compute full name from composite fields with fallback to legacy full_name attribute.
+     */
+    public function getFullNameAttribute(): string
+    {
+        $computed = trim("{$this->first_name} {$this->middle_name} {$this->last_name} {$this->name_extension}");
+        if ($computed !== '') {
+            return preg_replace('/\s+/', ' ', $computed);
+        }
+
+        return (string) ($this->attributes['full_name'] ?? '');
+    }
+
+    /**
+     * Mutator to synchronize first_name and last_name when full_name is assigned directly.
+     */
+    public function setFullNameAttribute($value): void
+    {
+        $this->attributes['full_name'] = $value;
+        if ($value && (empty($this->attributes['first_name']) || empty($this->attributes['last_name']))) {
+            $parts = preg_split('/\s+/', trim((string) $value), 2);
+            $this->attributes['first_name'] = $this->attributes['first_name'] ?? ($parts[0] ?? '');
+            $this->attributes['last_name'] = $this->attributes['last_name'] ?? ($parts[1] ?? ($parts[0] ?? ''));
+        }
+    }
+
+    /**
+     * Normalize contact numbers removing whitespace or formatting hyphens.
+     */
+    public function setContactNoAttribute($value): void
+    {
+        $this->attributes['contact_no'] = preg_replace('/[^\d+]/', '', (string) $value);
+    }
+
+    /**
+     * Masked ID accessor for summary tables to preserve tenant privacy (RA 10173 compliance).
+     */
+    public function getMaskedIdNumberAttribute(): string
+    {
+        $no = (string) $this->valid_id_no;
+        $len = strlen($no);
+        if ($len <= 4) {
+            return $no;
+        }
+
+        $stars = max(1, $len - 6);
+
+        return substr($no, 0, 2).str_repeat('*', $stars).substr($no, -4);
     }
 
     /** Historical and active lease agreements associated with this tenant. */

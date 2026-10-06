@@ -34,7 +34,7 @@ class CaretakerPrivacyTest extends TestCase
         $this->lease->update(['monthly_rent' => 4321.99, 'advance_amount' => 4321.99, 'deposit_maintenance' => 1111.11,
             'deposit_damage' => 2222.22, 'deposit_bills' => 777.77, 'deposit_keys' => 210.89]);
         $this->lease->tenant->update(['contact_no' => '0999 888 7777', 'valid_id_no' => 'SECRET-ID-42',
-            'provincial_address' => 'Secret Provincial Address', 'occupation' => 'Secret Occupation', 'prev_building' => 'Secret Building']);
+            'provincial_address' => 'Secret Provincial Address', 'occupation' => 'Secret Occupation']);
     }
 
     public function test_caretaker_gets_403_on_every_moa_route(): void

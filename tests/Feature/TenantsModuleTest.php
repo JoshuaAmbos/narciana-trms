@@ -206,4 +206,88 @@ class TenantsModuleTest extends TestCase
         $c->get(route('tenants.edit', $tenant))->assertForbidden();
         $c->get(route('leases.index'))->assertForbidden();
     }
+
+    public function test_register_tenant_with_split_name_fields_and_philippine_phone_format(): void
+    {
+        $payload = [
+            'first_name' => 'Juan',
+            'middle_name' => 'Protacio',
+            'last_name' => 'Rizal',
+            'name_extension' => 'Jr.',
+            'contact_no' => '+639171234567',
+            'valid_id_type' => 'PhilSys National ID (PCN)',
+            'valid_id_no' => '1234-5678-9012-3456',
+            'provincial_address' => 'Calamba, Laguna',
+            'occupation' => 'Ophthalmologist',
+            'status' => 'Active',
+        ];
+
+        $res = $this->actingAs($this->manager)->post(route('tenants.store'), $payload);
+
+        $res->assertRedirect(route('tenants.index'))
+            ->assertSessionHas('prompt_lease', true);
+
+        $tenant = Tenant::where('last_name', 'Rizal')->firstOrFail();
+        $this->assertSame('Juan Protacio Rizal Jr.', $tenant->full_name);
+        $this->assertSame('+639171234567', $tenant->contact_no);
+        $this->assertSame('1234-5678-9012-3456', $tenant->valid_id_no);
+        $this->assertSame('12*************3456', $tenant->masked_id_number);
+    }
+
+    public function test_phone_validation_rejects_non_philippine_formats(): void
+    {
+        $payload = [
+            'first_name' => 'Carlos',
+            'last_name' => 'Garcia',
+            'contact_no' => '08123456789', // Invalid prefix (not 09 or +639)
+            'valid_id_type' => 'Driver\'s License',
+            'valid_id_no' => 'N01-99-123456',
+            'provincial_address' => 'Talibon, Bohol',
+            'occupation' => 'Teacher',
+        ];
+
+        $res = $this->actingAs($this->manager)->post(route('tenants.store'), $payload);
+        $res->assertSessionHasErrors(['contact_no']);
+    }
+
+    public function test_other_id_type_is_required_when_valid_id_type_is_other(): void
+    {
+        $payload = [
+            'first_name' => 'Apolinario',
+            'last_name' => 'Mabini',
+            'contact_no' => '09181234567',
+            'valid_id_type' => 'Other',
+            'other_id_type' => '', // Missing required specification
+            'valid_id_no' => 'PWD-2026-001',
+            'provincial_address' => 'Tanauan, Batangas',
+            'occupation' => 'Lawyer',
+        ];
+
+        $res = $this->actingAs($this->manager)->post(route('tenants.store'), $payload);
+        $res->assertSessionHasErrors(['other_id_type']);
+
+        $payload['other_id_type'] = 'PWD Identification Card';
+        $res2 = $this->actingAs($this->manager)->post(route('tenants.store'), $payload);
+        $res2->assertSessionHasNoErrors();
+    }
+
+    public function test_masked_id_number_displayed_in_directory_table(): void
+    {
+        $tenant = Tenant::create([
+            'first_name' => 'Maria',
+            'last_name' => 'Clara',
+            'contact_no' => '09171239999',
+            'valid_id_type' => 'UMID',
+            'valid_id_no' => 'CRN-987654321',
+            'provincial_address' => 'San Diego',
+            'occupation' => 'Musician',
+            'status' => 'Active',
+        ]);
+
+        $res = $this->actingAs($this->manager)->get(route('tenants.index'));
+
+        $res->assertOk()
+            ->assertSee($tenant->masked_id_number)
+            ->assertDontSee('CRN-987654321');
+    }
 }

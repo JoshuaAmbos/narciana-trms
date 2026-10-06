@@ -42,8 +42,16 @@
             </div>
             <div class="card">
                 <div class="l">Government Identification</div>
-                <div class="n" style="font-size: 18px;">{{ $tenant->valid_id_type }}</div>
-                <div class="sub nowrap">ID No: <b>{{ $tenant->valid_id_no }}</b></div>
+                <div class="n" style="font-size: 18px;">
+                    {{ $tenant->valid_id_type }}
+                    @if ($tenant->other_id_type)
+                        <span class="sub muted">({{ $tenant->other_id_type }})</span>
+                    @endif
+                </div>
+                <div class="sub nowrap">
+                    <span class="tag t-green" style="font-size: 10px; margin-right: 4px;">Verified</span>
+                    ID No: <b>{{ $tenant->valid_id_no }}</b>
+                </div>
             </div>
             <div class="card">
                 <div class="l">Lifetime MOAs</div>
@@ -55,16 +63,20 @@
         {{-- Demographic Facts --}}
         <dl class="facts" style="margin-bottom: 24px;">
             <div>
+                <dt>Legal Full Name</dt>
+                <dd><b>{{ $tenant->full_name }}</b></dd>
+            </div>
+            <div>
+                <dt>Philippine Mobile</dt>
+                <dd>{{ $tenant->contact_no }}</dd>
+            </div>
+            <div>
                 <dt>Provincial Address</dt>
                 <dd>{{ $tenant->provincial_address ?: 'Not recorded' }}</dd>
             </div>
             <div>
                 <dt>Occupation</dt>
                 <dd>{{ $tenant->occupation ?: 'Not recorded' }}</dd>
-            </div>
-            <div>
-                <dt>Previous Building / Residence</dt>
-                <dd>{{ $tenant->prev_building ?: 'None specified' }}</dd>
             </div>
             <div>
                 <dt>System Profile Status</dt>

@@ -25,7 +25,7 @@ class LeaseController extends Controller
     public function index(Request $request): View
     {
         $status = $request->input('status', 'Active');
-        if (! in_array($status, ['Active', 'Ended', 'Cancelled', 'All'], true)) {
+        if (! in_array($status, ['Active', 'Moving out', 'Moved out', 'Ended', 'Cancelled', 'All'], true)) {
             $status = 'Active';
         }
 
@@ -35,7 +35,13 @@ class LeaseController extends Controller
         $query = Lease::with(['room', 'tenant', 'moveout'])
             ->withCount('activeOccupants');
 
-        if ($status !== 'All') {
+        if ($status === 'Moving out') {
+            $query->displayStatus('Moving out');
+        } elseif ($status === 'Moved out') {
+            $query->displayStatus('Moved out');
+        } elseif ($status === 'Active' && $request->has('status')) {
+            $query->displayStatus('Active');
+        } elseif ($status !== 'All') {
             $query->where('status', $status);
         }
 

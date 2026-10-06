@@ -153,7 +153,6 @@ class DemoSeeder extends Seeder
                     'valid_id_no' => 'SAMPLE-'.str_pad((string) $n, 3, '0', STR_PAD_LEFT),
                     'provincial_address' => "Purok {$n}, Sample Barangay, ".self::PROVINCES[$n % count(self::PROVINCES)],
                     'occupation' => self::OCCUPATIONS[$n % count(self::OCCUPATIONS)],
-                    'prev_building' => $n % 3 ? "Sample Apartment {$n}" : null, // optional on the form
                 ],
                 ['room_id' => $room->room_id, 'moa_date' => $moveIn->copy()->subDay()->toDateString(),
                     'move_in_date' => $moveIn->toDateString(), 'due_day' => $moveIn->day, 'monthly_rent' => $rent,

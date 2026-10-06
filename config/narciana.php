@@ -22,8 +22,9 @@ return [
         ['dashboard', 'Dashboard', ['Owner', 'Manager', 'Caretaker'], 'layout-dashboard'],
         ['bills.index', 'Billing', ['Owner', 'Manager'], 'receipt', ['meter-readings.*']],
         ['payments.index', 'Payments', ['Owner', 'Manager'], 'wallet'],
-        // Caretaker sees this page only for appliances and visitors, not the MOA details.
-        ['tenants.index', 'Tenants & MOA', ['Owner', 'Manager', 'Caretaker'], 'users', ['leases.*']],
+        // Caretaker sees Tenants list with limited room and name for security/maintenance.
+        ['tenants.index', 'Tenants', ['Owner', 'Manager', 'Caretaker'], 'users', ['tenants.*']],
+        ['leases.index', 'Leases', ['Owner', 'Manager'], 'file-text', ['leases.*']],
         ['concerns.index', 'Concerns', ['Owner', 'Manager', 'Caretaker'], 'wrench'],
         ['rooms.index', 'Rooms', ['Owner', 'Manager', 'Caretaker'], 'door-open'],
         ['inquiries.index', 'Inquiries', ['Owner', 'Manager', 'Caretaker'], 'clipboard-list'],

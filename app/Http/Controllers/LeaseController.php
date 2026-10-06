@@ -14,29 +14,86 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
-/** Encode, view, correct and cancel MOAs (Owner/Manager only; see routes). */
+/**
+ * Leases Module: contractual tenancy agreements (signed physical MOA reference details),
+ * unit assignments, security deposit breakdowns, utility sub-entities, and lifecycle states.
+ */
 class LeaseController extends Controller
 {
     public function __construct(private LeaseService $leases) {}
+
+    public function index(Request $request): View
+    {
+        $status = $request->input('status', 'Active');
+        if (! in_array($status, ['Active', 'Ended', 'Cancelled', 'All'], true)) {
+            $status = 'Active';
+        }
+
+        $search = trim((string) $request->input('search', ''));
+        $roomType = $request->input('room_type', 'All');
+
+        $query = Lease::with(['room', 'tenant', 'moveout'])
+            ->withCount('activeOccupants');
+
+        if ($status !== 'All') {
+            $query->where('status', $status);
+        }
+
+        if ($search !== '') {
+            $s = '%'.$search.'%';
+            $query->where(function ($q) use ($s) {
+                $q->whereHas('room', fn ($rq) => $rq->where('room_no', 'like', $s))
+                    ->orWhereHas('tenant', fn ($tq) => $tq->where('full_name', 'like', $s));
+            });
+        }
+
+        if ($roomType !== 'All' && in_array($roomType, Room::TYPES, true)) {
+            $query->whereHas('room', fn ($rq) => $rq->where('room_type', $roomType));
+        }
+
+        $leases = $query->orderByDesc('move_in_date')->get();
+
+        $counts = [
+            'Active' => Lease::where('status', 'Active')->count(),
+            'Ended' => Lease::where('status', 'Ended')->count(),
+            'Cancelled' => Lease::where('status', 'Cancelled')->count(),
+            'All' => Lease::count(),
+        ];
+
+        return view('leases.index', [
+            'leases' => $leases,
+            'status' => $status,
+            'search' => $search,
+            'roomType' => $roomType,
+            'counts' => $counts,
+            'vacantRoomsCount' => Room::where('status', 'Vacant')->count(),
+        ]);
+    }
 
     public function create(Request $request): View
     {
         $rooms = Room::where('status', 'Vacant')->orderBy('room_no')->get();
         $selected = $rooms->firstWhere('room_id', $request->integer('room_id'));
 
+        $selectedTenantId = $request->integer('tenant_id') ?: null;
+        $selectedTenant = $selectedTenantId ? Tenant::find($selectedTenantId) : null;
+
+        // Tenants without an active lease (eligible to lease).
+        $eligibleTenants = Tenant::whereDoesntHave('leases', fn ($q) => $q->where('status', 'Active'))
+            ->orderBy('full_name')->get();
+
         return view('leases.create', [
             'rooms' => $rooms,
             'selectedRoomId' => $selected?->room_id,
-            'tenant' => new Tenant,
-            // Returning tenants: anyone without an active lease.
-            'returningTenants' => Tenant::whereDoesntHave('leases', fn ($q) => $q->where('status', 'Active'))
-                ->orderBy('full_name')->get(),
+            'tenant' => $selectedTenant ?? new Tenant,
+            'selectedTenantId' => $selectedTenantId,
+            'eligibleTenants' => $eligibleTenants,
+            'staggeredDueDays' => Lease::STAGGERED_DUE_DAYS,
             'lease' => new Lease([
                 'moa_date' => today(),
                 'move_in_date' => today(),
                 'due_day' => today()->day,
                 'min_stay_months' => Lease::DEFAULT_MIN_STAY_MONTHS,
-                // Opened from a room's "Encode MOA" button: start from that room's rent.
                 'monthly_rent' => $selected?->monthly_rent,
                 'advance_amount' => $selected?->monthly_rent,
             ]),
@@ -60,7 +117,16 @@ class LeaseController extends Controller
 
     public function show(Lease $lease, HouseholdService $household, Request $request): View
     {
-        $lease->load(['tenant', 'room', 'user', 'occupants' => fn ($q) => $q->orderByDesc('is_principal')->orderBy('date_added')]);
+        $lease->load([
+            'tenant',
+            'room',
+            'user',
+            'occupants' => fn ($q) => $q->orderByDesc('is_principal')->orderBy('date_added'),
+            'appliances' => fn ($q) => $q->orderByDesc('date_added'),
+            'visitors' => fn ($q) => $q->orderByDesc('arrival_date'),
+            'bills' => fn ($q) => $q->orderByDesc('due_date'),
+            'moveout',
+        ]);
 
         return view('leases.show', [
             'lease' => $lease,
@@ -72,7 +138,10 @@ class LeaseController extends Controller
 
     public function edit(Lease $lease): View
     {
-        return view('leases.edit', ['lease' => $lease->load(['tenant', 'room'])]);
+        return view('leases.edit', [
+            'lease' => $lease->load(['tenant', 'room']),
+            'staggeredDueDays' => Lease::STAGGERED_DUE_DAYS,
+        ]);
     }
 
     public function update(LeaseRequest $request, Lease $lease): RedirectResponse
@@ -96,8 +165,11 @@ class LeaseController extends Controller
     private function depositWarning(Lease $lease): ?string
     {
         return $this->leases->depositWarning(
-            (float) $lease->monthly_rent, (float) $lease->deposit_maintenance, (float) $lease->deposit_damage,
-            (float) $lease->deposit_bills, (float) $lease->deposit_keys,
+            (float) $lease->monthly_rent,
+            (float) $lease->deposit_maintenance,
+            (float) $lease->deposit_damage,
+            (float) $lease->deposit_bills,
+            (float) $lease->deposit_keys,
         );
     }
 }

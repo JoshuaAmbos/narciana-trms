@@ -15,10 +15,11 @@
                 @if ($lease->status === 'Active')
                     <a href="{{ route('leases.edit', $lease) }}" class="btn sec">Edit MOA</a>
                 @endif
+                <a href="{{ route('leases.index') }}" class="btn sec">&larr; Back to Leases</a>
             </h2>
 
             <dl class="facts">
-                <div><dt>Principal renter</dt><dd>{{ $lease->tenant->full_name }} <a href="{{ route('tenants.edit', $lease->tenant) }}" class="small-link">Edit tenant</a></dd></div>
+                <div><dt>Principal renter</dt><dd><b>{{ $lease->tenant->full_name }}</b> <span class="muted">&bull;</span> <a href="{{ route('tenants.show', $lease->tenant) }}" class="small-link">Master profile</a> <span class="muted">&bull;</span> <a href="{{ route('tenants.edit', $lease->tenant) }}" class="small-link">Edit profile</a></dd></div>
                 <div><dt>Contact number</dt><dd>{{ $lease->tenant->contact_no }}</dd></div>
                 <div><dt>Valid ID</dt><dd>{{ $lease->tenant->valid_id_type }} {{ $lease->tenant->valid_id_no }}</dd></div>
                 <div><dt>Provincial address</dt><dd>{{ $lease->tenant->provincial_address ?? 'Not recorded' }}</dd></div>

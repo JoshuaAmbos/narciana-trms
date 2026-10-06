@@ -22,11 +22,14 @@ class Lease extends Model
     /** Default minimum stay on the MOA form (decision 3). */
     public const DEFAULT_MIN_STAY_MONTHS = 4;
 
+    /** Staggered contractual due dates strictly on the 10th, 15th, 20th, 25th, or 30th. */
+    public const STAGGERED_DUE_DAYS = [10, 15, 20, 25, 30];
+
     protected $table = 'tbl_lease';
 
     protected $primaryKey = 'lease_id';
 
-    public $timestamps = false;
+    public $timestamps = true;
 
     protected $fillable = [
         'tenant_id',
@@ -43,6 +46,8 @@ class Lease extends Model
         'deposit_keys',
         'status',
         'user_id',
+        'created_at',
+        'updated_at',
     ];
 
     protected function casts(): array
@@ -58,6 +63,8 @@ class Lease extends Model
             'deposit_damage' => 'decimal:2',
             'deposit_bills' => 'decimal:2',
             'deposit_keys' => 'decimal:2',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
         ];
     }
 
@@ -84,6 +91,21 @@ class Lease extends Model
             'Active' => $this->moveout ? 'Moving out' : 'Active',
             default => $this->status,
         };
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', 'Active');
+    }
+
+    public function scopeEnded(Builder $query): Builder
+    {
+        return $query->where('status', 'Ended');
+    }
+
+    public function scopeCancelled(Builder $query): Builder
+    {
+        return $query->where('status', 'Cancelled');
     }
 
     /** Leases shown under one display status (Tenants list filter). */

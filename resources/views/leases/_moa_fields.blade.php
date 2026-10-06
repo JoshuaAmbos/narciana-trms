@@ -11,9 +11,17 @@
         @error('move_in_date') <div class="err">{{ $message }}</div> @enderror
     </div>
     <div class="f @error('due_day') has-err @enderror">
-        <label for="due_day">Monthly due day</label>
+        <label for="due_day">Contractual due day</label>
+        <div style="display: flex; gap: 4px; margin-bottom: 6px; flex-wrap: wrap;">
+            @foreach ([10, 15, 20, 25, 30] as $staggeredDay)
+                <button type="button" class="btn sec" style="padding: 2px 8px; font-size: 11px;"
+                        onclick="document.getElementById('due_day').value = {{ $staggeredDay }}; document.getElementById('due_day').dispatchEvent(new Event('input'));">
+                    {{ $staggeredDay }}th
+                </button>
+            @endforeach
+        </div>
         <input id="due_day" name="due_day" type="number" min="1" max="31" inputmode="numeric" value="{{ old('due_day', $lease->due_day) }}">
-        <div class="hint">Defaults to the move-in day.</div>
+        <div class="hint">Staggered due day (10th, 15th, 20th, 25th, or 30th).</div>
         @error('due_day') <div class="err">{{ $message }}</div> @enderror
     </div>
     <div class="f @error('min_stay_months') has-err @enderror">

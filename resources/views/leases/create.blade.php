@@ -15,26 +15,35 @@
 
             <div class="panel">
                 <h2>1. Principal renter</h2>
-                @php($mode = old('tenant_mode', 'new'))
+                @php($defaultMode = ($selectedTenantId ?? false) ? 'existing' : 'new')
+                @php($mode = old('tenant_mode', $defaultMode))
+                @php($availableTenants = $eligibleTenants ?? $returningTenants ?? collect())
                 <div class="filters" role="radiogroup">
-                    <label class="chip {{ $mode === 'new' ? 'on' : '' }}"><input type="radio" name="tenant_mode" value="new" @checked($mode === 'new') class="sr-only"> New tenant</label>
-                    <label class="chip {{ $mode === 'existing' ? 'on' : '' }} {{ $returningTenants->isEmpty() ? 'disabled' : '' }}"><input type="radio" name="tenant_mode" value="existing" @checked($mode === 'existing') @disabled($returningTenants->isEmpty()) class="sr-only"> Returning tenant</label>
+                    <label class="chip {{ $mode === 'existing' ? 'on' : '' }} {{ $availableTenants->isEmpty() ? 'disabled' : '' }}">
+                        <input type="radio" name="tenant_mode" value="existing" @checked($mode === 'existing') @disabled($availableTenants->isEmpty()) class="sr-only"> Select registered tenant
+                    </label>
+                    <label class="chip {{ $mode === 'new' ? 'on' : '' }}">
+                        <input type="radio" name="tenant_mode" value="new" @checked($mode === 'new') class="sr-only"> Encode new tenant
+                    </label>
                 </div>
 
-                <div id="tenant-new" @if ($mode !== 'new') hidden @endif>
-                    @include('tenants._fields', ['tenant' => $tenant])
-                </div>
                 <div id="tenant-existing" @if ($mode !== 'existing') hidden @endif>
                     <div class="f @error('tenant_id') has-err @enderror">
-                        <label for="tenant_id">Returning tenant</label>
+                        <label for="tenant_id">Select tenant from Master Directory</label>
                         <select id="tenant_id" name="tenant_id">
-                            <option value="">Choose…</option>
-                            @foreach ($returningTenants as $t)
-                                <option value="{{ $t->tenant_id }}" @selected((string) old('tenant_id') === (string) $t->tenant_id)>{{ $t->full_name }} ({{ $t->valid_id_type }} {{ $t->valid_id_no }})</option>
+                            <option value="">Choose registered tenant…</option>
+                            @foreach ($availableTenants as $t)
+                                <option value="{{ $t->tenant_id }}" @selected((string) old('tenant_id', $selectedTenantId ?? '') === (string) $t->tenant_id)>
+                                    {{ $t->full_name }} ({{ $t->valid_id_type }}: {{ $t->valid_id_no }})
+                                </option>
                             @endforeach
                         </select>
+                        <div class="hint">Only verified tenants without an active lease are listed. Or switch to "Encode new tenant" above.</div>
                         @error('tenant_id') <div class="err">{{ $message }}</div> @enderror
                     </div>
+                </div>
+                <div id="tenant-new" @if ($mode !== 'new') hidden @endif>
+                    @include('tenants._fields', ['tenant' => $tenant])
                 </div>
             </div>
 

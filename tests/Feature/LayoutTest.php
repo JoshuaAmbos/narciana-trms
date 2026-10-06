@@ -85,12 +85,12 @@ class LayoutTest extends TestCase
     /** Decision 19: one fixed order, by what is checked most and needs action first; each role sees its own items in it. */
     public function test_sidebar_order_for_each_role(): void
     {
-        $order = ['Dashboard', 'Billing', 'Payments', 'Tenants &amp; MOA', 'Concerns', 'Rooms', 'Inquiries',
+        $order = ['Dashboard', 'Billing', 'Payments', 'Tenants', 'Leases', 'Concerns', 'Rooms', 'Inquiries',
             'Move-out Settlement', 'Reports', 'User Accounts', 'Settings &amp; Backup', 'Audit Log'];
         $expected = [
             'Owner' => $order,
-            'Manager' => array_slice($order, 0, 9),
-            'Caretaker' => ['Dashboard', 'Tenants &amp; MOA', 'Concerns', 'Rooms', 'Inquiries'],
+            'Manager' => array_slice($order, 0, 10),
+            'Caretaker' => ['Dashboard', 'Tenants', 'Concerns', 'Rooms', 'Inquiries'],
         ];
 
         foreach ($expected as $role => $labels) {

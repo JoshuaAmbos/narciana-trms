@@ -61,7 +61,7 @@ class PaymentService
     {
         return DB::transaction(function () use ($bill, $data, $receiver) {
             // Settings row lock = one payment at a time, so two payments can never get the same ACK number.
-            Setting::query()->lockForUpdate()->firstOrFail();
+            Setting::query()->lockForUpdate()->first();
             $bill = Bill::whereKey($bill->bill_id)->lockForUpdate()->firstOrFail();
 
             if ($bill->status === 'Paid') {
@@ -141,7 +141,7 @@ class PaymentService
     public function void(Payment $payment, User $owner): void
     {
         DB::transaction(function () use ($payment, $owner) {
-            Setting::query()->lockForUpdate()->firstOrFail();
+            Setting::query()->lockForUpdate()->first();
             $payment = Payment::whereKey($payment->payment_id)->lockForUpdate()->firstOrFail();
 
             if (! $this->canVoid($payment)) {

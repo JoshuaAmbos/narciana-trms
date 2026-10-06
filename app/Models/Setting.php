@@ -39,10 +39,20 @@ class Setting extends Model
         ];
     }
 
-    /** The single rates-and-rules row (created by SettingSeeder). */
+    public const DEFAULTS = [
+        'water_rate' => 200.00,
+        'appliance_fee' => 200.00,
+        'kwh_rate' => 15.00,
+        'grace_days' => 3,
+        'penalty_basis' => 'Per day of rent',
+        'penalty_rate' => 1.00,
+        'refund_days' => 7,
+    ];
+
+    /** The single rates-and-rules row (created by SettingSeeder or returned with system defaults). */
     public static function current(): self
     {
-        return self::query()->firstOrFail();
+        return self::query()->first() ?? new self(self::DEFAULTS);
     }
 
     public function updatedBy(): BelongsTo

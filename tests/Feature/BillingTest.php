@@ -8,9 +8,12 @@ use App\Models\Lease;
 use App\Models\MeterReading;
 use App\Models\Occupant;
 use App\Models\Payment;
+use App\Models\Setting;
 use App\Models\User;
+use App\Services\BillingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Testing\TestResponse;
 use Tests\Support\RentalFixtures;
 use Tests\TestCase;
 
@@ -33,9 +36,9 @@ class BillingTest extends TestCase
         $this->travelTo(Carbon::parse('2026-07-20 09:00')); // 5 days before the first due date
     }
 
-    private function generate(Lease $lease, array $reading = []): \Illuminate\Testing\TestResponse
+    private function generate(Lease $lease, array $reading = []): TestResponse
     {
-        $due = app(\App\Services\BillingService::class)->nextDueDate($lease)->toDateString();
+        $due = app(BillingService::class)->nextDueDate($lease)->toDateString();
 
         return $this->actingAs($this->manager)->post(route('bills.store'), ['lease_id' => $lease->lease_id, 'due_date' => $due] + $reading);
     }
@@ -348,5 +351,17 @@ class BillingTest extends TestCase
             ->assertSee('Meter bill')
             ->assertSee('Encode in Billing')
             ->assertSee('₱1,500.00');
+    }
+
+    public function test_viewing_bills_page_without_any_data_does_not_throw_404(): void
+    {
+        Setting::query()->delete();
+        $user = User::factory()->role('Manager')->create();
+
+        $this->actingAs($user)
+            ->get(route('bills.index'))
+            ->assertOk()
+            ->assertSee('Nothing to bill right now.')
+            ->assertSee('No bills due in');
     }
 }

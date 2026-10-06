@@ -31,7 +31,7 @@ class SettingService
     public function update(array $data, User $owner): array
     {
         return DB::transaction(function () use ($data, $owner) {
-            $setting = Setting::query()->lockForUpdate()->firstOrFail();
+            $setting = Setting::query()->lockForUpdate()->first() ?? new Setting(Setting::DEFAULTS);
 
             $changes = [];
             foreach (self::FIELDS as $field => [$label, $format]) {

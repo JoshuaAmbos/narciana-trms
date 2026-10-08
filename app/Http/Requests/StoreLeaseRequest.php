@@ -29,6 +29,12 @@ class StoreLeaseRequest extends LeaseRequest
         $computedFullName = trim("{$firstName} {$middleName} {$lastName} {$nameExtension}");
         $computedFullName = preg_replace('/\s+/', ' ', $computedFullName);
 
+        $mode = $this->input('mode');
+        if (blank($mode)) {
+            $mode = 'Cash';
+        }
+        $gcashRef = \App\Services\PaymentService::normalizeRef($this->input('gcash_ref_no'));
+
         $this->merge([
             'tenant_mode' => $this->input('tenant_mode', 'new'),
             'first_name' => $firstName ?: null,
@@ -39,6 +45,10 @@ class StoreLeaseRequest extends LeaseRequest
             'contact_no' => $contact,
             'other_id_type' => trim((string) $this->input('other_id_type')) ?: null,
             'co_tenant_name' => trim((string) $this->input('co_tenant_name')) ?: null,
+            'mode' => $mode,
+            'gcash_ref_no' => $gcashRef,
+            'inquiry_id' => $this->input('inquiry_id') ? (int) $this->input('inquiry_id') : null,
+            'appliance_name' => trim((string) $this->input('appliance_name')) ?: null,
         ]);
     }
 
@@ -48,10 +58,15 @@ class StoreLeaseRequest extends LeaseRequest
 
         return parent::rules() + [
             'tenant_mode' => ['required', Rule::in(['new', 'existing'])],
-            // Returning tenant: must not already have an active lease.
-            'tenant_id' => ['nullable', 'required_if:tenant_mode,existing',
-                Rule::exists('tbl_tenant', 'tenant_id'),
-                Rule::unique('tbl_lease', 'tenant_id')->where('status', 'Active')],
+            // Returning tenant: must not already have an active lease, and must not be blacklisted or archived.
+            'tenant_id' => [
+                'nullable',
+                'required_if:tenant_mode,existing',
+                Rule::exists('tbl_tenant', 'tenant_id')
+                    ->whereNull('deleted_at')
+                    ->whereNotIn('status', ['Blacklisted', 'Archived']),
+                Rule::unique('tbl_lease', 'tenant_id')->where('status', 'Active'),
+            ],
             'first_name' => ['nullable', 'string', 'max:100'],
             'middle_name' => ['nullable', 'string', 'max:100'],
             'last_name' => ['nullable', 'string', 'max:100'],
@@ -60,7 +75,20 @@ class StoreLeaseRequest extends LeaseRequest
             'contact_no' => ['nullable', $new, 'string', 'regex:/^(09|\+639)\d{9}$/'],
             'valid_id_type' => ['nullable', $new, 'string', 'max:60'],
             'other_id_type' => ['required_if:valid_id_type,Other', 'nullable', 'string', 'max:100'],
-            'valid_id_no' => ['nullable', $new, 'string', 'max:50'],
+            'valid_id_no' => [
+                'nullable',
+                $new,
+                'string',
+                'max:50',
+                function ($attribute, $value, $fail) {
+                    if ($this->input('tenant_mode') === 'new') {
+                        $type = $this->input('valid_id_type');
+                        if ($type && $value && ! \App\Models\Tenant::validateIdFormat($type, $value)) {
+                            $fail("The ID number does not match the expected format for {$type}.");
+                        }
+                    }
+                },
+            ],
             'provincial_address' => ['nullable', $new, 'string', 'max:255'],
             'occupation' => ['nullable', $new, 'string', 'max:100'],
             'prev_building' => ['nullable', 'string', 'max:150'],
@@ -68,6 +96,16 @@ class StoreLeaseRequest extends LeaseRequest
             'co_tenant_name' => ['nullable', 'string', 'max:255'],
             // Optional; used only when the room has its own meter.
             'move_in_reading' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
+            // Upfront settlement payment
+            'mode' => ['required', Rule::in(['Cash', 'GCash'])],
+            'gcash_ref_no' => [
+                'nullable',
+                'required_if:mode,GCash',
+                'regex:/^\d{13}$/',
+                Rule::unique('tbl_payment', 'gcash_ref_no'),
+            ],
+            'inquiry_id' => ['nullable', 'integer', Rule::exists('tbl_inquiry', 'inquiry_id')],
+            'appliance_name' => ['nullable', 'string', 'max:100'],
         ];
     }
 
@@ -76,6 +114,24 @@ class StoreLeaseRequest extends LeaseRequest
         $value = $this->validated('move_in_reading');
 
         return $value === null || $value === '' ? null : (float) $value;
+    }
+
+    public function inquiryId(): ?int
+    {
+        return $this->validated('inquiry_id') ? (int) $this->validated('inquiry_id') : null;
+    }
+
+    public function applianceName(): ?string
+    {
+        return $this->validated('appliance_name') ?: null;
+    }
+
+    public function paymentData(): array
+    {
+        return [
+            'mode' => $this->validated('mode') ?: 'Cash',
+            'gcash_ref_no' => $this->validated('mode') === 'GCash' ? $this->validated('gcash_ref_no') : null,
+        ];
     }
 
     /** ['tenant_id' => id] for a returning tenant, otherwise the new tenant's fields. */
@@ -109,9 +165,12 @@ class StoreLeaseRequest extends LeaseRequest
     {
         return parent::messages() + [
             'room_id.exists' => 'Choose a Vacant room. A new MOA can only be made for a Vacant room.',
+            'tenant_id.exists' => 'The selected returning tenant is not eligible for a lease (not found, blacklisted, or archived).',
             'tenant_id.unique' => 'This tenant already has an active lease.',
             'contact_no.regex' => 'The contact number must be a valid Philippine mobile number (e.g., 09XXXXXXXXX or +639XXXXXXXXX).',
             'other_id_type.required_if' => 'Please specify the ID type when "Other" is selected.',
+            'gcash_ref_no.regex' => 'The GCash reference number must be exactly 13 digits.',
+            'gcash_ref_no.unique' => 'This GCash reference number was already used for another payment.',
             'required_if' => 'The :attribute field is required.',
         ];
     }

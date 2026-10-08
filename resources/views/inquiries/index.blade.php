@@ -44,7 +44,14 @@
                             <td><x-inquiry-status :status="$inquiry->status" /></td>
                             <td>{{ $inquiry->room?->room_no ?? '–' }}</td>
                             <td>{{ $inquiry->user->role }}</td>
-                            <td class="actions"><a href="{{ route('inquiries.edit', $inquiry) }}" class="btn sec">Update</a></td>
+                            <td class="actions">
+                                @can('manage-leases')
+                                    @if ($inquiry->status === 'Waiting' && (! $inquiry->room_id || $inquiry->room?->status === 'Vacant'))
+                                        <a href="{{ route('leases.create', array_filter(['inquiry_id' => $inquiry->inquiry_id, 'room_id' => $inquiry->room_id])) }}" class="btn" style="padding: 2px 8px; font-size: 11.5px; margin-right: 4px;">Encode MOA</a>
+                                    @endif
+                                @endcan
+                                <a href="{{ route('inquiries.edit', $inquiry) }}" class="btn sec">Update</a>
+                            </td>
                         </tr>
                     @endforeach
                 </table>

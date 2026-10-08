@@ -138,7 +138,7 @@ class EndToEndTest extends TestCase
 
         $this->actingAs($this->manager)->post(route('bills.store'), ['lease_id' => $leaseA->lease_id, 'due_date' => '2026-07-25']
             + $this->reading(1000, 1120, '2026-07-24'))->assertSessionHasNoErrors();
-        $billA = Bill::where('lease_id', $leaseA->lease_id)->sole();
+        $billA = Bill::where('lease_id', $leaseA->lease_id)->where('is_initial', false)->sole();
         $this->assertSame(['4000.00', '400.00', '1800.00', '0.00', '0.00', '0.00', '6200.00', 'Unpaid', '2026-06-25', '2026-07-25'], [
             $billA->rent_amount, $billA->water_amount, $billA->electricity_amount, $billA->appliance_amount, $billA->penalty_amount,
             $billA->other_charges, $billA->total_amount, $billA->status, $billA->period_start->toDateString(), $billA->due_date->toDateString(),
@@ -148,7 +148,7 @@ class EndToEndTest extends TestCase
             ->assertSee('₱6,200.00')->assertSee('1,000')->assertSee('1,120');
 
         $this->actingAs($this->manager)->post(route('bills.store'), ['lease_id' => $leaseB->lease_id, 'due_date' => '2026-07-25'])->assertSessionHasNoErrors();
-        $billB = Bill::where('lease_id', $leaseB->lease_id)->sole();
+        $billB = Bill::where('lease_id', $leaseB->lease_id)->where('is_initial', false)->sole();
         $this->assertSame(['3000.00', '200.00', '0.00', '200.00', '3400.00'],
             [$billB->rent_amount, $billB->water_amount, $billB->electricity_amount, $billB->appliance_amount, $billB->total_amount]);
 
@@ -159,12 +159,12 @@ class EndToEndTest extends TestCase
         $this->actingAs($this->manager)->post(route('payments.store'), ['bill_id' => $billA->bill_id, 'payment_date' => '2026-07-25',
             'mode' => 'GCash', 'gcash_ref_no' => '9171 234 567 890', 'amount' => '6200.00'])->assertSessionHasNoErrors();
 
-        $payment = Payment::sole();
-        $this->assertSame(['ACK-2026-0001', '9171234567890', '6200.00', $this->manager->user_id],
+        $payment = Payment::where('bill_id', $billA->bill_id)->sole();
+        $this->assertSame(['ACK-2026-0003', '9171234567890', '6200.00', $this->manager->user_id],
             [$payment->ack_no, $payment->gcash_ref_no, $payment->amount, $payment->user_id]);
         $this->assertSame('Paid', $billA->refresh()->status);
-        $this->actingAs($this->manager)->get(route('bills.show', $billA))->assertOk()->assertSee('Paid')->assertSee('ACK-2026-0001');
-        $this->actingAs($this->manager)->get(route('payments.show', $payment))->assertOk()->assertSee('ACK-2026-0001')->assertSee('GCash');
+        $this->actingAs($this->manager)->get(route('bills.show', $billA))->assertOk()->assertSee('Paid')->assertSee('ACK-2026-0003');
+        $this->actingAs($this->manager)->get(route('payments.show', $payment))->assertOk()->assertSee('ACK-2026-0003')->assertSee('GCash');
 
         // ---------- 7. Caretaker logs a concern with a photo and resolves it; the Manager sets the cost ----------
         $this->on('2026-07-28 20:00');
@@ -173,7 +173,7 @@ class EndToEndTest extends TestCase
             'reported_at' => '2026-07-28T19:45', 'channel' => 'Group chat', 'priority' => 'Routine',
             'description' => 'Aircon not cooling', 'assigned_to' => $this->caretaker->user_id, 'status' => 'Open',
         ];
-        $this->actingAs($this->caretaker)->post(route('concerns.store'), $concernForm + ['photo' => UploadedFile::fake()->image('aircon.jpg', 1200, 900)])
+        $this->actingAs($this->caretaker)->post(route('concerns.store'), $concernForm + ['photo' => UploadedFile::fake()->create('aircon.jpg', 100, 'image/jpeg')])
             ->assertSessionHasNoErrors();
         $concern = Concern::sole();
         Storage::disk('local')->assertExists($concern->photo_path);
@@ -181,7 +181,7 @@ class EndToEndTest extends TestCase
         $this->on('2026-07-29 11:00');
         $this->actingAs($this->caretaker)->put(route('concerns.update', $concern), ['status' => 'Resolved',
             'resolution' => 'Technician cleaned the filter; tenant broke the vent cover',
-            'resolution_photo' => UploadedFile::fake()->image('fixed.jpg', 1200, 900)] + $concernForm)->assertSessionHasNoErrors();
+            'resolution_photo' => UploadedFile::fake()->create('fixed.jpg', 100, 'image/jpeg')] + $concernForm)->assertSessionHasNoErrors();
         $this->actingAs($this->manager)->put(route('concerns.update', $concern), ['status' => 'Resolved',
             'resolution' => 'Technician cleaned the filter; tenant broke the vent cover', 'cost' => '500.00', 'charged_to_tenant' => '1'] + $concernForm)
             ->assertSessionHasNoErrors();

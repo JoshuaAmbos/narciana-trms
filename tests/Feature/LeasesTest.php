@@ -57,7 +57,7 @@ class LeasesTest extends TestCase
         ]))->assertSessionHasNoErrors();
 
         $lease = Lease::firstOrFail();
-        $this->assertSame(17, $lease->due_day);
+        $this->assertSame(15, $lease->due_day);
         $this->assertSame('3500.00', $lease->advance_amount);
     }
 
@@ -65,10 +65,13 @@ class LeasesTest extends TestCase
     {
         $this->makeRoom('204');
 
+        $todayDay = today()->day;
+        $expectedDueDay = collect(Lease::STAGGERED_DUE_DAYS)->sortBy(fn ($d) => abs($d - $todayDay))->first();
+
         $this->actingAs($this->manager)->get('/leases/create')
             ->assertOk()
-            ->assertSee('name="min_stay_months" type="number" min="1" max="60" inputmode="numeric" value="4"', false)
-            ->assertSee('name="due_day" type="number" min="1" max="31" inputmode="numeric" value="'.today()->day.'"', false);
+            ->assertSee('name="min_stay_months" type="number" min="4" max="60" inputmode="numeric" value="4"', false)
+            ->assertSee('name="due_day" type="number" min="1" max="31" inputmode="numeric" value="'.$expectedDueDay.'"', false);
     }
 
     public function test_opening_the_form_from_a_room_prefills_its_rent_and_advance(): void

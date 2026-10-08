@@ -2,10 +2,14 @@
 
 namespace App\Services;
 
+use App\Models\Appliance;
 use App\Models\AuditLog;
+use App\Models\Bill;
+use App\Models\Inquiry;
 use App\Models\Lease;
 use App\Models\MeterReading;
 use App\Models\Occupant;
+use App\Models\Payment;
 use App\Models\Room;
 use App\Models\Setting;
 use App\Models\Tenant;
@@ -31,9 +35,17 @@ class LeaseService
      * @param  array  $lease  lease fields (room_id, moa_date, move_in_date, due_day, monthly_rent, ...)
      * @param  float|null  $moveInReading  optional meter reading (kWh) at move-in; saved only for metered rooms
      */
-    public function create(array $tenant, array $lease, ?string $coTenantName, User $by, ?float $moveInReading = null): Lease
-    {
-        return DB::transaction(function () use ($tenant, $lease, $coTenantName, $by, $moveInReading) {
+    public function create(
+        array $tenant,
+        array $lease,
+        ?string $coTenantName,
+        User $by,
+        ?float $moveInReading = null,
+        ?int $inquiryId = null,
+        ?array $paymentData = null,
+        ?string $applianceName = null,
+    ): Lease {
+        return DB::transaction(function () use ($tenant, $lease, $coTenantName, $by, $moveInReading, $inquiryId, $paymentData, $applianceName) {
             // Lock the room row so two people saving at the same time cannot both lease it.
             $room = Room::whereKey($lease['room_id'])->lockForUpdate()->firstOrFail();
 
@@ -48,9 +60,17 @@ class LeaseService
                 ]);
             }
 
-            $tenantModel = isset($tenant['tenant_id'])
-                ? Tenant::findOrFail($tenant['tenant_id'])
-                : Tenant::create(collect($tenant)->except(['prev_building'])->all() + ['created_at' => now()]);
+            if (isset($tenant['tenant_id'])) {
+                $tenantModel = Tenant::findOrFail($tenant['tenant_id']);
+                if (in_array($tenantModel->status, ['Blacklisted', 'Archived'], true) || $tenantModel->trashed()) {
+                    throw ValidationException::withMessages([
+                        'tenant_id' => 'The selected returning tenant is not eligible for a lease (blacklisted or archived).',
+                    ]);
+                }
+            } else {
+                $tenantModel = Tenant::create(collect($tenant)->except(['prev_building'])->all() + ['created_at' => now(), 'status' => 'Active']);
+                AuditLog::record('Tenant registered', 'tbl_tenant', $tenantModel->tenant_id, $by->user_id);
+            }
 
             $leaseModel = Lease::create($lease + [
                 'tenant_id' => $tenantModel->tenant_id,
@@ -86,6 +106,61 @@ class LeaseService
                 ]);
             }
 
+            // Optional appliance declaration for basic/unmetered rooms
+            if ($applianceName && ! $room->is_metered) {
+                Appliance::create([
+                    'lease_id' => $leaseModel->lease_id,
+                    'appliance_name' => $applianceName,
+                    'monthly_fee' => Setting::current()->appliance_fee,
+                    'date_added' => $leaseModel->move_in_date,
+                    'source' => 'Declared',
+                    'user_id' => $by->user_id,
+                ]);
+            }
+
+            // Optional transition of originating inquiry to Rented
+            if ($inquiryId && $inq = Inquiry::whereKey($inquiryId)->lockForUpdate()->first()) {
+                $inq->update([
+                    'status' => 'Rented',
+                    'room_id' => $room->room_id,
+                ]);
+                AuditLog::record('Inquiry rented', 'tbl_inquiry', $inq->inquiry_id, $by->user_id);
+            }
+
+            // Upfront move-in settlement logged in tbl_bill and tbl_payment
+            $upfrontTotal = round((float) $leaseModel->advance_amount + $leaseModel->depositTotal(), 2);
+            if ($upfrontTotal > 0 && $paymentData) {
+                $moveInBill = Bill::create([
+                    'lease_id' => $leaseModel->lease_id,
+                    'reading_id' => null,
+                    'period_start' => $leaseModel->move_in_date,
+                    'due_date' => $leaseModel->move_in_date,
+                    'rent_amount' => $leaseModel->advance_amount,
+                    'water_amount' => 0,
+                    'electricity_amount' => 0,
+                    'appliance_amount' => 0,
+                    'penalty_amount' => 0,
+                    'other_charges' => $leaseModel->depositTotal(),
+                    'total_amount' => $upfrontTotal,
+                    'status' => 'Paid',
+                    'is_initial' => true,
+                    'user_id' => $by->user_id,
+                ]);
+
+                $paymentDate = $leaseModel->moa_date ?: today();
+                $payment = Payment::create([
+                    'bill_id' => $moveInBill->bill_id,
+                    'amount' => $upfrontTotal,
+                    'payment_date' => $paymentDate->toDateString(),
+                    'mode' => $paymentData['mode'] ?? 'Cash',
+                    'gcash_ref_no' => ($paymentData['mode'] ?? 'Cash') === 'GCash' ? ($paymentData['gcash_ref_no'] ?? null) : null,
+                    'ack_no' => app(PaymentService::class)->nextAckNo((int) $paymentDate->year),
+                    'user_id' => $by->user_id,
+                ]);
+
+                AuditLog::record('Payment recorded', 'tbl_payment', $payment->payment_id, $by->user_id);
+            }
+
             $room->update(['status' => 'Occupied', 'expected_vacant_date' => null]);
             AuditLog::record('Lease created', 'tbl_lease', $leaseModel->lease_id, $by->user_id);
 
@@ -107,7 +182,7 @@ class LeaseService
     public function canCancel(Lease $lease): bool
     {
         return $lease->status === 'Active'
-            && $lease->bills()->doesntExist()      // no bills means no payments either
+            && $lease->bills()->where('is_initial', false)->doesntExist()      // no regular bills means no regular payments either
             && $lease->moveout()->doesntExist();   // once notice is given, use Move-out Settlement
     }
 

@@ -6,7 +6,6 @@
     <div class="panel form-panel">
         <h2>
             Register Tenant Profile
-            <span class="muted" style="font-size: 13.5px; font-weight: normal; margin-left: 8px;">Master identity record & ID verification</span>
         </h2>
         <p class="muted" style="margin-bottom: 20px;">
             Encode the personal identity credentials of the renter. Once registered, an active lease (MOA) can be created and assigned to any available room.

@@ -18,7 +18,7 @@ class Inquiry extends Model
 
     protected $primaryKey = 'inquiry_id';
 
-    public $timestamps = false;
+    public $timestamps = true;
 
     protected $fillable = [
         'prospect_name',
@@ -33,6 +33,8 @@ class Inquiry extends Model
         'room_id',
         'user_id',
         'remarks',
+        'created_at',
+        'updated_at',
     ];
 
     protected function casts(): array
@@ -42,6 +44,8 @@ class Inquiry extends Model
             'via_representative' => 'boolean',
             'wants_contact' => 'boolean',
             'inquiry_date' => 'date',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
         ];
     }
 

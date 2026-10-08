@@ -54,7 +54,17 @@ class StoreTenantRequest extends FormRequest
             'contact_no' => ['required', 'string', 'regex:/^(09|\+639)\d{9}$/'],
             'valid_id_type' => ['required', 'string', 'max:60'],
             'other_id_type' => ['required_if:valid_id_type,Other', 'nullable', 'string', 'max:100'],
-            'valid_id_no' => ['required', 'string', 'max:50'],
+            'valid_id_no' => [
+                'required',
+                'string',
+                'max:50',
+                function ($attribute, $value, $fail) {
+                    $type = $this->input('valid_id_type');
+                    if ($type && $value && ! \App\Models\Tenant::validateIdFormat($type, $value)) {
+                        $fail("The ID number does not match the expected format for {$type}.");
+                    }
+                },
+            ],
             'provincial_address' => ['required', 'string', 'max:255'],
             'occupation' => ['required', 'string', 'max:100'],
             'prev_building' => ['nullable', 'string', 'max:150'],

@@ -90,7 +90,7 @@ class BillingService
     /** The oldest month not billed yet (bills are generated in order). */
     public function nextDueDate(Lease $lease): Carbon
     {
-        $last = $lease->bills()->orderByDesc('due_date')->first();
+        $last = $lease->bills()->where('is_initial', false)->orderByDesc('due_date')->first();
 
         return $last
             ? $this->dueDateIn($lease->due_day, $last->due_date->copy()->startOfMonth()->addMonthNoOverflow())
@@ -175,7 +175,7 @@ class BillingService
      */
     public function finalPeriod(Lease $lease, Carbon $actualDate): ?array
     {
-        $last = $lease->bills()->whereNotIn('bill_id', Moveout::whereNotNull('excess_bill_id')->pluck('excess_bill_id'))
+        $last = $lease->bills()->where('is_initial', false)->whereNotIn('bill_id', Moveout::whereNotNull('excess_bill_id')->pluck('excess_bill_id'))
             ->orderByDesc('due_date')->first();
         $start = $last ? $last->due_date->copy() : $lease->move_in_date->copy();
 

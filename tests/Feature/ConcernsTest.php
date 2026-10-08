@@ -258,6 +258,10 @@ class ConcernsTest extends TestCase
 
     public function test_camera_photo_is_stored_shrunk_in_private_storage(): void
     {
+        if (! extension_loaded('gd')) {
+            $this->markTestSkipped('GD extension is not installed.');
+        }
+
         $this->log(['photo' => UploadedFile::fake()->image('camera.jpg', 4000, 3000)])->assertSessionHasNoErrors();
 
         $concern = Concern::first();
@@ -275,6 +279,10 @@ class ConcernsTest extends TestCase
 
     public function test_photos_are_not_public(): void
     {
+        if (! extension_loaded('gd')) {
+            $this->markTestSkipped('GD extension is not installed.');
+        }
+
         $this->log(['photo' => UploadedFile::fake()->image('a.jpg', 800, 600)]);
         $concern = Concern::first();
 
@@ -288,6 +296,10 @@ class ConcernsTest extends TestCase
 
     public function test_photo_when_resolved_is_proof_of_the_fix(): void
     {
+        if (! extension_loaded('gd')) {
+            $this->markTestSkipped('GD extension is not installed.');
+        }
+
         $this->log(['photo' => UploadedFile::fake()->image('before.jpg', 800, 600)]);
         $concern = Concern::first();
 
@@ -325,6 +337,10 @@ class ConcernsTest extends TestCase
 
     public function test_photo_size_and_type_limits(): void
     {
+        if (! extension_loaded('gd')) {
+            $this->markTestSkipped('GD extension is not installed.');
+        }
+
         $this->log(['photo' => UploadedFile::fake()->image('big.jpg')->size(6000)])->assertSessionHasErrors(['photo' => 'The photo must be 5 MB or smaller.']);
         $this->log(['photo' => UploadedFile::fake()->create('notes.pdf', 100, 'application/pdf')])->assertSessionHasErrors('photo');
         $this->log(['photo' => UploadedFile::fake()->image('phone.webp', 800, 600)])->assertSessionHasErrors(['photo' => 'Use a JPG or PNG photo.']);
@@ -335,6 +351,10 @@ class ConcernsTest extends TestCase
 
     public function test_replacing_or_removing_a_photo_deletes_the_old_file(): void
     {
+        if (! extension_loaded('gd')) {
+            $this->markTestSkipped('GD extension is not installed.');
+        }
+
         $this->log(['photo' => UploadedFile::fake()->image('a.jpg', 800, 600)]);
         $concern = Concern::first();
         $first = $concern->photo_path;

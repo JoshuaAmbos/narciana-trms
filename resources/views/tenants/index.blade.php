@@ -42,6 +42,12 @@
                 <div class="l">Blacklisted Tenants</div>
             </div>
         @endif
+        @if ($metrics['archived'] > 0 || $isArchivedView)
+            <div class="card">
+                <div class="n muted">{{ $metrics['archived'] }}</div>
+                <div class="l">Archived Profiles</div>
+            </div>
+        @endif
     </div>
 
     {{-- Main Master Directory Panel --}}
@@ -49,12 +55,20 @@
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
             <div>
                 <h2 style="margin: 0;">
-                    Tenants Directory
+                    {{ $isArchivedView ? 'Archived Tenants Directory' : 'Tenants Directory' }}
                 </h2>
+                @if ($isArchivedView)
+                    <p class="muted" style="margin: 4px 0 0; font-size: 13px;">Showing soft-deleted and archived records. Click Restore to return a profile to the active directory.</p>
+                @endif
             </div>
             <div class="actions">
-                <a href="{{ route('leases.index') }}" class="btn sec">View Active Leases</a>
-                <a href="{{ route('tenants.create') }}" class="btn">+ Register Tenant</a>
+                @if ($isArchivedView)
+                    <a href="{{ route('tenants.index') }}" class="btn sec">&larr; Active Directory</a>
+                @else
+                    <a href="{{ route('tenants.index', ['archived' => 1]) }}" class="btn sec">Show Archived ({{ $metrics['archived'] }})</a>
+                    <a href="{{ route('leases.index') }}" class="btn sec">View Active Leases</a>
+                    <a href="{{ route('tenants.create') }}" class="btn">+ Register Tenant</a>
+                @endif
             </div>
         </div>
 
@@ -151,15 +165,30 @@
                                 @endif
                             </td>
                             <td>
-                                <span class="tag {{ $tenant->status === 'Active' ? 't-green' : ($tenant->status === 'Blacklisted' ? 't-red' : 't-amber') }}" style="font-size: 11px;">
+                                <span class="tag {{ $tenant->status === 'Active' ? 't-green' : ($tenant->status === 'Blacklisted' ? 't-red' : ($tenant->status === 'Archived' ? 't-muted' : 't-amber')) }}" style="font-size: 11px;">
                                     {{ $tenant->status }}
                                 </span>
                             </td>
                             <td class="tenant-actions-cell nowrap">
                                 <div class="tenant-action-btns">
                                     <a href="{{ route('tenants.show', $tenant) }}" class="btn sec" title="View Profile & Tenancy History">Profile</a>
-                                    @if (! $active)
-                                        <a href="{{ route('leases.create', ['tenant_id' => $tenant->tenant_id]) }}" class="btn" title="Create Lease for this tenant">+ Lease</a>
+                                    @if ($isArchivedView)
+                                        <form method="POST" action="{{ route('tenants.restore', $tenant->tenant_id) }}" style="display: inline;">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="btn" title="Restore profile to active directory" onclick="return confirm('Restore this tenant to the active directory?');">Restore</button>
+                                        </form>
+                                    @else
+                                        @if (! $active && $tenant->status !== 'Blacklisted')
+                                            <a href="{{ route('leases.create', ['tenant_id' => $tenant->tenant_id]) }}" class="btn" title="Create Lease for this tenant">+ Lease</a>
+                                        @endif
+                                        @if (! $active)
+                                            <form method="POST" action="{{ route('tenants.archive', $tenant) }}" style="display: inline;">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="btn sec" style="color: #64748b;" title="Archive profile" onclick="return confirm('Move this tenant profile to the archives?');">Archive</button>
+                                            </form>
+                                        @endif
                                     @endif
                                 </div>
                             </td>

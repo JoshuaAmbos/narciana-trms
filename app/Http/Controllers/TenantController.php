@@ -32,7 +32,14 @@ class TenantController extends Controller
         $status = $request->input('status', 'All');
         $tenancyFilter = $request->input('tenancy', 'all');
 
-        $query = Tenant::with(['activeLease.room', 'leases' => fn ($q) => $q->orderByDesc('move_in_date')]);
+        $isArchivedView = $request->boolean('archived');
+
+        if ($isArchivedView) {
+            $query = Tenant::onlyTrashed()->with(['leases' => fn ($q) => $q->orderByDesc('move_in_date')]);
+        } else {
+            $query = Tenant::withoutTrashed()->where('status', '!=', 'Archived')
+                ->with(['activeLease.room', 'leases' => fn ($q) => $q->orderByDesc('move_in_date')]);
+        }
 
         if ($search !== '') {
             $s = '%'.$search.'%';
@@ -48,32 +55,54 @@ class TenantController extends Controller
             });
         }
 
-        if ($status !== 'All' && in_array($status, Tenant::STATUSES, true)) {
+        if (! $isArchivedView && $status !== 'All' && in_array($status, Tenant::ACTIVE_STATUSES, true)) {
             $query->where('status', $status);
         }
 
-        if ($tenancyFilter === 'active') {
-            $query->whereHas('leases', fn ($q) => $q->where('status', 'Active'));
-        } elseif ($tenancyFilter === 'past') {
-            $query->whereDoesntHave('leases', fn ($q) => $q->where('status', 'Active'));
+        if (! $isArchivedView) {
+            if ($tenancyFilter === 'active') {
+                $query->whereHas('leases', fn ($q) => $q->where('status', 'Active'));
+            } elseif ($tenancyFilter === 'past') {
+                $query->whereDoesntHave('leases', fn ($q) => $q->where('status', 'Active'))
+                    ->where(function ($q) {
+                        $q->whereHas('leases', fn ($lq) => $lq->whereIn('status', ['Ended', 'Cancelled']))
+                            ->orWhereExists(function ($iq) {
+                                $iq->selectRaw('1')->from('tbl_inquiry')
+                                    ->whereColumn('tbl_inquiry.contact_no', 'tbl_tenant.contact_no')
+                                    ->orWhereColumn('tbl_inquiry.prospect_name', 'tbl_tenant.full_name');
+                            });
+                    });
+            }
         }
 
         $tenants = $query->orderBy('full_name')->get();
 
+        $baseActiveQuery = Tenant::withoutTrashed()->where('status', '!=', 'Archived');
+
         $metrics = [
-            'total' => Tenant::count(),
-            'active_renters' => Tenant::whereHas('leases', fn ($q) => $q->where('status', 'Active'))->count(),
-            'past_renters' => Tenant::whereDoesntHave('leases', fn ($q) => $q->where('status', 'Active'))->count(),
-            'blacklisted' => Tenant::where('status', 'Blacklisted')->count(),
+            'total' => (clone $baseActiveQuery)->count(),
+            'active_renters' => (clone $baseActiveQuery)->whereHas('leases', fn ($q) => $q->where('status', 'Active'))->count(),
+            'past_renters' => (clone $baseActiveQuery)->whereDoesntHave('leases', fn ($q) => $q->where('status', 'Active'))
+                ->where(function ($q) {
+                    $q->whereHas('leases', fn ($lq) => $lq->whereIn('status', ['Ended', 'Cancelled']))
+                        ->orWhereExists(function ($iq) {
+                            $iq->selectRaw('1')->from('tbl_inquiry')
+                                ->whereColumn('tbl_inquiry.contact_no', 'tbl_tenant.contact_no')
+                                ->orWhereColumn('tbl_inquiry.prospect_name', 'tbl_tenant.full_name');
+                        });
+                })->count(),
+            'blacklisted' => (clone $baseActiveQuery)->where('status', 'Blacklisted')->count(),
+            'archived' => Tenant::onlyTrashed()->orWhere('status', 'Archived')->count(),
         ];
 
         return view('tenants.index', [
             'tenants' => $tenants,
             'search' => $search,
             'status' => $status,
-            'statuses' => ['All', ...Tenant::STATUSES],
+            'statuses' => ['All', ...Tenant::ACTIVE_STATUSES],
             'tenancyFilter' => $tenancyFilter,
             'metrics' => $metrics,
+            'isArchivedView' => $isArchivedView,
         ]);
     }
 
@@ -136,5 +165,29 @@ class TenantController extends Controller
 
         return ($lease ? redirect()->route('leases.show', $lease) : redirect()->route('tenants.show', $tenant))
             ->with('status', 'Tenant profile was updated.');
+    }
+
+    public function archive(Request $request, Tenant $tenant): RedirectResponse
+    {
+        if ($tenant->hasActiveLease()) {
+            return back()->with('error', 'Cannot archive a tenant with an active ongoing lease. End or settle the lease first.');
+        }
+
+        $tenant->update(['status' => 'Archived']);
+        $tenant->delete();
+        AuditLog::record('Tenant archived', 'tbl_tenant', $tenant->tenant_id, $request->user()->user_id);
+
+        return redirect()->route('tenants.index')
+            ->with('status', "Tenant {$tenant->full_name} has been moved to the archives.");
+    }
+
+    public function restore(Request $request, Tenant $tenant): RedirectResponse
+    {
+        $tenant->restore();
+        $tenant->update(['status' => 'Inactive']);
+        AuditLog::record('Tenant restored', 'tbl_tenant', $tenant->tenant_id, $request->user()->user_id);
+
+        return redirect()->route('tenants.index', ['archived' => 1])
+            ->with('status', "Tenant {$tenant->full_name} has been restored to inactive status.");
     }
 }

@@ -81,24 +81,46 @@ class LeaseController extends Controller
         $rooms = Room::where('status', 'Vacant')->orderBy('room_no')->get();
         $selected = $rooms->firstWhere('room_id', $request->integer('room_id'));
 
+        $inquiryId = $request->integer('inquiry_id') ?: null;
+        $inquiry = $inquiryId ? \App\Models\Inquiry::find($inquiryId) : null;
+        if ($inquiry && ! $selected && $inquiry->room_id) {
+            $selected = $rooms->firstWhere('room_id', $inquiry->room_id);
+        }
+
         $selectedTenantId = $request->integer('tenant_id') ?: null;
         $selectedTenant = $selectedTenantId ? Tenant::find($selectedTenantId) : null;
 
-        // Tenants without an active lease (eligible to lease).
-        $eligibleTenants = Tenant::whereDoesntHave('leases', fn ($q) => $q->where('status', 'Active'))
+        $tenantToForm = $selectedTenant;
+        if (! $tenantToForm && $inquiry) {
+            $tenantToForm = new Tenant([
+                'full_name' => $inquiry->prospect_name,
+                'contact_no' => $inquiry->contact_no,
+                'status' => 'Active',
+            ]);
+        }
+
+        // Tenants eligible to lease (no active lease and strictly neither Blacklisted nor Archived).
+        $eligibleTenants = Tenant::whereNotIn('status', ['Blacklisted', 'Archived'])
+            ->whereNull('deleted_at')
+            ->whereDoesntHave('leases', fn ($q) => $q->where('status', 'Active'))
             ->orderBy('full_name')->get();
+
+        $todayDay = today()->day;
+        $defaultDueDay = collect(Lease::STAGGERED_DUE_DAYS)->sortBy(fn ($d) => abs($d - $todayDay))->first();
 
         return view('leases.create', [
             'rooms' => $rooms,
             'selectedRoomId' => $selected?->room_id,
-            'tenant' => $selectedTenant ?? new Tenant,
+            'tenant' => $tenantToForm ?? new Tenant(['status' => 'Active']),
             'selectedTenantId' => $selectedTenantId,
+            'inquiryId' => $inquiryId,
+            'inquiry' => $inquiry,
             'eligibleTenants' => $eligibleTenants,
             'staggeredDueDays' => Lease::STAGGERED_DUE_DAYS,
             'lease' => new Lease([
                 'moa_date' => today(),
                 'move_in_date' => today(),
-                'due_day' => today()->day,
+                'due_day' => $defaultDueDay,
                 'min_stay_months' => Lease::DEFAULT_MIN_STAY_MONTHS,
                 'monthly_rent' => $selected?->monthly_rent,
                 'advance_amount' => $selected?->monthly_rent,
@@ -114,6 +136,9 @@ class LeaseController extends Controller
             $request->validated('co_tenant_name'),
             $request->user(),
             $request->moveInReading(),
+            $request->inquiryId(),
+            $request->paymentData(),
+            $request->applianceName(),
         );
 
         return redirect()->route('leases.show', $lease)

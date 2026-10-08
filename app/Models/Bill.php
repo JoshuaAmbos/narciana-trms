@@ -31,6 +31,7 @@ class Bill extends Model
         'other_charges',
         'total_amount',
         'status',
+        'is_initial',
         'user_id',
     ];
 
@@ -39,6 +40,7 @@ class Bill extends Model
         return [
             'period_start' => 'date',
             'due_date' => 'date',
+            'is_initial' => 'boolean',
             'rent_amount' => 'decimal:2',
             'water_amount' => 'decimal:2',
             'electricity_amount' => 'decimal:2',

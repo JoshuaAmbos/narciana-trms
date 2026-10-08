@@ -26,7 +26,8 @@
     </div>
     <div class="f @error('min_stay_months') has-err @enderror">
         <label for="min_stay_months">Minimum stay (months)</label>
-        <input id="min_stay_months" name="min_stay_months" type="number" min="1" max="60" inputmode="numeric" value="{{ old('min_stay_months', $lease->min_stay_months) }}">
+        <input id="min_stay_months" name="min_stay_months" type="number" min="4" max="60" inputmode="numeric" value="{{ old('min_stay_months', $lease->min_stay_months ?: 4) }}">
+        <div class="hint">Contractual minimum stay is 4 months.</div>
         @error('min_stay_months') <div class="err">{{ $message }}</div> @enderror
     </div>
 </div>
@@ -83,13 +84,22 @@
             parts.forEach(function (p) { p.addEventListener('input', refresh); });
             rent.addEventListener('input', refresh);
 
-            // Due day follows the move-in day until someone types their own.
+            // Due day snaps to closest staggered cycle day (10, 15, 20, 25, 30) following the move-in day.
             var moveIn = document.getElementById('move_in_date');
             var dueDay = document.getElementById('due_day');
             var dueTouched = false;
+            var staggeredDays = [10, 15, 20, 25, 30];
+            function snapDueDay(day) {
+                return staggeredDays.reduce(function (prev, curr) {
+                    return Math.abs(curr - day) < Math.abs(prev - day) ? curr : prev;
+                });
+            }
             dueDay.addEventListener('input', function () { dueTouched = true; });
             moveIn.addEventListener('change', function () {
-                if (!dueTouched && moveIn.value) { dueDay.value = parseInt(moveIn.value.slice(8, 10), 10); }
+                if (!dueTouched && moveIn.value) {
+                    var rawDay = parseInt(moveIn.value.slice(8, 10), 10);
+                    dueDay.value = snapDueDay(rawDay);
+                }
             });
 
             refresh();

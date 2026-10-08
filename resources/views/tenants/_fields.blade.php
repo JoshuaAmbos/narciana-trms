@@ -54,9 +54,17 @@
         <div class="f @error('valid_id_type') has-err @enderror" style="flex: 1 1 260px; min-height: 44px;">
             <label for="valid_id_type">Valid Government ID Type <span style="color: #ef4444;">*</span></label>
             <select id="valid_id_type" name="valid_id_type" required style="min-height: 44px;"
-                    onchange="toggleOtherIdInput(this.value)">
-                @php($selectedIdType = old('valid_id_type', $tenant->valid_id_type ?: 'PhilSys National ID (PCN)'))
-                @foreach (['PhilSys National ID (PCN)', "Driver's License", 'UMID', 'Passport', 'PRC ID', 'Postal ID', "Voter's ID", 'Student ID', 'Other'] as $idType)
+                    onchange="updateIdFieldConfig(this.value)">
+                @php
+                    $idConfigs = \App\Models\Tenant::idTypeConfigs();
+                    $selectedIdType = old('valid_id_type', $tenant->valid_id_type ?: 'PhilSys National ID (PCN)');
+                    $activeConfig = $idConfigs[$selectedIdType] ?? [
+                        'placeholder' => 'Enter ID number',
+                        'helper' => 'Official government, company, or institutional ID number',
+                        'maxlength' => 50,
+                    ];
+                @endphp
+                @foreach (array_keys($idConfigs) as $idType)
                     <option value="{{ $idType }}" {{ $selectedIdType === $idType ? 'selected' : '' }}>
                         {{ $idType }}
                     </option>
@@ -76,9 +84,13 @@
 
         <div class="f @error('valid_id_no') has-err @enderror" style="flex: 1 1 260px; min-height: 44px;">
             <label for="valid_id_no">Valid ID Number / Card No. <span style="color: #ef4444;">*</span></label>
-            <input id="valid_id_no" name="valid_id_no" type="text" maxlength="50" required
+            <input id="valid_id_no" name="valid_id_no" type="text"
+                   maxlength="{{ $activeConfig['maxlength'] ?? 50 }}" required
                    value="{{ old('valid_id_no', $tenant->valid_id_no) }}"
-                   placeholder="Enter ID number" style="min-height: 44px;">
+                   placeholder="{{ $activeConfig['placeholder'] ?? 'Enter ID number' }}" style="min-height: 44px;">
+            <div id="valid_id_helper" class="hint" style="font-size: 11.5px; color: #64748b; margin-top: 4px;">
+                {{ $activeConfig['helper'] ?? '' }}
+            </div>
             @error('valid_id_no') <div class="err">{{ $message }}</div> @enderror
         </div>
     </div>
@@ -127,6 +139,26 @@
 </div>
 
 <script>
+    const idConfigs = @json(\App\Models\Tenant::idTypeConfigs());
+
+    function updateIdFieldConfig(val) {
+        toggleOtherIdInput(val);
+        const config = idConfigs[val] || {
+            placeholder: 'Enter ID number',
+            helper: 'Official government, company, or institutional ID number',
+            maxlength: 50
+        };
+        const idInput = document.getElementById('valid_id_no');
+        const helperEl = document.getElementById('valid_id_helper');
+        if (idInput) {
+            idInput.placeholder = config.placeholder;
+            idInput.maxLength = config.maxlength;
+        }
+        if (helperEl) {
+            helperEl.textContent = config.helper;
+        }
+    }
+
     function toggleOtherIdInput(val) {
         var container = document.getElementById('other-id-container');
         if (container) {

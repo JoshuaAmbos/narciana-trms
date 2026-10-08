@@ -34,6 +34,17 @@
     </div>
 </div>
 
+<style>
+    #advance_amount::-webkit-outer-spin-button,
+    #advance_amount::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    #advance_amount {
+        -moz-appearance: textfield;
+        appearance: textfield;
+    }
+</style>
 <div class="row">
     <div class="f @error('monthly_rent') has-err @enderror">
         <label for="monthly_rent">Monthly rent (₱)</label>
@@ -43,7 +54,8 @@
     <div class="f @error('advance_amount') has-err @enderror">
         <label for="advance_amount">One-month advance paid (₱)</label>
         <input id="advance_amount" name="advance_amount" type="number" min="0" step="0.01" inputmode="decimal" readonly
-               style="background-color: #f8fafc; cursor: not-allowed;"
+               class="no-spin"
+               style="background-color: #f8fafc; cursor: not-allowed; -moz-appearance: textfield; appearance: textfield;"
                value="{{ old('advance_amount', $lease->advance_amount ?: $lease->monthly_rent) }}">
         @error('advance_amount') <div class="err">{{ $message }}</div> @enderror
     </div>
@@ -90,8 +102,18 @@
                     ? '(Must equal one month\'s rent of ' + peso(r) + ' per MOA Clause 6)' : '';
             }
             parts.forEach(function (p) { p.addEventListener('input', refresh); });
+            var adv = document.getElementById('advance_amount');
+            if (adv) {
+                adv.addEventListener('keydown', function (e) {
+                    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                        e.preventDefault();
+                    }
+                });
+                adv.addEventListener('wheel', function (e) {
+                    e.preventDefault();
+                }, { passive: false });
+            }
             rent.addEventListener('input', function () {
-                var adv = document.getElementById('advance_amount');
                 if (adv) adv.value = rent.value;
                 refresh();
             });

@@ -767,3 +767,19 @@ td.audit-details { min-width: 220px; font-size: 13.5px; overflow-wrap: anywhere;
     }
 }
 
+/* Remove spin buttons from number inputs that should not have arrows (e.g. readonly advance amount) */
+input[type="number"].no-spin,
+#advance_amount {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+input[type="number"].no-spin::-webkit-outer-spin-button,
+input[type="number"].no-spin::-webkit-inner-spin-button,
+#advance_amount::-webkit-outer-spin-button,
+#advance_amount::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+

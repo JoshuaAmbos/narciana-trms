@@ -190,7 +190,7 @@ class Tenant extends Model
                 'helper' => 'Voter Identification Number (VIN) or certification number',
                 'maxlength' => 30,
                 'pattern' => '^[A-Z0-9 -]{6,30}$',
-            ],
+            ],  
             'Other' => [
                 'placeholder' => 'Enter official ID number',
                 'helper' => 'Official government, company, or institutional ID number',

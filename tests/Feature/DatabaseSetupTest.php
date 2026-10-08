@@ -72,7 +72,7 @@ class DatabaseSetupTest extends TestCase
         $s = Setting::first();
         $this->assertSame('200.00', $s->water_rate);
         $this->assertSame('200.00', $s->appliance_fee);
-        $this->assertSame('15.00', $s->kwh_rate);
+        $this->assertSame('12.00', $s->kwh_rate);
         $this->assertSame(3, $s->grace_days);
         $this->assertSame('Per day of rent', $s->penalty_basis);
         $this->assertSame('1.00', $s->penalty_rate);

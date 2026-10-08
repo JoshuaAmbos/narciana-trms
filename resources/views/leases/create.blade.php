@@ -62,12 +62,24 @@
 
             <div class="panel">
                 <h2>2. Room and MOA details</h2>
+                @php($selectedRoom = $rooms->firstWhere('room_id', old('room_id', $selectedRoomId)))
+                @php($isAirconSelected = (bool) ($selectedRoom && ($selectedRoom->room_type === 'Aircon' || $selectedRoom->is_metered)))
+                <div id="min-stay-banner" style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px; display: flex; align-items: flex-start; gap: 8px;">
+                    <span style="font-size: 16px; line-height: 1;">ℹ️</span>
+                    <div id="min-stay-banner-text">
+                        @if ($isAirconSelected)
+                            <strong>Air-conditioned Unit Lock-in: 6 Months.</strong> Per Aircon MOA Clause 9, vacating before completing the 6-month minimum stay contractually forfeits all deposits.
+                        @else
+                            <strong>Standard Unit Lock-in: 4 Months.</strong> Per MOA Clause 9, vacating before completing the 4-month minimum stay contractually forfeits all deposits.
+                        @endif
+                    </div>
+                </div>
                 <div class="f @error('room_id') has-err @enderror">
                     <label for="room_id">Room</label>
                     <select id="room_id" name="room_id">
                         <option value="">Choose…</option>
                         @foreach ($rooms as $room)
-                            <option value="{{ $room->room_id }}" data-rent="{{ $room->monthly_rent }}" data-max="{{ $room->max_occupants }}" data-metered="{{ $room->is_metered ? 1 : 0 }}"
+                            <option value="{{ $room->room_id }}" data-rent="{{ $room->monthly_rent }}" data-max="{{ $room->max_occupants }}" data-metered="{{ $room->is_metered ? 1 : 0 }}" data-type="{{ $room->room_type }}"
                                     @selected((string) old('room_id', $selectedRoomId) === (string) $room->room_id)>
                                 Room {{ $room->room_no }} — {{ $room->room_type }}, {{ $room->is_metered ? 'own meter' : 'no meter' }}, max {{ $room->max_occupants }}, ₱{{ number_format((float) $room->monthly_rent, 2) }}
                             </option>
@@ -76,14 +88,16 @@
                     @error('room_id') <div class="err">{{ $message }}</div> @enderror
                 </div>
                 <div class="f @error('move_in_reading') has-err @enderror" id="move-in-reading"
-                     @if (! $rooms->firstWhere('room_id', old('room_id', $selectedRoomId))?->is_metered) hidden @endif>
-                    <label for="move_in_reading">Electric meter reading at move-in (kWh, optional)</label>
-                    <input id="move_in_reading" name="move_in_reading" type="number" min="0" step="0.01" inputmode="decimal" value="{{ old('move_in_reading') }}">
-                    <div class="hint">Becomes the "previous reading" of this tenant's first bill.</div>
+                     @if (! $isAirconSelected) hidden @endif>
+                    <label for="move_in_reading">Baseline move-in meter reading (kWh) <span style="color: #ef4444;">*</span></label>
+                    <input id="move_in_reading" name="move_in_reading" type="number" min="0" step="0.01" inputmode="decimal"
+                           value="{{ old('move_in_reading') }}"
+                           @if ($isAirconSelected) required @endif>
+                    <div class="hint">Required for air-conditioned rooms per Aircon MOA Clause 6. Billed at ₱12.00/kWh.</div>
                     @error('move_in_reading') <div class="err">{{ $message }}</div> @enderror
                 </div>
                 <div class="f @error('appliance_name') has-err @enderror" id="unmetered-appliance"
-                     @if ($rooms->firstWhere('room_id', old('room_id', $selectedRoomId))?->is_metered) hidden @endif>
+                     @if ($isAirconSelected) hidden @endif>
                     <label for="appliance_name">Declared Onboarding Appliance (Unmetered Unit, optional)</label>
                     <input id="appliance_name" name="appliance_name" type="text" maxlength="100"
                            value="{{ old('appliance_name') }}"
@@ -152,15 +166,43 @@
                         });
                     });
 
-                    // Picking a room fills in its configured rent and advance, toggles meter / appliance inputs.
+                    // Picking a room fills in its configured rent and advance, toggles meter / appliance inputs, and adjusts min stay.
                     var room = document.getElementById('room_id');
                     var reading = document.getElementById('move-in-reading');
+                    var readingInput = document.getElementById('move_in_reading');
                     var appliance = document.getElementById('unmetered-appliance');
+                    var minStayInput = document.getElementById('min_stay_months');
+                    var minStayText = document.getElementById('min_stay_text');
+                    var bannerText = document.getElementById('min-stay-banner-text');
+
                     room.addEventListener('change', function () {
                         var opt = room.options[room.selectedIndex];
-                        var isMetered = (opt && opt.dataset.metered === '1');
-                        if (reading) reading.hidden = !isMetered;
+                        var isAircon = opt && (opt.dataset.type === 'Aircon' || opt.dataset.metered === '1');
+                        var isMetered = opt && (opt.dataset.metered === '1');
+
+                        if (reading) reading.hidden = !isAircon;
+                        if (readingInput) {
+                            if (isAircon) {
+                                readingInput.setAttribute('required', 'required');
+                            } else {
+                                readingInput.removeAttribute('required');
+                                readingInput.value = '';
+                            }
+                        }
+
                         if (appliance) appliance.hidden = isMetered;
+
+                        var minStayMonths = isAircon ? 6 : 4;
+                        if (minStayInput) minStayInput.value = minStayMonths;
+                        if (minStayText) minStayText.textContent = minStayMonths + ' Months';
+                        if (bannerText) {
+                            if (isAircon) {
+                                bannerText.innerHTML = '<strong>Air-conditioned Unit Lock-in: 6 Months.</strong> Per Aircon MOA Clause 9, vacating before completing the 6-month minimum stay contractually forfeits all deposits.';
+                            } else {
+                                bannerText.innerHTML = '<strong>Standard Unit Lock-in: 4 Months.</strong> Per MOA Clause 9, vacating before completing the 4-month minimum stay contractually forfeits all deposits.';
+                            }
+                        }
+
                         var rent = document.getElementById('monthly_rent');
                         var adv = document.getElementById('advance_amount');
                         if (opt && opt.dataset.rent) {

@@ -48,7 +48,7 @@ class Setting extends Model
         'appliance_fee' => 200.00,
         'standard_basic_rent' => 3000.00,
         'standard_aircon_rent' => 3600.00,
-        'kwh_rate' => 15.00,
+        'kwh_rate' => 12.00,
         'grace_days' => 3,
         'penalty_basis' => 'Per day of rent',
         'penalty_rate' => 1.00,

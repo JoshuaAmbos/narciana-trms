@@ -95,8 +95,14 @@ class StoreLeaseRequest extends LeaseRequest
             'prev_building' => ['nullable', 'string', 'max:150'],
             'room_id' => ['required', Rule::exists('tbl_room', 'room_id')->where('status', 'Vacant')],
             'co_tenant_name' => ['nullable', 'string', 'max:255'],
-            // Optional; used only when the room has its own meter.
-            'move_in_reading' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
+            // Baseline move-in reading: required for aircon rooms per Aircon MOA Clause 6, nullable for unmetered units.
+            'move_in_reading' => [
+                $this->isAirconRoom() ? 'required' : 'nullable',
+                'numeric',
+                'decimal:0,2',
+                'min:0',
+                'max:99999999.99',
+            ],
             // Upfront settlement payment
             'mode' => ['required', Rule::in(['Cash', 'GCash'])],
             'payment_mode' => ['nullable', Rule::in(['Cash', 'GCash'])],
@@ -135,6 +141,10 @@ class StoreLeaseRequest extends LeaseRequest
 
     public function moveInReading(): ?float
     {
+        if (! $this->isAirconRoom()) {
+            return null;
+        }
+
         $value = $this->validated('move_in_reading');
 
         return $value === null || $value === '' ? null : (float) $value;
@@ -190,6 +200,7 @@ class StoreLeaseRequest extends LeaseRequest
     public function messages(): array
     {
         return parent::messages() + [
+            'move_in_reading.required' => 'The baseline move-in meter reading is required for air-conditioned rooms per Aircon MOA Clause 6.',
             'room_id.exists' => 'Choose a Vacant room. A new MOA can only be made for a Vacant room.',
             'tenant_id.exists' => 'The selected returning tenant is not eligible for a lease (not found, blacklisted, or archived).',
             'tenant_id.unique' => 'This tenant already has an active lease.',

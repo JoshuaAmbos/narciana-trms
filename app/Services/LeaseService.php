@@ -72,6 +72,12 @@ class LeaseService
                 AuditLog::record('Tenant registered', 'tbl_tenant', $tenantModel->tenant_id, $by->user_id);
             }
 
+            if (empty($lease['min_stay_months'])) {
+                $lease['min_stay_months'] = ($room->room_type === 'Aircon' || $room->is_metered)
+                    ? Lease::MIN_STAY_AIRCON
+                    : Lease::MIN_STAY_BASIC;
+            }
+
             $leaseModel = Lease::create($lease + [
                 'tenant_id' => $tenantModel->tenant_id,
                 'status' => 'Active',
@@ -93,8 +99,8 @@ class LeaseService
                 ]);
             }
 
-            // Move-in meter reading (decision 13): becomes the "previous reading" of the first bill.
-            if ($moveInReading !== null && $room->is_metered) {
+            // Move-in meter reading (Aircon MOA Clause 6): becomes the "previous reading" of the first bill.
+            if ($moveInReading !== null && ($room->is_metered || $room->room_type === 'Aircon')) {
                 MeterReading::create([
                     'room_id' => $room->room_id,
                     'reading_date' => $leaseModel->move_in_date,

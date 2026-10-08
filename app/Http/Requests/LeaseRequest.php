@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Lease;
+use App\Models\Room;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
@@ -24,6 +25,25 @@ class LeaseRequest extends FormRequest
         return true;
     }
 
+    protected function targetRoom(): ?Room
+    {
+        $roomId = $this->input('room_id') ?? ($this->route('lease') ? $this->route('lease')->room_id : null);
+
+        return $roomId ? Room::find($roomId) : null;
+    }
+
+    protected function isAirconRoom(): bool
+    {
+        $room = $this->targetRoom();
+
+        return (bool) ($room && ($room->room_type === 'Aircon' || $room->is_metered));
+    }
+
+    protected function requiredMinStay(): int
+    {
+        return $this->isAirconRoom() ? Lease::MIN_STAY_AIRCON : Lease::MIN_STAY_BASIC;
+    }
+
     protected function prepareForValidation(): void
     {
         $moveIn = $this->input('move_in_date');
@@ -39,7 +59,7 @@ class LeaseRequest extends FormRequest
             $this->merge(['advance_amount' => $this->input('monthly_rent')]);
         }
         if (blank($this->input('min_stay_months'))) {
-            $this->merge(['min_stay_months' => Lease::DEFAULT_MIN_STAY_MONTHS]);
+            $this->merge(['min_stay_months' => $this->requiredMinStay()]);
         }
     }
 

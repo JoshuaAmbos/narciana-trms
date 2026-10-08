@@ -23,9 +23,11 @@
     </div>
     <div class="f">
         <label>Contractual minimum stay</label>
-        <input type="hidden" name="min_stay_months" id="min_stay_months" value="{{ old('min_stay_months', $lease->min_stay_months ?: 4) }}">
+        @php($isAirconLease = (bool) (isset($lease->room) && ($lease->room->room_type === 'Aircon' || $lease->room->is_metered)))
+        @php($initialStay = (int) old('min_stay_months', $lease->min_stay_months ?: ($isAirconLease ? 6 : 4)))
+        <input type="hidden" name="min_stay_months" id="min_stay_months" value="{{ $initialStay }}">
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 7px 12px; font-size: 13px; color: #334155; display: flex; align-items: center; gap: 8px;">
-            <span style="font-weight: 600; color: #1e293b;">4 Months</span>
+            <span id="min_stay_text" style="font-weight: 600; color: #1e293b;">{{ $initialStay }} Months</span>
             <span class="muted" style="font-size: 12px;">(Mandatory lock-in period)</span>
         </div>
         @error('min_stay_months') <div class="err">{{ $message }}</div> @enderror

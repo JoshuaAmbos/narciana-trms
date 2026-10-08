@@ -321,7 +321,7 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
 
     public function test_minimum_stay_policy_enforces_at_least_four_months(): void
     {
-        $room = $this->makeRoom('108');
+        $room = $this->makeRoom('108', 'Basic');
 
         // Less than 4 months fails
         $this->actingAs($this->manager)->post('/leases', $this->moaForm($room, [
@@ -516,15 +516,16 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
 
     public function test_contractual_minimum_stay_disclaimer_and_backend_default(): void
     {
-        $room = $this->makeRoom('114');
+        $room = $this->makeRoom('114', 'Basic');
+        $airconRoom = $this->makeRoom('114A', 'Aircon');
 
         $this->actingAs($this->manager)->get('/leases/create')
             ->assertOk()
             ->assertSee('Contractual minimum stay')
-            ->assertSee('4 Months')
+            ->assertSee('Months')
             ->assertDontSee('id="min_stay_months" name="min_stay_months" type="number"', false);
 
-        // Submitting with min_stay_months omitted defaults automatically to 4
+        // Submitting with min_stay_months omitted on Basic room defaults automatically to 4
         $form = $this->moaForm($room);
         unset($form['min_stay_months']);
 
@@ -532,6 +533,15 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
 
         $lease = Lease::where('room_id', $room->room_id)->firstOrFail();
         $this->assertSame(4, (int) $lease->min_stay_months);
+
+        // Submitting with min_stay_months omitted on Aircon room defaults automatically to 6
+        $airconForm = $this->moaForm($airconRoom, ['move_in_reading' => '1250.00']);
+        unset($airconForm['min_stay_months']);
+
+        $this->actingAs($this->manager)->post('/leases', $airconForm)->assertSessionHasNoErrors();
+
+        $airconLease = Lease::where('room_id', $airconRoom->room_id)->firstOrFail();
+        $this->assertSame(6, (int) $airconLease->min_stay_months);
     }
 
     // ==========================================
@@ -674,6 +684,50 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
 
         // 4. Action buttons right-aligned
         $response->assertSee('justify-content: flex-end', false);
+    }
+
+    public function test_aircon_room_strictly_requires_move_in_meter_reading(): void
+    {
+        $aircon = $this->makeRoom('218', 'Aircon');
+        \App\Models\Setting::current()->update(['kwh_rate' => 12.00]);
+
+        // Missing move_in_reading on Aircon room fails validation
+        $formWithoutReading = $this->moaForm($aircon);
+        unset($formWithoutReading['move_in_reading']);
+
+        $this->actingAs($this->manager)->post('/leases', $formWithoutReading)
+            ->assertSessionHasErrors(['move_in_reading' => 'The baseline move-in meter reading is required for air-conditioned rooms per Aircon MOA Clause 6.']);
+
+        // Providing move_in_reading succeeds and records reading with property default kwh_rate 12.00
+        $formWithReading = $this->moaForm($aircon, ['move_in_reading' => '1500.25']);
+        $this->actingAs($this->manager)->post('/leases', $formWithReading)
+            ->assertSessionHasNoErrors();
+
+        $reading = \App\Models\MeterReading::where('room_id', $aircon->room_id)->firstOrFail();
+        $this->assertSame('1500.25', $reading->previous_reading);
+        $this->assertSame('12.00', $reading->rate_per_kwh);
+    }
+
+    public function test_inquiry_conversion_action_in_inquiries_index(): void
+    {
+        $room = $this->makeRoom('219', 'Basic');
+        $inquiry = \App\Models\Inquiry::create([
+            'prospect_name' => 'Prospect John Doe',
+            'contact_no' => '09171234567',
+            'preferred_type' => 'Basic',
+            'no_of_occupants' => 1,
+            'channel' => 'Walk-in',
+            'via_representative' => false,
+            'inquiry_date' => today(),
+            'status' => 'Waiting',
+            'room_id' => $room->room_id,
+            'user_id' => $this->manager->user_id,
+        ]);
+
+        $this->actingAs($this->manager)->get(route('inquiries.index'))
+            ->assertOk()
+            ->assertSee('Encode MOA')
+            ->assertSee(route('leases.create', ['inquiry_id' => $inquiry->inquiry_id, 'room_id' => $room->room_id]));
     }
 }
 

@@ -21,6 +21,8 @@ class Lease extends Model
 
     /** Default minimum stay on the MOA form (decision 3). */
     public const DEFAULT_MIN_STAY_MONTHS = 4;
+    public const MIN_STAY_BASIC = 4;
+    public const MIN_STAY_AIRCON = 6;
 
     /** Staggered contractual due dates strictly on the 10th, 15th, 20th, 25th, or 30th. */
     public const STAGGERED_DUE_DAYS = [10, 15, 20, 25, 30];

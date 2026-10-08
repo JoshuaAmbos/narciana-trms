@@ -47,7 +47,7 @@ class EndToEndTest extends TestCase
     {
         parent::setUp();
         $this->owner = User::factory()->role('Owner')->create();
-        $this->settings($this->owner);
+        $this->settings($this->owner, ['kwh_rate' => 15]);
         $this->manager = User::factory()->role('Manager')->create();
         $this->caretaker = User::factory()->role('Caretaker')->create();
     }

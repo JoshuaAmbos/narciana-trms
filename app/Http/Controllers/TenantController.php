@@ -106,12 +106,10 @@ class TenantController extends Controller
         ]);
     }
 
-    public function create(): View
+    public function create(): RedirectResponse
     {
-        return view('tenants.create', [
-            'tenant' => new Tenant(['status' => 'Active']),
-            'idTypes' => Tenant::ID_TYPES,
-        ]);
+        return redirect()->route('leases.create')
+            ->with('info', 'New tenants are registered through the Lease / MOA encoding process.');
     }
 
     public function store(StoreTenantRequest $request): RedirectResponse

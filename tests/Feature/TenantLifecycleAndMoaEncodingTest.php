@@ -61,6 +61,40 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
             ->assertOk();
     }
 
+    public function test_standalone_create_tenant_route_is_redirected_to_lease_encoding(): void
+    {
+        $this->actingAs($this->manager)
+            ->get(route('tenants.create'))
+            ->assertRedirect(route('leases.create'))
+            ->assertSessionHas('info');
+
+        $room = $this->makeRoom('201');
+        $this->makeLease($room, $this->manager, null, 'Sample Tenant');
+
+        $response = $this->actingAs($this->manager)->get(route('tenants.index'));
+        $response->assertOk()
+            ->assertDontSee('+ New Tenant')
+            ->assertDontSee('+ Add Tenant')
+            ->assertDontSee('+ Register Tenant')
+            ->assertSee('Tenant Name')
+            ->assertSee('Current Rented Room')
+            ->assertSee('Contact Number')
+            ->assertSee('Valid ID Type')
+            ->assertSee('Masked ID Number')
+            ->assertSee('Status')
+            ->assertSee('Edit Profile');
+    }
+
+    public function test_leases_index_matches_layout_and_has_encode_moa_button(): void
+    {
+        $response = $this->actingAs($this->manager)->get(route('leases.index'));
+        $response->assertOk()
+            ->assertSee('+ Encode New MOA')
+            ->assertSee('Active')
+            ->assertSee('Ended')
+            ->assertSee('Cancelled');
+    }
+
     // ==========================================
     // 2. Tenant Lifecycle, Archiving & Directory
     // ==========================================

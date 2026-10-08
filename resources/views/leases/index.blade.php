@@ -30,50 +30,65 @@
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
             <div>
                 <h2 style="margin: 0;">
-                    Leases & MOA Management
-                    <span class="muted" style="font-size: 13px; font-weight: normal; margin-left: 8px;">Contractual tenancy agreements & room allocations</span>
+                    Leases &amp; MOA Directory
                 </h2>
             </div>
             <div class="actions">
-                <a href="{{ route('leases.create') }}" class="btn">+ Execute New Lease (MOA)</a>
-                <a href="{{ route('tenants.index') }}" class="btn sec">Tenants Master Directory &rarr;</a>
+                <a href="{{ route('tenants.index') }}" class="btn sec">Tenants Directory &rarr;</a>
+                @can('manage-leases')
+                    <a href="{{ route('leases.create') }}" class="btn">+ Encode New MOA</a>
+                @endcan
             </div>
         </div>
 
-        {{-- Lifecycle Tabs Navigation --}}
-        <div class="filters" style="margin-bottom: 14px;">
-            <span class="muted" style="font-size: 13px;">Status:</span>
-            @foreach (['Active' => 'Active Leases ('.$counts['Active'].')', 'Ended' => 'Ended Contracts ('.$counts['Ended'].')', 'Cancelled' => 'Cancelled ('.$counts['Cancelled'].')', 'All' => 'All ('.$counts['All'].')'] as $st => $label)
-                <a href="{{ route('leases.index', ['status' => $st, 'search' => $search, 'room_type' => $roomType]) }}"
-                   class="chip {{ $status === $st ? 'on' : '' }}">{{ $label }}</a>
-            @endforeach
-        </div>
-
-        {{-- Filter & Search Controls --}}
-        <form method="GET" action="{{ route('leases.index') }}" class="billing-filter-bar" style="margin-bottom: 16px;">
+        {{-- Search & Filters Bar --}}
+        <form method="GET" action="{{ route('leases.index') }}" class="tenant-filter-bar">
             <input type="hidden" name="status" value="{{ $status }}">
+            <input type="hidden" name="room_type" value="{{ $roomType }}">
 
-            <div class="billing-filter-group">
-                <span class="muted" style="font-size: 13px;">Room Type:</span>
-                @foreach (['All', 'Basic', 'Aircon'] as $rt)
-                    <a href="{{ route('leases.index', ['status' => $status, 'room_type' => $rt, 'search' => $search]) }}"
-                       class="chip {{ $roomType === $rt ? 'on' : '' }}">{{ $rt }}</a>
-                @endforeach
-            </div>
+            <div class="tenant-filter-row">
+                <div class="tenant-filter-groups">
+                    <div class="tenant-filter-group">
+                        <span class="tenant-filter-label">Status:</span>
+                        <div class="tenant-chips-wrap">
+                            @foreach (['Active' => 'Active', 'Ended' => 'Ended', 'Cancelled' => 'Cancelled', 'All' => 'All'] as $st => $label)
+                                <a href="{{ route('leases.index', ['status' => $st, 'search' => $search, 'room_type' => $roomType]) }}"
+                                   class="chip {{ $status === $st ? 'on' : '' }}">{{ $label }} ({{ $counts[$st] ?? 0 }})</a>
+                            @endforeach
+                        </div>
+                    </div>
 
-            <div class="billing-filter-group">
-                <input type="text" name="search" class="search-input" placeholder="Search room no or tenant name..." value="{{ $search }}">
-                <button type="submit" class="btn sec" style="padding: 6px 12px; font-size: 13px;">Search</button>
-                @if ($search !== '' || $roomType !== 'All' || $status !== 'Active')
-                    <a href="{{ route('leases.index') }}" class="btn sec" style="padding: 6px 10px; font-size: 13px;">Clear</a>
-                @endif
+                    <div class="tenant-filter-group">
+                        <span class="tenant-filter-label">Room Type:</span>
+                        <div class="tenant-chips-wrap">
+                            @foreach (['All', 'Basic', 'Aircon'] as $rt)
+                                <a href="{{ route('leases.index', ['status' => $status, 'search' => $search, 'room_type' => $rt]) }}"
+                                   class="chip {{ $roomType === $rt ? 'on' : '' }}">{{ $rt }}</a>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tenant-search-form">
+                    <div class="tenant-search-input-wrap">
+                        <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" name="search" class="search-input" placeholder="Search room no or tenant name..." value="{{ $search }}" autocomplete="off">
+                    </div>
+                    <button type="submit" class="btn sec tenant-search-btn">Search</button>
+                    @if ($search !== '' || $roomType !== 'All' || $status !== 'Active')
+                        <a href="{{ route('leases.index') }}" class="btn sec tenant-clear-btn" title="Clear all filters">Clear</a>
+                    @endif
+                </div>
             </div>
         </form>
 
         @if ($leases->isEmpty())
             <p class="muted">No {{ strtolower($status) }} lease agreements found.
                 @if ($status === 'Active')
-                    <a href="{{ route('leases.create') }}">Execute a new lease (MOA) &rarr;</a>
+                    <a href="{{ route('leases.create') }}">+ Encode New MOA &rarr;</a>
                 @endif
             </p>
         @else
@@ -88,14 +103,14 @@
                         <th class="r">Monthly Rent</th>
                         <th>Occupants</th>
                         <th>Status</th>
-                        <th></th>
+                        <th class="tenant-actions-header">Actions</th>
                     </tr>
                     @foreach ($leases as $lease)
                         <tr>
                             <td class="nowrap"><b>MOA-{{ str_pad($lease->lease_id, 4, '0', STR_PAD_LEFT) }}</b></td>
                             <td>
-                                <b>{{ $lease->room->room_no }}</b>
-                                <div class="sub nowrap">{{ $lease->room->room_type }}</div>
+                                <b>Room {{ $lease->room->room_no }}</b>
+                                <div class="sub nowrap muted">{{ $lease->room->room_type }}</div>
                             </td>
                             <td>
                                 <a href="{{ route('tenants.show', $lease->tenant) }}" style="font-weight: 600; text-decoration: none; color: inherit;">
@@ -117,9 +132,11 @@
                                     <div class="sub">{{ $lease->moveout->actual_date ? 'left '.$lease->moveout->actual_date->format('j M') : 'leaving '.$lease->moveout->planned_date->format('j M') }}</div>
                                 @endif
                             </td>
-                            <td class="actions nowrap">
-                                <a href="{{ route('leases.show', $lease) }}" class="btn sec">View MOA</a>
-                                <a href="{{ route('leases.household', $lease) }}" class="btn sec" title="Manage occupants, appliances, and visitors">Household</a>
+                            <td class="tenant-actions-cell nowrap">
+                                <div class="tenant-action-btns">
+                                    <a href="{{ route('leases.show', $lease) }}" class="btn sec">View MOA</a>
+                                    <a href="{{ route('leases.household', $lease) }}" class="btn sec" title="Manage occupants, appliances, and visitors">Household</a>
+                                </div>
                             </td>
                         </tr>
                     @endforeach

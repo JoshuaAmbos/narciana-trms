@@ -21,7 +21,6 @@
             @endforeach
         </div>
         <input id="due_day" name="due_day" type="number" min="1" max="31" inputmode="numeric" value="{{ old('due_day', $lease->due_day) }}">
-        <div class="hint">Staggered due day (10th, 15th, 20th, 25th, or 30th).</div>
         @error('due_day') <div class="err">{{ $message }}</div> @enderror
     </div>
     <div class="f @error('min_stay_months') has-err @enderror">

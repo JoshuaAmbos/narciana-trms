@@ -66,8 +66,7 @@
                     <a href="{{ route('tenants.index') }}" class="btn sec">&larr; Active Directory</a>
                 @else
                     <a href="{{ route('tenants.index', ['archived' => 1]) }}" class="btn sec">Show Archived ({{ $metrics['archived'] }})</a>
-                    <a href="{{ route('leases.index') }}" class="btn sec">View Active Leases</a>
-                    <a href="{{ route('tenants.create') }}" class="btn">+ Register Tenant</a>
+                    <a href="{{ route('leases.index') }}" class="btn sec">View Active Leases &rarr;</a>
                 @endif
             </div>
         </div>
@@ -121,18 +120,18 @@
                 @if ($search !== '' || $status !== 'All' || $tenancyFilter !== 'all')
                     <a href="{{ route('tenants.index') }}">Clear filters</a> or
                 @endif
-                <a href="{{ route('tenants.create') }}">register a new tenant</a>
+                <a href="{{ route('leases.create') }}">encode an MOA on the Leases page</a>.
             </p>
         @else
             <div class="table-wrap">
                 <table>
                     <tr>
-                        <th>Full Name</th>
-                        <th>Contact No.</th>
-                        <th>Valid ID</th>
-                        <th>Provincial Origin</th>
-                        <th>Current Room</th>
-                        <th>Profile Status</th>
+                        <th>Tenant Name</th>
+                        <th>Current Rented Room</th>
+                        <th>Contact Number</th>
+                        <th>Valid ID Type</th>
+                        <th>Masked ID Number</th>
+                        <th>Status</th>
                         <th class="tenant-actions-header">Actions</th>
                     </tr>
                     @foreach ($tenants as $tenant)
@@ -146,23 +145,24 @@
                                     <div class="sub nowrap muted">{{ $tenant->occupation }}</div>
                                 @endif
                             </td>
+                            <td class="nowrap">
+                                @if ($active)
+                                    <a href="{{ route('leases.show', $active) }}" class="tag t-green" style="text-decoration: none; font-weight: 600;">
+                                        Room {{ $active->room->room_no }} ({{ $active->room->room_type }})
+                                    </a>
+                                @else
+                                    <span class="muted">None / Past Tenant</span>
+                                @endif
+                            </td>
                             <td class="nowrap">{{ $tenant->contact_no }}</td>
                             <td>
                                 <b>{{ $tenant->valid_id_type }}</b>
                                 @if ($tenant->other_id_type)
                                     <span class="sub muted">({{ $tenant->other_id_type }})</span>
                                 @endif
-                                <div class="sub nowrap muted" title="Masked for privacy">{{ $tenant->masked_id_number }}</div>
                             </td>
-                            <td>{{ $tenant->provincial_address ?: '—' }}</td>
                             <td class="nowrap">
-                                @if ($active)
-                                    <a href="{{ route('leases.show', $active) }}" class="tag t-green" style="text-decoration: none;">
-                                        Room {{ $active->room->room_no }} ({{ $active->room->room_type }})
-                                    </a>
-                                @else
-                                    <span class="muted">None (Past)</span>
-                                @endif
+                                <code style="font-family: inherit; font-size: 13px; color: #475569;" title="Masked for privacy">{{ $tenant->masked_id_number }}</code>
                             </td>
                             <td>
                                 <span class="tag {{ $tenant->status === 'Active' ? 't-green' : ($tenant->status === 'Blacklisted' ? 't-red' : ($tenant->status === 'Archived' ? 't-muted' : 't-amber')) }}" style="font-size: 11px;">
@@ -171,6 +171,7 @@
                             </td>
                             <td class="tenant-actions-cell nowrap">
                                 <div class="tenant-action-btns">
+                                    <a href="{{ route('tenants.edit', $tenant) }}" class="btn sec" title="Edit personal details">Edit Profile</a>
                                     <a href="{{ route('tenants.show', $tenant) }}" class="btn sec" title="View Profile & Tenancy History">Profile</a>
                                     @if ($isArchivedView)
                                         <form method="POST" action="{{ route('tenants.restore', $tenant->tenant_id) }}" style="display: inline;">
@@ -179,9 +180,6 @@
                                             <button type="submit" class="btn" title="Restore profile to active directory" onclick="return confirm('Restore this tenant to the active directory?');">Restore</button>
                                         </form>
                                     @else
-                                        @if (! $active && $tenant->status !== 'Blacklisted')
-                                            <a href="{{ route('leases.create', ['tenant_id' => $tenant->tenant_id]) }}" class="btn" title="Create Lease for this tenant">+ Lease</a>
-                                        @endif
                                         @if (! $active)
                                             <form method="POST" action="{{ route('tenants.archive', $tenant) }}" style="display: inline;">
                                                 @csrf

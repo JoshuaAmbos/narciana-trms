@@ -64,7 +64,7 @@
             <div class="panel">
                 <h2>2. Room and MOA details</h2>
                 <div class="f @error('room_id') has-err @enderror">
-                    <label for="room_id">Room (Vacant rooms only)</label>
+                    <label for="room_id">Room</label>
                     <select id="room_id" name="room_id">
                         <option value="">Choose…</option>
                         @foreach ($rooms as $room)

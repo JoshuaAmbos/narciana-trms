@@ -19,9 +19,17 @@ class RoomController extends Controller
 
     public function create(): View
     {
+        $setting = \App\Models\Setting::current();
+
         return view('rooms.create', [
-            'room' => new Room(['room_type' => 'Basic', 'is_metered' => false, 'max_occupants' => Room::MAX_OCCUPANTS]),
+            'room' => new Room([
+                'room_type' => 'Basic',
+                'monthly_rent' => $setting->standard_basic_rent,
+                'is_metered' => false,
+                'max_occupants' => Room::MAX_OCCUPANTS,
+            ]),
             'types' => Room::TYPES,
+            'setting' => $setting,
         ]);
     }
 
@@ -39,14 +47,24 @@ class RoomController extends Controller
 
     public function edit(Room $room): View
     {
-        return view('rooms.edit', ['room' => $room, 'types' => Room::TYPES]);
+        return view('rooms.edit', [
+            'room' => $room,
+            'types' => Room::TYPES,
+            'setting' => \App\Models\Setting::current(),
+        ]);
     }
 
     public function update(RoomRequest $request, Room $room): RedirectResponse
     {
         DB::transaction(function () use ($request, $room) {
+            $oldRent = (float) $room->monthly_rent;
             $room->update($request->validated()); // status is not in the validated data, so it never changes here
-            AuditLog::record('Room changed', 'tbl_room', $room->room_id);
+            $newRent = (float) $room->monthly_rent;
+            $detail = null;
+            if ($oldRent !== $newRent) {
+                $detail = 'Monthly rent: ₱'.number_format($oldRent, 2).' → ₱'.number_format($newRent, 2);
+            }
+            AuditLog::record('Room changed', 'tbl_room', $room->room_id, null, $detail);
         });
 
         return redirect()->route('rooms.index')->with('status', "Room {$room->room_no} was updated.");

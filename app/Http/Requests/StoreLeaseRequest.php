@@ -29,7 +29,7 @@ class StoreLeaseRequest extends LeaseRequest
         $computedFullName = trim("{$firstName} {$middleName} {$lastName} {$nameExtension}");
         $computedFullName = preg_replace('/\s+/', ' ', $computedFullName);
 
-        $mode = $this->input('mode');
+        $mode = $this->input('payment_mode') ?? $this->input('mode');
         if (blank($mode)) {
             $mode = 'Cash';
         }
@@ -46,6 +46,7 @@ class StoreLeaseRequest extends LeaseRequest
             'other_id_type' => trim((string) $this->input('other_id_type')) ?: null,
             'co_tenant_name' => trim((string) $this->input('co_tenant_name')) ?: null,
             'mode' => $mode,
+            'payment_mode' => $mode,
             'gcash_ref_no' => $gcashRef,
             'inquiry_id' => $this->input('inquiry_id') ? (int) $this->input('inquiry_id') : null,
             'appliance_name' => trim((string) $this->input('appliance_name')) ?: null,
@@ -98,6 +99,7 @@ class StoreLeaseRequest extends LeaseRequest
             'move_in_reading' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
             // Upfront settlement payment
             'mode' => ['required', Rule::in(['Cash', 'GCash'])],
+            'payment_mode' => ['nullable', Rule::in(['Cash', 'GCash'])],
             'gcash_ref_no' => [
                 'nullable',
                 'required_if:mode,GCash',
@@ -107,6 +109,28 @@ class StoreLeaseRequest extends LeaseRequest
             'inquiry_id' => ['nullable', 'integer', Rule::exists('tbl_inquiry', 'inquiry_id')],
             'appliance_name' => ['nullable', 'string', 'max:100'],
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $rent = (float) $this->input('monthly_rent');
+            $advance = (float) $this->input('advance_amount');
+            $depositMaintenance = (float) $this->input('deposit_maintenance');
+            $depositDamage = (float) $this->input('deposit_damage');
+            $depositBills = (float) $this->input('deposit_bills');
+            $depositKeys = (float) $this->input('deposit_keys');
+            $totalDeposit = round($depositMaintenance + $depositDamage + $depositBills + $depositKeys, 2);
+
+            if ($rent > 0) {
+                if (round($advance, 2) !== round($rent, 2)) {
+                    $validator->errors()->add('advance_amount', 'The advance rent must be exactly one month\'s rent (₱'.number_format($rent, 2).') per MOA Clause 6.');
+                }
+                if (abs($totalDeposit - round($rent, 2)) >= 0.005) {
+                    $validator->errors()->add('deposit_maintenance', 'The total deposit (₱'.number_format($totalDeposit, 2).') must equal exactly one month\'s rent (₱'.number_format($rent, 2).') per MOA Clause 6.');
+                }
+            }
+        });
     }
 
     public function moveInReading(): ?float
@@ -128,9 +152,11 @@ class StoreLeaseRequest extends LeaseRequest
 
     public function paymentData(): array
     {
+        $mode = $this->input('payment_mode') ?: ($this->validated('mode') ?: 'Cash');
+
         return [
-            'mode' => $this->validated('mode') ?: 'Cash',
-            'gcash_ref_no' => $this->validated('mode') === 'GCash' ? $this->validated('gcash_ref_no') : null,
+            'mode' => $mode,
+            'gcash_ref_no' => $mode === 'GCash' ? $this->validated('gcash_ref_no') : null,
         ];
     }
 

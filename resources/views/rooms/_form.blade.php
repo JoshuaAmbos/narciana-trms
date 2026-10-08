@@ -49,9 +49,19 @@
 
 @push('scripts')
     <script>
-        // Default the meter checkbox from the room type (the Owner can still change it).
+        // Default the meter checkbox and baseline rent from room type.
+        var isNewRoom = {{ $room->exists ? 'false' : 'true' }};
+        var basicRent = '{{ number_format((float) ($setting->standard_basic_rent ?? 3000), 2, '.', '') }}';
+        var airconRent = '{{ number_format((float) ($setting->standard_aircon_rent ?? 3600), 2, '.', '') }}';
+
         document.getElementById('room_type').addEventListener('change', function () {
             document.getElementById('is_metered').checked = this.value === 'Aircon';
+            if (isNewRoom) {
+                var rentInput = document.getElementById('monthly_rent');
+                if (rentInput) {
+                    rentInput.value = this.value === 'Aircon' ? airconRent : basicRent;
+                }
+            }
         });
     </script>
 @endpush

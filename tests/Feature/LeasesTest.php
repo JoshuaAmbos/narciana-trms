@@ -69,9 +69,11 @@ class LeasesTest extends TestCase
         $expectedDueDay = collect(Lease::STAGGERED_DUE_DAYS)->sortBy(fn ($d) => abs($d - $todayDay))->first();
 
         $this->actingAs($this->manager)->get('/leases/create')
-            ->assertOk()
-            ->assertSee('name="min_stay_months" type="number" min="4" max="60" inputmode="numeric" value="4"', false)
-            ->assertSee('name="due_day" type="number" min="1" max="31" inputmode="numeric" value="'.$expectedDueDay.'"', false);
+            ->assertSee('Contractual minimum stay')
+            ->assertSee('4 Months')
+            ->assertSee('name="min_stay_months" id="min_stay_months" value="4"', false)
+            ->assertSee('name="due_day"', false)
+            ->assertSee('<option value="'.$expectedDueDay.'" selected', false);
     }
 
     public function test_opening_the_form_from_a_room_prefills_its_rent_and_advance(): void
@@ -81,7 +83,8 @@ class LeasesTest extends TestCase
         $this->actingAs($this->manager)->get(route('leases.create', ['room_id' => $room->room_id]))
             ->assertOk()
             ->assertSee('name="monthly_rent" type="number" min="0.01" step="0.01" inputmode="decimal" value="3250.50"', false)
-            ->assertSee('name="advance_amount" type="number" min="0" step="0.01" inputmode="decimal" value="3250.50"', false);
+            ->assertSee('name="advance_amount" type="number" min="0" step="0.01" inputmode="decimal" readonly', false)
+            ->assertSee('value="3250.50"', false);
     }
 
     public function test_only_a_vacant_room_can_get_a_new_lease(): void
@@ -150,15 +153,14 @@ class LeasesTest extends TestCase
 
     // ---------- Deposit warning (not a block) ----------
 
-    public function test_deposit_not_equal_to_one_month_saves_with_a_warning(): void
+    public function test_deposit_not_equal_to_one_month_fails_validation(): void
     {
         $room = $this->makeRoom('204');
 
         $this->actingAs($this->manager)->post('/leases', $this->moaForm($room, ['deposit_keys' => '200.00']))
-            ->assertSessionHasNoErrors()
-            ->assertSessionHas('warning', "Note: the 4 deposit parts total ₱3,400.00, but one month's rent is ₱3,500.00 (the MOA deposit is one month). Please check the amounts.");
+            ->assertSessionHasErrors(['deposit_maintenance']);
 
-        $this->assertSame(1, Lease::count());
+        $this->assertSame(0, Lease::count());
     }
 
     public function test_deposit_equal_to_one_month_has_no_warning(): void

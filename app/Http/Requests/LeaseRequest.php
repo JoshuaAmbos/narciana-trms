@@ -38,6 +38,9 @@ class LeaseRequest extends FormRequest
         if (blank($this->input('advance_amount')) && is_numeric($this->input('monthly_rent'))) {
             $this->merge(['advance_amount' => $this->input('monthly_rent')]);
         }
+        if (blank($this->input('min_stay_months'))) {
+            $this->merge(['min_stay_months' => Lease::DEFAULT_MIN_STAY_MONTHS]);
+        }
     }
 
     /** Rules for the MOA fields (room and tenant are handled by StoreLeaseRequest). */

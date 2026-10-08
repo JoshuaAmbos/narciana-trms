@@ -12,21 +12,22 @@
     </div>
     <div class="f @error('due_day') has-err @enderror">
         <label for="due_day">Contractual due day</label>
-        <div style="display: flex; gap: 4px; margin-bottom: 6px; flex-wrap: wrap;">
+        <select id="due_day" name="due_day" required>
             @foreach ([10, 15, 20, 25, 30] as $staggeredDay)
-                <button type="button" class="btn sec" style="padding: 2px 8px; font-size: 11px;"
-                        onclick="document.getElementById('due_day').value = {{ $staggeredDay }}; document.getElementById('due_day').dispatchEvent(new Event('input'));">
+                <option value="{{ $staggeredDay }}" @selected((int) old('due_day', $lease->due_day) === $staggeredDay)>
                     {{ $staggeredDay }}th
-                </button>
+                </option>
             @endforeach
-        </div>
-        <input id="due_day" name="due_day" type="number" min="1" max="31" inputmode="numeric" value="{{ old('due_day', $lease->due_day) }}">
+        </select>
         @error('due_day') <div class="err">{{ $message }}</div> @enderror
     </div>
-    <div class="f @error('min_stay_months') has-err @enderror">
-        <label for="min_stay_months">Minimum stay (months)</label>
-        <input id="min_stay_months" name="min_stay_months" type="number" min="4" max="60" inputmode="numeric" value="{{ old('min_stay_months', $lease->min_stay_months ?: 4) }}">
-        <div class="hint">Contractual minimum stay is 4 months.</div>
+    <div class="f">
+        <label>Contractual minimum stay</label>
+        <input type="hidden" name="min_stay_months" id="min_stay_months" value="{{ old('min_stay_months', $lease->min_stay_months ?: 4) }}">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 7px 12px; font-size: 13px; color: #334155; display: flex; align-items: center; gap: 8px;">
+            <span style="font-weight: 600; color: #1e293b;">4 Months</span>
+            <span class="muted" style="font-size: 12px;">(Mandatory lock-in period)</span>
+        </div>
         @error('min_stay_months') <div class="err">{{ $message }}</div> @enderror
     </div>
 </div>
@@ -39,13 +40,19 @@
     </div>
     <div class="f @error('advance_amount') has-err @enderror">
         <label for="advance_amount">One-month advance paid (₱)</label>
-        <input id="advance_amount" name="advance_amount" type="number" min="0" step="0.01" inputmode="decimal" value="{{ old('advance_amount', $lease->advance_amount) }}">
-        <div class="hint">Left blank = same as the monthly rent.</div>
+        <input id="advance_amount" name="advance_amount" type="number" min="0" step="0.01" inputmode="decimal" readonly
+               style="background-color: #f8fafc; cursor: not-allowed;"
+               value="{{ old('advance_amount', $lease->advance_amount ?: $lease->monthly_rent) }}">
         @error('advance_amount') <div class="err">{{ $message }}</div> @enderror
     </div>
 </div>
 
-<div class="f"><label>Deposit breakdown (₱) — the MOA deposit is one month's rent</label></div>
+<div class="f" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+    <label style="margin-bottom: 0;">Deposit breakdown (₱)</label>
+    <button type="button" class="btn sec" id="btn-split-deposits" style="padding: 2px 8px; font-size: 11px;">
+        Auto-split 1-Month Deposit
+    </button>
+</div>
 <div class="row deposits">
     @foreach ([
         'deposit_maintenance' => 'Maintenance (non-refundable)',
@@ -78,10 +85,42 @@
                 totalEl.textContent = peso(total);
                 var r = parseFloat(rent.value) || 0;
                 noteEl.textContent = (r > 0 && Math.abs(total - r) >= 0.005)
-                    ? '(one month\'s rent is ' + peso(r) + ' — you can still save)' : '';
+                    ? '(Must equal one month\'s rent of ' + peso(r) + ' per MOA Clause 6)' : '';
             }
             parts.forEach(function (p) { p.addEventListener('input', refresh); });
-            rent.addEventListener('input', refresh);
+            rent.addEventListener('input', function () {
+                var adv = document.getElementById('advance_amount');
+                if (adv) adv.value = rent.value;
+                refresh();
+            });
+
+            function autoSplitDeposits() {
+                var r = parseFloat(rent.value) || 0;
+                if (r <= 0) return;
+                var maint = Math.round(r * 0.30 * 100) / 100;
+                var dam = Math.round(r * 0.40 * 100) / 100;
+                var bills = Math.round(r * 0.20 * 100) / 100;
+                var keys = Math.round((r - maint - dam - bills) * 100) / 100;
+                var mInput = document.getElementById('deposit_maintenance');
+                var dInput = document.getElementById('deposit_damage');
+                var bInput = document.getElementById('deposit_bills');
+                var kInput = document.getElementById('deposit_keys');
+                if (mInput) mInput.value = maint.toFixed(2);
+                if (dInput) dInput.value = dam.toFixed(2);
+                if (bInput) bInput.value = bills.toFixed(2);
+                if (kInput) kInput.value = keys.toFixed(2);
+                refresh();
+            }
+            var splitBtn = document.getElementById('btn-split-deposits');
+            if (splitBtn) splitBtn.addEventListener('click', autoSplitDeposits);
+
+            rent.addEventListener('change', function () {
+                var total = 0;
+                parts.forEach(function (p) { total += parseFloat(p.value) || 0; });
+                if (total === 0) {
+                    autoSplitDeposits();
+                }
+            });
 
             // Due day snaps to closest staggered cycle day (10, 15, 20, 25, 30) following the move-in day.
             var moveIn = document.getElementById('move_in_date');
@@ -93,7 +132,7 @@
                     return Math.abs(curr - day) < Math.abs(prev - day) ? curr : prev;
                 });
             }
-            dueDay.addEventListener('input', function () { dueTouched = true; });
+            if (dueDay) dueDay.addEventListener('change', function () { dueTouched = true; });
             moveIn.addEventListener('change', function () {
                 if (!dueTouched && moveIn.value) {
                     var rawDay = parseInt(moveIn.value.slice(8, 10), 10);

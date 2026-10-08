@@ -15,6 +15,24 @@
         <form method="POST" action="{{ route('settings.update') }}" novalidate>
             @csrf @method('PUT')
 
+            <h3 class="sub-head">Standard room baseline rates</h3>
+            <div class="row">
+                <div class="f @error('standard_basic_rent') has-err @enderror">
+                    <label for="standard_basic_rent">Standard Basic room monthly rate (₱)</label>
+                    <input id="standard_basic_rent" name="standard_basic_rent" type="number" step="0.01" min="0" inputmode="decimal"
+                           value="{{ old('standard_basic_rent', $setting->standard_basic_rent) }}">
+                    <div class="hint">Baseline rent for new Basic rooms (default ₱3,000.00).</div>
+                    @error('standard_basic_rent') <div class="err">{{ $message }}</div> @enderror
+                </div>
+                <div class="f @error('standard_aircon_rent') has-err @enderror">
+                    <label for="standard_aircon_rent">Standard Aircon room monthly rate (₱)</label>
+                    <input id="standard_aircon_rent" name="standard_aircon_rent" type="number" step="0.01" min="0" inputmode="decimal"
+                           value="{{ old('standard_aircon_rent', $setting->standard_aircon_rent) }}">
+                    <div class="hint">Baseline rent for new Aircon rooms (default ₱3,600.00).</div>
+                    @error('standard_aircon_rent') <div class="err">{{ $message }}</div> @enderror
+                </div>
+            </div>
+
             <h3 class="sub-head">Monthly charges</h3>
             <div class="row">
                 @foreach (['water_rate' => ['Water rate per occupant (₱)', 'Per occupant per month.'],

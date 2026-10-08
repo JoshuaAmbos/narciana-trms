@@ -21,6 +21,8 @@ class SettingRequest extends FormRequest
         return [
             'water_rate' => $money(10000),
             'appliance_fee' => $money(10000),
+            'standard_basic_rent' => $money(50000),
+            'standard_aircon_rent' => $money(50000),
             'kwh_rate' => $money(1000),
             'grace_days' => ['required', 'integer', 'between:0,31'],
             'penalty_basis' => ['required', Rule::in(Setting::PENALTY_BASES)],
@@ -39,6 +41,8 @@ class SettingRequest extends FormRequest
             '*.min' => 'This cannot be negative.',
             'water_rate.max' => 'The water rate cannot be more than ₱10,000.00.',
             'appliance_fee.max' => 'The appliance fee cannot be more than ₱10,000.00.',
+            'standard_basic_rent.max' => 'The standard basic room rate cannot be more than ₱50,000.00.',
+            'standard_aircon_rent.max' => 'The standard aircon room rate cannot be more than ₱50,000.00.',
             'kwh_rate.max' => 'The rate per kWh cannot be more than ₱1,000.00.',
             'penalty_rate.max' => 'The penalty rate cannot be more than 100%.',
             'grace_days.between' => 'Use 0 to 31 days.',

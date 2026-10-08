@@ -17,6 +17,8 @@ class SettingService
     public const FIELDS = [
         'water_rate' => ['Water rate (per occupant)', 'peso'],
         'appliance_fee' => ['Appliance fee (per appliance, basic rooms)', 'peso'],
+        'standard_basic_rent' => ['Standard Basic room rate', 'peso'],
+        'standard_aircon_rent' => ['Standard Aircon room rate', 'peso'],
         'kwh_rate' => ['Electricity rate (per kWh)', 'peso'],
         'grace_days' => ['Grace period', 'days'],
         'penalty_basis' => ['Penalty basis', 'text'],

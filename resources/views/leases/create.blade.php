@@ -52,7 +52,6 @@
                                 </option>
                             @endforeach
                         </select>
-                        <div class="hint">Only verified tenants without an active lease are listed. Or switch to "Encode new tenant" above.</div>
                         @error('tenant_id') <div class="err">{{ $message }}</div> @enderror
                     </div>
                 </div>
@@ -111,17 +110,19 @@
                     The initial move-in settlement encompasses the 1-month advance rent plus required security/maintenance deposit components. A paid settlement bill and official payment receipt will automatically be logged.
                 </p>
                 <div class="row">
-                    <div class="f @error('mode') has-err @enderror" style="flex: 1 1 200px;">
+                    <div class="f @error('mode') @error('payment_mode') has-err @enderror @enderror" style="flex: 1 1 200px;">
                         <label for="payment_mode">Payment Mode <span style="color: #ef4444;">*</span></label>
-                        <select id="payment_mode" name="mode" required>
-                            <option value="Cash" @selected(old('mode', 'Cash') === 'Cash')>Cash</option>
-                            <option value="GCash" @selected(old('mode') === 'GCash')>GCash</option>
+                        <select id="payment_mode" name="payment_mode" required>
+                            <option value="Cash" @selected(old('payment_mode', old('mode', 'Cash')) === 'Cash')>Cash</option>
+                            <option value="GCash" @selected(old('payment_mode', old('mode')) === 'GCash')>GCash</option>
                         </select>
+                        <input type="hidden" name="mode" id="mode_alias" value="{{ old('payment_mode', old('mode', 'Cash')) }}">
+                        @error('payment_mode') <div class="err">{{ $message }}</div> @enderror
                         @error('mode') <div class="err">{{ $message }}</div> @enderror
                     </div>
 
                     <div class="f @error('gcash_ref_no') has-err @enderror" id="gcash-ref-container" style="flex: 1 1 260px;"
-                         @if (old('mode', 'Cash') !== 'GCash') hidden @endif>
+                         @if (old('payment_mode', old('mode', 'Cash')) !== 'GCash') hidden @endif>
                         <label for="gcash_ref_no">GCash Reference Number (13 digits) <span style="color: #ef4444;">*</span></label>
                         <input id="gcash_ref_no" name="gcash_ref_no" type="text" maxlength="13" inputmode="numeric"
                                value="{{ old('gcash_ref_no') }}" placeholder="13-digit reference number">
@@ -131,11 +132,10 @@
                 </div>
             </div>
 
-            <div class="form-actions">
-                <button type="submit" class="btn">Save MOA</button>
+            <div class="form-actions" style="margin-top: 24px; display: flex; justify-content: flex-end; align-items: center; gap: 12px;">
                 <a href="{{ route('tenants.index') }}" class="btn sec">Cancel</a>
+                <button type="submit" class="btn">Save MOA</button>
             </div>
-            <p class="muted">Saving sets the room to <b>Occupied</b>.</p>
         </form>
 
         @push('scripts')
@@ -152,7 +152,7 @@
                         });
                     });
 
-                    // Picking a room fills in its rent (and the advance) if still empty, toggles meter / appliance inputs.
+                    // Picking a room fills in its configured rent and advance, toggles meter / appliance inputs.
                     var room = document.getElementById('room_id');
                     var reading = document.getElementById('move-in-reading');
                     var appliance = document.getElementById('unmetered-appliance');
@@ -164,17 +164,20 @@
                         var rent = document.getElementById('monthly_rent');
                         var adv = document.getElementById('advance_amount');
                         if (opt && opt.dataset.rent) {
-                            if (!rent.value) { rent.value = opt.dataset.rent; }
-                            if (!adv.value) { adv.value = opt.dataset.rent; }
+                            rent.value = opt.dataset.rent;
+                            adv.value = opt.dataset.rent;
                             rent.dispatchEvent(new Event('input'));
+                            rent.dispatchEvent(new Event('change'));
                         }
                     });
 
                     // Payment mode switch
                     var modeSelect = document.getElementById('payment_mode');
+                    var modeAlias = document.getElementById('mode_alias');
                     var gcashContainer = document.getElementById('gcash-ref-container');
                     if (modeSelect && gcashContainer) {
                         modeSelect.addEventListener('change', function () {
+                            if (modeAlias) modeAlias.value = this.value;
                             gcashContainer.hidden = (this.value !== 'GCash');
                         });
                     }

@@ -18,8 +18,8 @@ class SettingController extends Controller
             'setting' => Setting::current()->load('updatedBy'),
             'bases' => Setting::PENALTY_BASES,
             'fixedRules' => [
-                ['Default due day', 'The tenant\'s move-in day of the month (editable on each MOA).'],
-                ['Default minimum stay', Lease::DEFAULT_MIN_STAY_MONTHS.' months (editable on each MOA).'],
+                ['Default due day', 'The tenant\'s move-in day of the month (snapped to staggered billing days: 10th, 15th, 20th, 25th, or 30th).'],
+                ['Contractual minimum stay', Lease::DEFAULT_MIN_STAY_MONTHS.' months (mandatory lock-in period per MOA Clause 9).'],
                 ['Logout after inactivity', config('session.lifetime').' minutes, with a warning 1 minute before (SESSION_LIFETIME in .env).'],
             ],
         ]);

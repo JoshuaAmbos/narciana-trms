@@ -467,4 +467,214 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
             'user_id' => $this->manager->user_id,
         ]);
     }
+
+    // ==========================================
+    // 9. Strict MOA Clause 6 Upfront Validation
+    // ==========================================
+
+    public function test_strict_moa_clause_6_upfront_breakdown_validation(): void
+    {
+        $room = $this->makeRoom('113', 'Basic', ['monthly_rent' => 3000.00]);
+
+        // Advance rent does not match monthly rent (e.g., 2500 vs 3000)
+        $this->actingAs($this->manager)->post('/leases', $this->moaForm($room, [
+            'monthly_rent' => 3000.00,
+            'advance_amount' => 2500.00,
+            'deposit_maintenance' => 900.00,
+            'deposit_damage' => 1200.00,
+            'deposit_bills' => 600.00,
+            'deposit_keys' => 300.00,
+        ]))->assertSessionHasErrors(['advance_amount']);
+
+        // Deposit sum does not match monthly rent (e.g., 2900 vs 3000)
+        $this->actingAs($this->manager)->post('/leases', $this->moaForm($room, [
+            'monthly_rent' => 3000.00,
+            'advance_amount' => 3000.00,
+            'deposit_maintenance' => 900.00,
+            'deposit_damage' => 1200.00,
+            'deposit_bills' => 600.00,
+            'deposit_keys' => 200.00, // 2900 total
+        ]))->assertSessionHasErrors(['deposit_maintenance']);
+
+        // Exact match passes validation
+        $this->actingAs($this->manager)->post('/leases', $this->moaForm($room, [
+            'monthly_rent' => 3000.00,
+            'advance_amount' => 3000.00,
+            'deposit_maintenance' => 900.00,
+            'deposit_damage' => 1200.00,
+            'deposit_bills' => 600.00,
+            'deposit_keys' => 300.00, // 3000 total
+            'payment_mode' => 'Cash',
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertSame(1, Lease::where('room_id', $room->room_id)->count());
+    }
+
+    // ==========================================
+    // 10. Contractual Minimum Stay Disclaimer & Default
+    // ==========================================
+
+    public function test_contractual_minimum_stay_disclaimer_and_backend_default(): void
+    {
+        $room = $this->makeRoom('114');
+
+        $this->actingAs($this->manager)->get('/leases/create')
+            ->assertOk()
+            ->assertSee('Contractual minimum stay')
+            ->assertSee('4 Months')
+            ->assertDontSee('id="min_stay_months" name="min_stay_months" type="number"', false);
+
+        // Submitting with min_stay_months omitted defaults automatically to 4
+        $form = $this->moaForm($room);
+        unset($form['min_stay_months']);
+
+        $this->actingAs($this->manager)->post('/leases', $form)->assertSessionHasNoErrors();
+
+        $lease = Lease::where('room_id', $room->room_id)->firstOrFail();
+        $this->assertSame(4, (int) $lease->min_stay_months);
+    }
+
+    // ==========================================
+    // 11. Room Inventory & Preset Rate Architecture
+    // ==========================================
+
+    public function test_room_inventory_and_preset_rates_seeder(): void
+    {
+        $this->seed(\Database\Seeders\RoomSeeder::class);
+
+        $this->assertSame(17, Room::count());
+
+        // Check specific room presets per specifications
+        $r201 = Room::where('room_no', '201')->firstOrFail();
+        $this->assertSame('Basic', $r201->room_type);
+        $this->assertSame('3000.00', $r201->monthly_rent);
+        $this->assertSame(2, $r201->max_occupants);
+
+        $r204 = Room::where('room_no', '204')->firstOrFail();
+        $this->assertSame('3500.00', $r204->monthly_rent);
+
+        $r213 = Room::where('room_no', '213')->firstOrFail();
+        $this->assertSame('2500.00', $r213->monthly_rent);
+        $this->assertSame(1, $r213->max_occupants);
+
+        $r207 = Room::where('room_no', '207')->firstOrFail();
+        $this->assertSame('Aircon', $r207->room_type);
+        $this->assertSame('3600.00', $r207->monthly_rent);
+
+        $r214 = Room::where('room_no', '214')->firstOrFail();
+        $this->assertSame('3700.00', $r214->monthly_rent);
+
+        $r212 = Room::where('room_no', '212')->firstOrFail();
+        $this->assertSame('3800.00', $r212->monthly_rent);
+    }
+
+    // ==========================================
+    // 12. Settings Module: RBAC & Baseline Rates
+    // ==========================================
+
+    public function test_settings_module_restricted_strictly_to_owner(): void
+    {
+        // Manager is forbidden
+        $this->actingAs($this->manager)->get(route('settings.index'))->assertForbidden();
+        $this->actingAs($this->manager)->put(route('settings.update'), [])->assertForbidden();
+
+        // Caretaker is forbidden
+        $this->actingAs($this->caretaker)->get(route('settings.index'))->assertForbidden();
+        $this->actingAs($this->caretaker)->put(route('settings.update'), [])->assertForbidden();
+
+        // Owner is authorized
+        $this->actingAs($this->owner)->get(route('settings.index'))
+            ->assertOk()
+            ->assertSee('Standard Basic room monthly rate')
+            ->assertSee('Standard Aircon room monthly rate');
+    }
+
+    public function test_owner_updates_baseline_room_rates_and_logs_audit(): void
+    {
+        $this->actingAs($this->owner)->put(route('settings.update'), [
+            'water_rate' => '200.00',
+            'appliance_fee' => '200.00',
+            'standard_basic_rent' => '3100.00',
+            'standard_aircon_rent' => '3700.00',
+            'kwh_rate' => '15.00',
+            'grace_days' => 3,
+            'penalty_basis' => 'Per day of rent',
+            'penalty_rate' => '1.00',
+            'refund_days' => 7,
+        ])->assertRedirect(route('settings.index'))->assertSessionHasNoErrors();
+
+        $setting = \App\Models\Setting::current();
+        $this->assertSame('3100.00', $setting->standard_basic_rent);
+        $this->assertSame('3700.00', $setting->standard_aircon_rent);
+
+        $this->assertDatabaseHas('tbl_audit_log', [
+            'action' => 'Settings changed',
+            'table_name' => 'tbl_setting',
+            'user_id' => $this->owner->user_id,
+        ]);
+    }
+
+    public function test_owner_updating_room_base_rent_is_audited_and_does_not_affect_existing_leases(): void
+    {
+        $room = $this->makeRoom('115', 'Basic', ['monthly_rent' => 3000.00]);
+        $lease = $this->makeLease($room, $this->manager);
+
+        // Owner updates room base rent to 3800.00
+        $this->actingAs($this->owner)->put(route('rooms.update', $room), [
+            'room_no' => $room->room_no,
+            'room_type' => $room->room_type,
+            'monthly_rent' => 3800.00,
+            'max_occupants' => $room->max_occupants,
+            'is_metered' => $room->is_metered ? 1 : 0,
+        ])->assertRedirect(route('rooms.index'));
+
+        $room->refresh();
+        $this->assertSame('3800.00', $room->monthly_rent);
+
+        // Existing lease is untouched (contractual rent was 3500.00)
+        $lease->refresh();
+        $this->assertSame('3500.00', $lease->monthly_rent);
+
+        // Audit log records the price change
+        $this->assertDatabaseHas('tbl_audit_log', [
+            'action' => 'Room changed',
+            'table_name' => 'tbl_room',
+            'record_id' => $room->room_id,
+            'details' => 'Monthly rent: ₱3,000.00 → ₱3,800.00',
+        ]);
+    }
+
+    // ==========================================
+    // 13. UI Refinements & Subtitles Removal
+    // ==========================================
+
+    public function test_moa_encoding_ui_refinements_and_subtitles_removal(): void
+    {
+        $room = $this->makeRoom('116', 'Basic', ['monthly_rent' => 3000.00]);
+
+        $response = $this->actingAs($this->manager)->get(route('leases.create', ['room_id' => $room->room_id]))
+            ->assertOk();
+
+        // 1. Due day: dropdown select with only staggered days; free-form text/number field removed
+        $response->assertSee('<select id="due_day" name="due_day"', false);
+        $response->assertDontSee('id="due_day" name="due_day" type="number"', false);
+        foreach ([10, 15, 20, 25, 30] as $day) {
+            $response->assertSee('<option value="'.$day.'"', false);
+        }
+
+        // 2. One-month advance paid: readonly and defaults to monthly rent
+        $response->assertSee('name="advance_amount" type="number" min="0" step="0.01" inputmode="decimal" readonly', false);
+
+        // 3. Subtitles removed
+        $response->assertDontSee('Only verified tenants without an active lease are listed. Or switch to "Encode new tenant" above.');
+        $response->assertDontSee('Contractual Minimum Stay: 4 Months (Leaving earlier forfeits deposit per MOA Clause 9).');
+        $response->assertDontSee("Must equal exactly 1 month's rent per MOA Clause 6.");
+        $response->assertDontSee('Saving sets the room to Occupied.');
+        $response->assertDontSee("— the MOA deposit is one month's rent");
+
+        // 4. Action buttons right-aligned
+        $response->assertSee('justify-content: flex-end', false);
+    }
 }
+
+

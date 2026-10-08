@@ -19,6 +19,8 @@ class Setting extends Model
     protected $fillable = [
         'water_rate',
         'appliance_fee',
+        'standard_basic_rent',
+        'standard_aircon_rent',
         'kwh_rate',
         'grace_days',
         'penalty_basis',
@@ -32,6 +34,8 @@ class Setting extends Model
         return [
             'water_rate' => 'decimal:2',
             'appliance_fee' => 'decimal:2',
+            'standard_basic_rent' => 'decimal:2',
+            'standard_aircon_rent' => 'decimal:2',
             'kwh_rate' => 'decimal:2',
             'grace_days' => 'integer',
             'penalty_rate' => 'decimal:2',
@@ -42,6 +46,8 @@ class Setting extends Model
     public const DEFAULTS = [
         'water_rate' => 200.00,
         'appliance_fee' => 200.00,
+        'standard_basic_rent' => 3000.00,
+        'standard_aircon_rent' => 3600.00,
         'kwh_rate' => 15.00,
         'grace_days' => 3,
         'penalty_basis' => 'Per day of rent',

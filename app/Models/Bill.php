@@ -6,7 +6,25 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/** Monthly billing statement for a lease. */
+/**
+ * Monthly billing statement for a lease.
+ *
+ * @property int $bill_id
+ * @property int $lease_id
+ * @property int|null $reading_id
+ * @property \Illuminate\Support\Carbon $period_start
+ * @property \Illuminate\Support\Carbon $due_date
+ * @property string $rent_amount
+ * @property string $water_amount
+ * @property string $electricity_amount
+ * @property string $appliance_amount
+ * @property string $penalty_amount
+ * @property string $other_charges
+ * @property string $total_amount
+ * @property string $status
+ * @property bool $is_initial
+ * @property int|null $user_id
+ */
 class Bill extends Model
 {
     public const STATUSES = ['Unpaid', 'Paid', 'Overdue'];

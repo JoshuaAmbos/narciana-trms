@@ -121,64 +121,33 @@ class ReportService
      * Entries: a bill is a charge on its due date, or on the payment date if paid earlier (without penalty); a late penalty is a charge on the day it was
      * paid; a payment, or a bill settled from the deposit at move-out, is a credit. Entries before $from make up
      * the opening balance. Unpaid bills' penalties so far are shown in the closing, not saved.
+     *
+     * @return array<string, mixed>
      */
     public function statement(Lease $lease, ?Carbon $from = null, ?Carbon $to = null, ?Carbon $today = null): array
     {
         $today = ($today ?? today())->copy()->startOfDay();
         $this->payments->refreshOverdue($today);
         $lease->loadMissing(['room', 'tenant']);
+
         $bills = $lease->bills()->with(['payments.user', 'meterReading', 'concerns'])
             ->orderBy('due_date')->orderBy('bill_id')->get();
         $settledAt = AuditLog::where('action', 'Bill settled from deposit')->whereIn('record_id', $bills->pluck('bill_id'))
             ->pluck('logged_at', 'record_id');
 
-        $entries = collect();
+        $rawEntries = [];
         foreach ($bills as $bill) {
-            $base = round((float) $bill->total_amount - (float) $bill->penalty_amount, 2);
-            $payment = $bill->payments->first();
-            // A bill exists before its due date (generated up to 7 days ahead): paid early, it is listed on the payment day.
-            $entries->push(['date' => $payment ? $bill->due_date->min($payment->payment_date) : $bill->due_date, 'order' => 1,
-                'type' => 'bill', 'bill' => $bill, 'statement' => $this->billing->statementForBill($bill), 'charge' => $base, 'credit' => 0.0]);
-
-            $closedOn = $payment?->payment_date
-                ?? ($settledAt->has($bill->bill_id) ? $settledAt[$bill->bill_id]->copy()->startOfDay() : null);
-            if ($bill->status === 'Paid' && (float) $bill->penalty_amount > 0) {
-                $entries->push(['date' => $closedOn ?? $bill->due_date, 'order' => 2, 'type' => 'penalty', 'bill' => $bill,
-                    'days_late' => $this->penalties->daysLate($bill->due_date, $closedOn ?? $bill->due_date, $this->graceDays()),
-                    'charge' => (float) $bill->penalty_amount, 'credit' => 0.0]);
-            }
-            if ($payment) {
-                $entries->push(['date' => $payment->payment_date, 'order' => 3, 'type' => 'payment', 'bill' => $bill,
-                    'payment' => $payment, 'charge' => 0.0, 'credit' => (float) $payment->amount]);
-            } elseif ($bill->status === 'Paid') {
-                $entries->push(['date' => $closedOn ?? $bill->due_date, 'order' => 3, 'type' => 'deposit', 'bill' => $bill,
-                    'charge' => 0.0, 'credit' => (float) $bill->total_amount]);
+            foreach ($this->buildBillStatementEntries($bill, $settledAt) as $entry) {
+                $rawEntries[] = $entry;
             }
         }
 
-        $entries = $entries->sortBy(fn (array $e) => [$e['date']->toDateString(), $e['order'], $e['bill']->bill_id])->values();
+        $entries = collect($rawEntries)
+            ->sortBy(fn (array $e) => [$e['date']->toDateString(), $e['order'], $e['bill']->bill_id])
+            ->values();
 
-        $opening = 0.0;
-        $balance = 0.0;
-        $shown = collect();
-        foreach ($entries as $e) {
-            $balance = round($balance + $e['charge'] - $e['credit'], 2);
-            if ($from && $e['date']->lt($from)) {
-                $opening = $balance;
-
-                continue;
-            }
-            if ($to && $e['date']->gt($to)) {
-                continue;
-            }
-            $shown->push($e + ['balance' => $balance]);
-        }
-        $closing = $shown->isEmpty() ? $opening : $shown->last()['balance'];
-
-        // Penalty so far on bills not paid yet (counted only when the period runs to today or later).
-        $unpaid = $bills->where('status', '!=', 'Paid')
-            ->filter(fn (Bill $b) => (! $from || $b->due_date->gte($from)) && (! $to || $b->due_date->lte($to)))
-            ->map(fn (Bill $b) => ['bill' => $b] + $this->penalties->forBill($b, $today))->values();
+        [$shown, $opening, $closing] = $this->calculateStatementLedger($entries, $from, $to);
+        $unpaid = $this->unpaidBillsWithPenalties($bills, $from, $to, $today);
         $penaltySoFar = $to && $to->lt($today) ? 0.0 : round($unpaid->sum('penalty'), 2);
 
         return [
@@ -195,6 +164,106 @@ class ReportService
             'penalty_so_far' => $penaltySoFar,
             'due_today' => round($closing + $penaltySoFar, 2),
         ];
+    }
+
+    /**
+     * @return array{0: Collection, 1: float, 2: float}
+     */
+    private function calculateStatementLedger(Collection $entries, ?Carbon $from, ?Carbon $to): array
+    {
+        $opening = 0.0;
+        $balance = 0.0;
+        $shown = collect();
+
+        foreach ($entries as $e) {
+            $balance = round($balance + $e['charge'] - $e['credit'], 2);
+            if ($from && $e['date']->lt($from)) {
+                $opening = $balance;
+
+                continue;
+            }
+            if ($to && $e['date']->gt($to)) {
+                continue;
+            }
+            $shown->push($e + ['balance' => $balance]);
+        }
+
+        $closing = $shown->isEmpty() ? $opening : $shown->last()['balance'];
+
+        return [$shown, $opening, $closing];
+    }
+
+    private function unpaidBillsWithPenalties(Collection $bills, ?Carbon $from, ?Carbon $to, Carbon $today): Collection
+    {
+        return $bills->where('status', '!=', 'Paid')
+            ->filter(function (Bill $b) use ($from, $to) {
+                $dueDate = Carbon::parse($b->due_date);
+
+                return (! $from || $dueDate->gte($from)) && (! $to || $dueDate->lte($to));
+            })
+            ->map(fn (Bill $b) => ['bill' => $b] + $this->penalties->forBill($b, $today))
+            ->values();
+    }
+
+    /**
+     * @param Collection<mixed, mixed> $settledAt
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildBillStatementEntries(Bill $bill, Collection $settledAt): array
+    {
+        $entries = [];
+        $base = round((float) $bill->total_amount - (float) $bill->penalty_amount, 2);
+        $payment = $bill->payments->first();
+        $billDueDate = Carbon::parse($bill->due_date);
+
+        // A bill exists before its due date (generated up to 7 days ahead): paid early, it is listed on the payment day.
+        $entries[] = [
+            'date' => $payment ? $billDueDate->min($payment->payment_date) : $billDueDate,
+            'order' => 1,
+            'type' => 'bill',
+            'bill' => $bill,
+            'statement' => $this->billing->statementForBill($bill),
+            'charge' => $base,
+            'credit' => 0.0,
+        ];
+
+        $closedOn = $payment?->payment_date
+            ?? ($settledAt->has($bill->bill_id) ? Carbon::parse($settledAt[$bill->bill_id])->startOfDay() : null);
+
+        if ($bill->status === 'Paid' && (float) $bill->penalty_amount > 0) {
+            $entries[] = [
+                'date' => $closedOn ?? $billDueDate,
+                'order' => 2,
+                'type' => 'penalty',
+                'bill' => $bill,
+                'days_late' => $this->penalties->daysLate($billDueDate, $closedOn ?? $billDueDate, $this->graceDays()),
+                'charge' => (float) $bill->penalty_amount,
+                'credit' => 0.0,
+            ];
+        }
+
+        if ($payment) {
+            $entries[] = [
+                'date' => $payment->payment_date,
+                'order' => 3,
+                'type' => 'payment',
+                'bill' => $bill,
+                'payment' => $payment,
+                'charge' => 0.0,
+                'credit' => (float) $payment->amount,
+            ];
+        } elseif ($bill->status === 'Paid') {
+            $entries[] = [
+                'date' => $closedOn ?? $billDueDate,
+                'order' => 3,
+                'type' => 'deposit',
+                'bill' => $bill,
+                'charge' => 0.0,
+                'credit' => (float) $bill->total_amount,
+            ];
+        }
+
+        return $entries;
     }
 
     // ---------- 4. Concern history per room ----------
@@ -276,10 +345,29 @@ class ReportService
     // ---------- 6. Move-out settlements ----------
 
     /**
-     * Departed leases summary: security deposit breakdown, deductions
-     * (maintenance fee, damages, utility bills), and net refunds/excess.
-     */
+      * Departed leases summary: security deposit breakdown, deductions
+      * (maintenance fee, damages, utility bills), and net refunds/excess.
+      *
+      * @return array<string, mixed>
+      */
     public function moveOutSettlements(?Carbon $from = null, ?Carbon $to = null): array
+    {
+        $rows = $this->collectSettlementRows($from, $to);
+        $summary = $this->summarizeSettlements($rows);
+
+        return [
+            'from' => $from,
+            'to' => $to,
+            'rows' => $rows,
+            'count' => $rows->count(),
+            'total_deposits' => $summary['total_deposits'],
+            'total_deductions' => $summary['total_deductions'],
+            'total_refunds' => $summary['total_refunds'],
+            'total_excess' => $summary['total_excess'],
+        ];
+    }
+
+    private function collectSettlementRows(?Carbon $from, ?Carbon $to): Collection
     {
         $leases = Lease::with(['room', 'tenant', 'bills'])
             ->where('status', 'Ended')
@@ -293,87 +381,100 @@ class ReportService
         $settledBillIds = AuditLog::where('action', 'Bill settled from deposit')
             ->pluck('record_id');
 
-        $rows = collect();
+        $rowsList = [];
         foreach ($leases as $lease) {
-            $log = $endLogs->get($lease->lease_id)?->sortByDesc('logged_at')->first();
-            $moveOutDate = null;
-            if ($log) {
-                if (preg_match('/Actual move-out date:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/', (string) $log->details, $m)) {
-                    $moveOutDate = Carbon::parse($m[1])->startOfDay();
-                } else {
-                    $moveOutDate = $log->logged_at->copy()->startOfDay();
-                }
-            } else {
-                $moveOutDate = $lease->move_in_date->copy()->addMonths($lease->min_stay_months ?: 6)->startOfDay();
+            $row = $this->buildMoveOutSettlementRow($lease, $endLogs, $settledBillIds, $from, $to);
+            if ($row !== null) {
+                $rowsList[] = $row;
             }
-
-            if ($from && $moveOutDate->lt($from)) {
-                continue;
-            }
-            if ($to && $moveOutDate->gt($to)) {
-                continue;
-            }
-
-            $totalDeposit = $lease->depositTotal();
-            $maintenanceDeduction = (float) $lease->deposit_maintenance;
-
-            // Damage deduction from concerns charged to tenant
-            $damageDeduction = (float) Concern::where('lease_id', $lease->lease_id)
-                ->where('charged_to_tenant', true)
-                ->sum('cost');
-
-            // Utilities / unpaid bills
-            $unpaidBills = (float) Bill::where('lease_id', $lease->lease_id)
-                ->where('status', '!=', 'Paid')
-                ->sum('total_amount');
-            $depositSettledBills = (float) Bill::where('lease_id', $lease->lease_id)
-                ->whereIn('bill_id', $settledBillIds)
-                ->sum('total_amount');
-            $billsDeduction = round($unpaidBills + $depositSettledBills, 2);
-
-            $totalDeductions = round($maintenanceDeduction + $damageDeduction + $billsDeduction, 2);
-            $netRefund = round($totalDeposit - $totalDeductions, 2);
-
-            $rows->push([
-                'lease' => $lease,
-                'room_no' => $lease->room->room_no,
-                'room_type' => $lease->room->room_type,
-                'tenant_name' => $lease->tenant->full_name,
-                'tenant_contact' => $lease->tenant->contact_no,
-                'move_in_date' => $lease->move_in_date,
-                'move_out_date' => $moveOutDate,
-                'deposit_maintenance' => $maintenanceDeduction,
-                'deposit_damage' => (float) $lease->deposit_damage,
-                'deposit_bills' => (float) $lease->deposit_bills,
-                'deposit_keys' => (float) $lease->deposit_keys,
-                'total_deposit' => $totalDeposit,
-                'deductions' => [
-                    'maintenance' => $maintenanceDeduction,
-                    'damages' => $damageDeduction,
-                    'bills' => $billsDeduction,
-                    'total' => $totalDeductions,
-                ],
-                'net_refund' => $netRefund,
-                'status' => $netRefund > 0 ? 'Refund' : ($netRefund < 0 ? 'Excess' : 'Settled'),
-            ]);
         }
 
-        $rows = $rows->sortByDesc(fn ($r) => $r['move_out_date']?->timestamp ?? 0)->values();
+        return collect($rowsList)->sortByDesc(fn ($r) => $r['move_out_date']?->timestamp ?? 0)->values();
+    }
 
-        $totalDeposits = round($rows->sum('total_deposit'), 2);
-        $totalDeductionsSum = round($rows->sum('deductions.total'), 2);
-        $totalRefunds = round($rows->filter(fn ($r) => $r['net_refund'] > 0)->sum('net_refund'), 2);
-        $totalExcess = round(abs($rows->filter(fn ($r) => $r['net_refund'] < 0)->sum('net_refund')), 2);
+    private function summarizeSettlements(Collection $rows): array
+    {
+        return [
+            'total_deposits' => round($rows->sum('total_deposit'), 2),
+            'total_deductions' => round($rows->sum('deductions.total'), 2),
+            'total_refunds' => round($rows->filter(fn ($r) => $r['net_refund'] > 0)->sum('net_refund'), 2),
+            'total_excess' => round(abs($rows->filter(fn ($r) => $r['net_refund'] < 0)->sum('net_refund')), 2),
+        ];
+    }
+
+    /**
+     * @param Collection<mixed, mixed> $endLogs
+     * @param Collection<mixed, mixed> $settledBillIds
+     * @return array<string, mixed>|null
+     */
+    private function buildMoveOutSettlementRow(
+        Lease $lease,
+        Collection $endLogs,
+        Collection $settledBillIds,
+        ?Carbon $from,
+        ?Carbon $to
+    ): ?array {
+        $log = $endLogs->get($lease->lease_id)?->sortByDesc('logged_at')->first();
+        $moveOutDate = null;
+        if ($log) {
+            if (preg_match('/Actual move-out date:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/', (string) $log->details, $m)) {
+                $moveOutDate = Carbon::parse($m[1])->startOfDay();
+            } else {
+                $moveOutDate = Carbon::parse($log->logged_at)->startOfDay();
+            }
+        } else {
+            $moveInDate = Carbon::parse($lease->move_in_date);
+            $moveOutDate = $moveInDate->copy()->addMonths($lease->min_stay_months ?: 6)->startOfDay();
+        }
+
+        if ($from && $moveOutDate->lt($from)) {
+            return null;
+        }
+        if ($to && $moveOutDate->gt($to)) {
+            return null;
+        }
+
+        $totalDeposit = $lease->depositTotal();
+        $maintenanceDeduction = (float) $lease->deposit_maintenance;
+
+        // Damage deduction from concerns charged to tenant
+        $damageDeduction = (float) Concern::where('lease_id', $lease->lease_id)
+            ->where('charged_to_tenant', true)
+            ->sum('cost');
+
+        // Utilities / unpaid bills
+        $unpaidBills = (float) Bill::where('lease_id', $lease->lease_id)
+            ->where('status', '!=', 'Paid')
+            ->sum('total_amount');
+        $depositSettledBills = (float) Bill::where('lease_id', $lease->lease_id)
+            ->whereIn('bill_id', $settledBillIds)
+            ->sum('total_amount');
+        $billsDeduction = round($unpaidBills + $depositSettledBills, 2);
+
+        $totalDeductions = round($maintenanceDeduction + $damageDeduction + $billsDeduction, 2);
+        $netRefund = round($totalDeposit - $totalDeductions, 2);
 
         return [
-            'from' => $from,
-            'to' => $to,
-            'rows' => $rows,
-            'count' => $rows->count(),
-            'total_deposits' => $totalDeposits,
-            'total_deductions' => $totalDeductionsSum,
-            'total_refunds' => $totalRefunds,
-            'total_excess' => $totalExcess,
+            'lease' => $lease,
+            'room_no' => $lease->room->room_no,
+            'room_type' => $lease->room->room_type,
+            'tenant_name' => $lease->tenant->full_name,
+            'tenant_contact' => $lease->tenant->contact_no,
+            'move_in_date' => $lease->move_in_date,
+            'move_out_date' => $moveOutDate,
+            'deposit_maintenance' => $maintenanceDeduction,
+            'deposit_damage' => (float) $lease->deposit_damage,
+            'deposit_bills' => (float) $lease->deposit_bills,
+            'deposit_keys' => (float) $lease->deposit_keys,
+            'total_deposit' => $totalDeposit,
+            'deductions' => [
+                'maintenance' => $maintenanceDeduction,
+                'damages' => $damageDeduction,
+                'bills' => $billsDeduction,
+                'total' => $totalDeductions,
+            ],
+            'net_refund' => $netRefund,
+            'status' => $netRefund > 0 ? 'Refund' : ($netRefund < 0 ? 'Excess' : 'Settled'),
         ];
     }
 

@@ -32,37 +32,37 @@
         @php
             $reportsList = [
                 [
-                    'route' => 'reports.collections',
+                    'url' => route('reports.collections'),
                     'title' => 'Monthly Collection Summary',
                     'desc' => 'Reconciles payments with ACK numbers, payment mode (Cash vs. GCash), collectors, and amounts.',
                     'badge' => 'Financial Audit',
                 ],
                 [
-                    'route' => 'reports.due',
+                    'url' => route('reports.due'),
                     'title' => 'Due And Overdue Tenants',
                     'desc' => 'Identifies delinquent accounts, days overdue, and computed penalties.',
                     'badge' => 'Delinquency',
                 ],
                 [
-                    'route' => 'reports.statement',
+                    'url' => route('reports.statement'),
                     'title' => 'Billing Statements Per Tenant',
                     'desc' => 'Comprehensive historical billing invoices, charges, payments, and running balance.',
                     'badge' => 'Tenant Ledger',
                 ],
                 [
-                    'route' => 'reports.concerns',
+                    'url' => route('reports.concerns'),
                     'title' => 'Concern History Per Room',
                     'desc' => 'Maintenance audit tracking repair frequency, costs, and tenant charges.',
                     'badge' => 'Maintenance',
                 ],
                 [
-                    'route' => 'reports.inquiries',
+                    'url' => route('reports.inquiries'),
                     'title' => 'Inquiries And Room Demand',
                     'desc' => 'Aggregates conversion metrics (Aircon vs. Basic across Waiting, Rented, Referred, and Declined).',
                     'badge' => 'Demand Matrix',
                 ],
                 [
-                    'route' => 'reports.settlements',
+                    'url' => route('reports.settlements'),
                     'title' => 'Move-Out Settlements',
                     'desc' => 'Summary of departed leases, deposit deductions (maintenance fee ₱500, damages, utilities), and net refunds/excess.',
                     'badge' => 'Move-Out Audit',
@@ -83,7 +83,7 @@
                 <tbody>
                     @foreach ($reportsList as $item)
                         <tr class="report-row-clickable"
-                            onclick="window.location='{{ route($item['route']) }}'"
+                            onclick="window.location='{{ $item['url'] }}'"
                             tabindex="0"
                             role="button"
                             aria-label="Open {{ $item['title'] }}">
@@ -107,7 +107,7 @@
         <div class="report-cards">
             @foreach ($reportsList as $item)
                 <div class="report-card"
-                     onclick="window.location='{{ route($item['route']) }}'"
+                     onclick="window.location='{{ $item['url'] }}'"
                      tabindex="0"
                      role="button"
                      aria-label="Open {{ $item['title'] }}">

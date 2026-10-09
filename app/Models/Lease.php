@@ -8,7 +8,27 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-/** Signed MOA (Contract of Rent) reference details. */
+/**
+ * Signed MOA (Contract of Rent) reference details.
+ *
+ * @property int $lease_id
+ * @property int $tenant_id
+ * @property int $room_id
+ * @property \Illuminate\Support\Carbon $moa_date
+ * @property \Illuminate\Support\Carbon $move_in_date
+ * @property int $due_day
+ * @property string $monthly_rent
+ * @property int $min_stay_months
+ * @property string $advance_amount
+ * @property string $deposit_maintenance
+ * @property string $deposit_damage
+ * @property string $deposit_bills
+ * @property string $deposit_keys
+ * @property string $status
+ * @property int|null $user_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ */
 class Lease extends Model
 {
     public const STATUSES = ['Active', 'Ended', 'Cancelled'];

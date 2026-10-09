@@ -33,5 +33,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Only the Owner approves a move-out settlement and releases refunds (decision 4 and 16).
         Gate::define('approve-settlements', fn (User $user) => $user->hasRole('Owner'));
+
+        Gate::policy(\App\Models\Room::class, \App\Policies\RoomPolicy::class);
     }
 }

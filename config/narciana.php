@@ -63,7 +63,7 @@ return [
         ['My password', true, true, true],
     ],
 
-    // Backups (Module 9b): plain mysqldump / mysql, run by BackupService.
+    // Backups: plain mysqldump / mysql, run by BackupService.
     // XAMPP:     BACKUP_MYSQLDUMP_PATH=C:/xampp/mysql/bin/mysqldump.exe  BACKUP_MYSQL_PATH=C:/xampp/mysql/bin/mysql.exe
     // Namecheap: usually just "mysqldump" and "mysql" (they are on the PATH).
     'backup' => [

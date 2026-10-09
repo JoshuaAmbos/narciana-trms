@@ -325,6 +325,62 @@ td.actions .btn { margin-left: 4px; }
     .card .n { font-size: 22px; }
 }
 
+/* Responsive room cards for mobile view */
+.room-cards { display: none; }
+.room-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+.room-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.room-card-head > span:first-child,
+.room-card-no {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--navy);
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+}
+.room-card-specs {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 10px;
+}
+.room-card-body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+}
+.room-card-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.room-card-actions .btn {
+    flex: 1;
+    min-height: var(--tap);
+    justify-content: center;
+    text-align: center;
+}
+
+@media (max-width: 760px) {
+    .rooms-table-wrap { display: none !important; }
+    .room-cards { display: block !important; }
+}
+
 /* ---------- Printing (reports, statements): Chrome > Print > Save as PDF ---------- */
 @media print {
     body { background: #fff; font-size: 12px; }

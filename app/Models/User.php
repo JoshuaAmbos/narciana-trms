@@ -62,6 +62,21 @@ class User extends Authenticatable
         return in_array($this->role, $roles, true);
     }
 
+    public function isOwner(): bool
+    {
+        return $this->role === 'Owner';
+    }
+
+    public function isManager(): bool
+    {
+        return $this->role === 'Manager';
+    }
+
+    public function isCaretaker(): bool
+    {
+        return $this->role === 'Caretaker';
+    }
+
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class, 'user_id');

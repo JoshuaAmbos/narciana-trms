@@ -147,4 +147,96 @@ class RoomsTest extends TestCase
         $this->actingAs($this->owner)->put("/rooms/{$room->room_id}", $this->validRoom(['room_no' => '201']))
             ->assertSessionHasNoErrors();
     }
+
+    public function test_encode_moa_button_strictly_rendered_for_vacant_rooms_only_to_owner_and_manager(): void
+    {
+        $vacant = $this->room(['room_no' => '101', 'status' => 'Vacant']);
+        $occupied = $this->room(['room_no' => '102', 'status' => 'Occupied']);
+        $vacating = $this->room(['room_no' => '103', 'status' => 'Vacating', 'expected_vacant_date' => today()->addDays(5)]);
+
+        $manager = User::factory()->role('Manager')->create();
+        $caretaker = User::factory()->role('Caretaker')->create();
+
+        // Owner and Manager see Encode MOA ONLY for the vacant room
+        foreach ([$this->owner, $manager] as $user) {
+            $response = $this->actingAs($user)->get('/rooms')->assertOk();
+            $response->assertSee(route('leases.create', ['room_id' => $vacant->room_id]), false);
+            $response->assertDontSee(route('leases.create', ['room_id' => $occupied->room_id]), false);
+            $response->assertDontSee(route('leases.create', ['room_id' => $vacating->room_id]), false);
+        }
+
+        // Caretaker does not see Encode MOA for any room
+        $this->actingAs($caretaker)->get('/rooms')->assertOk()->assertDontSee('Encode MOA');
+    }
+
+    public function test_waiting_inquiry_demand_calculated_and_displayed(): void
+    {
+        \App\Models\Inquiry::create([
+            'prospect_name' => 'Alice',
+            'contact_no' => '0917 111 2233',
+            'inquiry_date' => today()->toDateString(),
+            'preferred_type' => 'Aircon',
+            'no_of_occupants' => 2,
+            'status' => 'Waiting',
+            'user_id' => $this->owner->user_id,
+        ]);
+
+        \App\Models\Inquiry::create([
+            'prospect_name' => 'Bob',
+            'contact_no' => '0917 222 3344',
+            'inquiry_date' => today()->toDateString(),
+            'preferred_type' => 'Aircon',
+            'no_of_occupants' => 1,
+            'status' => 'Waiting',
+            'user_id' => $this->owner->user_id,
+        ]);
+
+        \App\Models\Inquiry::create([
+            'prospect_name' => 'Charlie',
+            'contact_no' => '0917 333 4455',
+            'inquiry_date' => today()->toDateString(),
+            'preferred_type' => 'Any',
+            'no_of_occupants' => 2,
+            'status' => 'Waiting',
+            'user_id' => $this->owner->user_id,
+        ]);
+
+        // Declined inquiry must not be counted
+        \App\Models\Inquiry::create([
+            'prospect_name' => 'Declined Dave',
+            'contact_no' => '0917 444 5566',
+            'inquiry_date' => today()->toDateString(),
+            'preferred_type' => 'Aircon',
+            'no_of_occupants' => 2,
+            'status' => 'Declined',
+            'user_id' => $this->owner->user_id,
+        ]);
+
+        $airconRoom = $this->room(['room_no' => '212', 'room_type' => 'Aircon']);
+        $basicRoom = $this->room(['room_no' => '201', 'room_type' => 'Basic']);
+
+        $response = $this->actingAs($this->owner)->get('/rooms')->assertOk();
+
+        // Aircon has 2 Aircon + 1 Any = 3 waiting
+        // Basic has 0 Basic + 1 Any = 1 waiting
+        $response->assertSee('3 waiting');
+        $response->assertSee('1 waiting');
+    }
+
+    public function test_room_policy_encode_moa_rules(): void
+    {
+        $vacant = $this->room(['room_no' => '201', 'status' => 'Vacant']);
+        $occupied = $this->room(['room_no' => '202', 'status' => 'Occupied']);
+
+        $manager = User::factory()->role('Manager')->create();
+        $caretaker = User::factory()->role('Caretaker')->create();
+
+        $this->assertTrue($this->owner->can('encodeMoa', $vacant));
+        $this->assertTrue($manager->can('encodeMoa', $vacant));
+        $this->assertFalse($caretaker->can('encodeMoa', $vacant));
+
+        $this->assertFalse($this->owner->can('encodeMoa', $occupied));
+        $this->assertFalse($manager->can('encodeMoa', $occupied));
+        $this->assertFalse($caretaker->can('encodeMoa', $occupied));
+    }
 }

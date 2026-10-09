@@ -2,24 +2,46 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\RoomRequest;
+use App\Http\Requests\StoreRoomRequest;
+use App\Http\Requests\UpdateRoomRequest;
 use App\Models\AuditLog;
+use App\Models\Inquiry;
 use App\Models\Room;
+use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
-/** Rooms: the availability list (all roles) and adding/editing rooms (Owner). Inquiries have their own module. */
+/**
+ * Rooms Module: room availability, specs, rates, and waiting inquiries.
+ * Adding/editing is restricted to the Owner.
+ */
 class RoomController extends Controller
 {
     public function index(): View
     {
-        return view('rooms.index', ['rooms' => Room::orderBy('room_no')->get()]);
+        // Demand from queued waiting inquiries for each room type (or 'Any')
+        $waitingDemands = [
+            'Aircon' => Inquiry::where('status', 'Waiting')->whereIn('preferred_type', ['Aircon', 'Any'])->count(),
+            'Basic' => Inquiry::where('status', 'Waiting')->whereIn('preferred_type', ['Basic', 'Any'])->count(),
+        ];
+
+        $rooms = Room::with('concerns')
+            ->orderBy('room_no')
+            ->get()
+            ->each(function (Room $room) use ($waitingDemands) {
+                $room->waiting_demand = $waitingDemands[$room->room_type] ?? 0;
+            });
+
+        return view('rooms.index', [
+            'rooms' => $rooms,
+            'waitingDemands' => $waitingDemands,
+        ]);
     }
 
     public function create(): View
     {
-        $setting = \App\Models\Setting::current();
+        $setting = Setting::current();
 
         return view('rooms.create', [
             'room' => new Room([
@@ -33,10 +55,13 @@ class RoomController extends Controller
         ]);
     }
 
-    public function store(RoomRequest $request): RedirectResponse
+    public function store(StoreRoomRequest $request): RedirectResponse
     {
         $room = DB::transaction(function () use ($request) {
-            $room = Room::create($request->validated() + ['status' => 'Vacant', 'expected_vacant_date' => null]);
+            $room = Room::create($request->validated() + [
+                'status' => 'Vacant',
+                'expected_vacant_date' => null,
+            ]);
             AuditLog::record('Room created', 'tbl_room', $room->room_id);
 
             return $room;
@@ -50,11 +75,11 @@ class RoomController extends Controller
         return view('rooms.edit', [
             'room' => $room,
             'types' => Room::TYPES,
-            'setting' => \App\Models\Setting::current(),
+            'setting' => Setting::current(),
         ]);
     }
 
-    public function update(RoomRequest $request, Room $room): RedirectResponse
+    public function update(UpdateRoomRequest $request, Room $room): RedirectResponse
     {
         DB::transaction(function () use ($request, $room) {
             $oldRent = (float) $room->monthly_rent;

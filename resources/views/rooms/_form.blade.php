@@ -4,7 +4,7 @@
 <div class="row">
     <div class="f @error('room_no') has-err @enderror">
         <label for="room_no">Room number</label>
-        <input id="room_no" name="room_no" type="text" maxlength="10" required value="{{ old('room_no', $room->room_no) }}">
+        <input id="room_no" name="room_no" type="text" maxlength="10" required autofocus value="{{ old('room_no', $room->room_no) }}">
         @error('room_no') <div class="err">{{ $message }}</div> @enderror
     </div>
     <div class="f @error('room_type') has-err @enderror">

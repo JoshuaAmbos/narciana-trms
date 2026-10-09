@@ -17,7 +17,7 @@
     --red: #c0392b;
     --amber: #b9770e;
     --green: #1e8449;
-    --side-w: 230px;
+    --side-w: 260px;
     --tap: 44px; /* minimum touch target height */
 }
 
@@ -35,6 +35,13 @@ body {
 
 a { color: var(--navy-2); }
 
+/* Prevent animation flash during page load and navigation */
+html.preload-nav *,
+body.preload-nav * {
+    transition: none !important;
+    animation: none !important;
+}
+
 /* ---------- App shell: sidebar + main ---------- */
 .app { display: flex; min-height: 100vh; }
 
@@ -48,8 +55,11 @@ a { color: var(--navy-2); }
     top: 0;
     height: 100vh;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
+    transition: width 280ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease, visibility 280ms ease;
+    will-change: width;
 }
 
 .brand {
@@ -59,6 +69,7 @@ a { color: var(--navy-2); }
     padding: 0 16px 14px;
     border-bottom: 1px solid var(--navy-line);
     margin-bottom: 8px;
+    transition: padding 280ms ease;
 }
 .brand img {
     width: 42px;
@@ -67,10 +78,15 @@ a { color: var(--navy-2); }
     background: #fff;
     padding: 3px;
     flex-shrink: 0;
+    transition: width 280ms ease, height 280ms ease;
 }
-.brand-text { min-width: 0; }
+.brand-text {
+    min-width: 0;
+    overflow: hidden;
+    transition: opacity 180ms ease, max-width 280ms ease;
+}
 .brand b { display: block; font-size: 16px; color: #fff; white-space: nowrap; }
-.brand span { font-size: 12px; color: #9fb6d3; white-space: nowrap; }
+.brand span { font-size: 11.5px; color: #9fb6d3; white-space: nowrap; display: block; line-height: 1.3; }
 
 .nav-heading {
     padding: 16px 16px 6px;
@@ -79,6 +95,9 @@ a { color: var(--navy-2); }
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: #8da4c4;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: opacity 180ms ease, height 280ms ease, padding 280ms ease;
 }
 .nav-heading:first-of-type {
     padding-top: 6px;
@@ -94,12 +113,20 @@ a { color: var(--navy-2); }
     text-decoration: none;
     font-size: 15px;
     border-left: 4px solid transparent;
+    transition: padding 280ms ease, background 0.15s ease, color 0.15s ease;
 }
 .nav a:hover, .nav a:focus-visible { background: #274a74; color: #fff; }
 .nav a.on { background: var(--navy-2); color: #fff; border-left-color: var(--gold); }
 .nav .icon { flex-shrink: 0; color: #9fb6d3; }
 .nav a:hover .icon { color: #fff; }
 .nav a.on .icon { color: var(--gold); }
+
+.nav-label {
+    white-space: nowrap;
+    overflow: hidden;
+    transition: opacity 180ms ease, max-width 280ms ease;
+    display: inline-block;
+}
 
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
@@ -209,7 +236,7 @@ form.inline { display: inline; margin: 0; }
 .body { padding: 18px 20px 32px; flex: 1; }
 
 /* ---------- Building blocks ---------- */
-.cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 14px; }
 .card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
 .card .n { font-size: 28px; font-weight: 700; }
 .card .l { font-size: 13px; color: var(--muted); margin-top: 2px; }
@@ -353,7 +380,7 @@ td.actions .btn { margin-left: 4px; }
         left: 0;
         top: 0;
         bottom: 0;
-        width: 230px !important;
+        width: 260px !important;
         z-index: 50;
         transform: translateX(-100%);
         transition: transform .25s ease;
@@ -395,10 +422,17 @@ td.actions .btn { margin-left: 4px; }
             height: 36px !important;
         }
         body:not(.side-expanded):not(.side-collapsed) .brand .brand-text {
-            display: none !important;
+            opacity: 0 !important;
+            max-width: 0 !important;
+            overflow: hidden !important;
+            pointer-events: none !important;
         }
         body:not(.side-expanded):not(.side-collapsed) .nav-heading {
-            display: none !important;
+            opacity: 0 !important;
+            height: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            pointer-events: none !important;
         }
         body:not(.side-expanded):not(.side-collapsed) .nav a {
             font-size: 0 !important;
@@ -408,13 +442,32 @@ td.actions .btn { margin-left: 4px; }
             min-height: 48px !important;
             position: relative !important;
         }
+        body:not(.side-expanded):not(.side-collapsed) .nav-label {
+            opacity: 0 !important;
+            max-width: 0 !important;
+            overflow: hidden !important;
+            pointer-events: none !important;
+        }
         body:not(.side-expanded):not(.side-collapsed) .side-footer .side-toggle-label {
+            opacity: 0 !important;
+            max-width: 0 !important;
+            overflow: hidden !important;
+            pointer-events: none !important;
             display: none !important;
         }
         body:not(.side-expanded):not(.side-collapsed) .side-footer {
             padding: 8px 4px !important;
         }
     }
+}
+
+/* Smooth sliding animation for sidebar and layout transitions */
+.side {
+    transition: width 280ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease, visibility 280ms ease;
+    will-change: width;
+}
+.main {
+    transition: margin-left 280ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Explicit body.side-rail state */
@@ -432,10 +485,17 @@ body.side-rail .brand img {
     height: 36px !important;
 }
 body.side-rail .brand .brand-text {
-    display: none !important;
+    opacity: 0 !important;
+    max-width: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
 }
 body.side-rail .nav-heading {
-    display: none !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
 }
 body.side-rail .nav a {
     font-size: 0 !important;
@@ -445,7 +505,17 @@ body.side-rail .nav a {
     min-height: 48px !important;
     position: relative !important;
 }
+body.side-rail .nav-label {
+    opacity: 0 !important;
+    max-width: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+}
 body.side-rail .side-footer .side-toggle-label {
+    opacity: 0 !important;
+    max-width: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
     display: none !important;
 }
 body.side-rail .side-footer {
@@ -454,10 +524,13 @@ body.side-rail .side-footer {
 
 /* Explicit body.side-expanded state */
 body.side-expanded .side {
-    width: var(--side-w, 230px) !important;
+    width: var(--side-w, 260px) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 body.side-expanded .brand .brand-text {
-    display: block !important;
+    opacity: 1 !important;
+    max-width: 200px !important;
 }
 body.side-expanded .nav a {
     font-size: 15px !important;
@@ -465,14 +538,26 @@ body.side-expanded .nav a {
     justify-content: flex-start !important;
     gap: 10px !important;
 }
+body.side-expanded .nav-label {
+    opacity: 1 !important;
+    max-width: 200px !important;
+}
 body.side-expanded .nav-heading {
-    display: block !important;
+    opacity: 1 !important;
+    height: auto !important;
+    padding: 16px 16px 6px !important;
 }
 
-/* Explicit body.side-collapsed state */
+/* Explicit body.side-collapsed state (smooth transition in and out) */
 body.side-collapsed .side {
-    display: none !important;
     width: 0 !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden;
+    border: none !important;
 }
 
 /* Tooltips on hover & focus-visible in rail navigation */
@@ -1796,4 +1881,100 @@ svg.w-4 {
     display: inline-block !important;
     vertical-align: middle;
 }
+
+/* ---------- Form Readonly Box (Matches .f input height & border) ---------- */
+.readonly-box {
+    width: 100%;
+    min-height: var(--tap);
+    height: var(--tap);
+    padding: 8px 10px;
+    border: 1px solid #cfd8e3;
+    border-radius: 6px;
+    background: var(--head-bg);
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--navy);
+    box-sizing: border-box;
+}
+
+/* ---------- Alert Info & Minimum Stay Disclaimer ---------- */
+.alert-info {
+    background: #eef5fc;
+    border: 1px solid #c8dcf2;
+    color: #174276;
+}
+.min-stay-info-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    font-size: 13.5px;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 10px 14px;
+}
+.min-stay-info-banner .icon {
+    flex-shrink: 0;
+    color: var(--navy-2);
+}
+
+/* ---------- Basic Room Appliance Repeater ---------- */
+.appliance-row {
+    padding: 12px 14px;
+    background: var(--head-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+.appliance-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-end;
+}
+.appliance-grid .col-type { flex: 2 1 180px; }
+.appliance-grid .col-name { flex: 2 1 160px; }
+.appliance-grid .col-fee { flex: 1 1 120px; }
+.appliance-grid .col-action { flex: 0 0 auto; }
+.appliance-grid label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+    letter-spacing: 0.04em;
+}
+
+/* ---------- Clickable Leases Rows & Detail Modal ---------- */
+.lease-row,
+.lease-card-clickable {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+.lease-row:hover {
+    background-color: #f1f5fa;
+}
+.lease-row:focus-visible,
+.lease-card-clickable:focus-visible {
+    outline: 2px solid var(--navy-2);
+    outline-offset: -2px;
+}
+.lease-card-clickable:hover {
+    border-color: var(--navy-2);
+    box-shadow: 0 2px 8px rgba(15, 28, 46, 0.08);
+}
+.lease-modal-actions {
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+    margin-top: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+    align-items: center;
+}
+
 

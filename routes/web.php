@@ -57,14 +57,18 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/concerns/{concern}/photo/{kind}', [ConcernController::class, 'photo'])
         ->whereIn('kind', ['reported', 'resolved'])->name('concerns.photo'); // private photos (decision 18)
 
+    // ---------- Leases & MOA Management (Owner & Manager only via can:manage-leases) ----------
+    Route::middleware(['auth', 'can:manage-leases'])->group(function () {
+        Route::resource('leases', LeaseController::class);
+        Route::match(['post', 'patch'], 'leases/{lease}/end', [LeaseController::class, 'endLease'])->name('leases.end');
+        Route::match(['post', 'patch'], 'leases/{lease}/cancel', [LeaseController::class, 'cancelMoa'])->name('leases.cancel');
+    });
+
     // ---------- Owner and Manager ----------
     Route::middleware('role:Owner,Manager')->group(function () {
         Route::resource('tenants', TenantController::class)->only(['create', 'store', 'show', 'edit', 'update']);
         Route::patch('/tenants/{tenant}/archive', [TenantController::class, 'archive'])->name('tenants.archive');
         Route::patch('/tenants/{tenant}/restore', [TenantController::class, 'restore'])->withTrashed()->name('tenants.restore');
-        Route::resource('leases', LeaseController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update']);
-        Route::patch('/leases/{lease}/end', [LeaseController::class, 'endLease'])->name('leases.end');
-        Route::patch('/leases/{lease}/cancel', [LeaseController::class, 'cancel'])->name('leases.cancel');
         Route::resource('leases.occupants', OccupantController::class)->only(['store']);
         Route::patch('/occupants/{occupant}/remove', [OccupantController::class, 'remove'])->name('occupants.remove');
 

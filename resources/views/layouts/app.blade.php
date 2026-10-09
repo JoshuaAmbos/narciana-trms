@@ -7,9 +7,30 @@
     <title>@yield('title', 'Dashboard') · Narciana TRMS</title>
     <link rel="icon" type="image/png" href="{{ asset('images/logo-64.png') }}">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ filemtime(public_path('css/app.css')) }}">
+    <script>
+        (function() {
+            try {
+                var mode = localStorage.getItem('narciana_nav_mode');
+                if (mode && ['rail', 'expanded', 'collapsed'].indexOf(mode) !== -1) {
+                    document.documentElement.classList.add('side-' + mode);
+                }
+            } catch (e) {}
+            document.documentElement.classList.add('preload-nav');
+        })();
+    </script>
     @stack('head')
 </head>
-<body>
+<body class="preload-nav">
+<script>
+    (function() {
+        try {
+            var mode = localStorage.getItem('narciana_nav_mode');
+            if (mode && ['rail', 'expanded', 'collapsed'].indexOf(mode) !== -1) {
+                document.body.classList.add('side-' + mode);
+            }
+        } catch (e) {}
+    })();
+</script>
 @php($me = auth()->user())
 <div class="app">
     <aside class="side" id="side">
@@ -22,7 +43,12 @@
         </div>
         <nav class="nav">
             @foreach (config('narciana.nav') as $group => $items)
-                @php($visibleItems = collect($items)->filter(fn ($item) => $me?->hasRole(...$item[2])))
+                @php($visibleItems = collect($items)->filter(function ($item) use ($me) {
+                    if (str_starts_with($item[0], 'leases.') && !Gate::allows('manage-leases')) {
+                        return false;
+                    }
+                    return $me?->hasRole(...$item[2]);
+                }))
                 @continue($visibleItems->isEmpty())
 
                 @if ($group)
@@ -31,12 +57,23 @@
 
                 @foreach ($visibleItems as $item)
                     @php([$routeName, $label, $roles, $icon] = $item)
-                    <a href="{{ route($routeName) }}"
-                       class="{{ request()->routeIs(Str::before($routeName, '.').'*', ...($item[4] ?? [])) ? 'on' : '' }}"
-                       title="{{ $label }}"
-                       data-tooltip="{{ $label }}">
-                        <x-icon :name="$icon" />{{ $label }}
-                    </a>
+                    @if (str_starts_with($routeName, 'leases.'))
+                        @can('manage-leases')
+                            <a href="{{ route($routeName) }}"
+                               class="{{ request()->routeIs(Str::before($routeName, '.').'*', ...($item[4] ?? [])) ? 'on' : '' }}"
+                               title="{{ $label }}"
+                               data-tooltip="{{ $label }}">
+                                <x-icon :name="$icon" />{{ $label }}
+                            </a>
+                        @endcan
+                    @else
+                        <a href="{{ route($routeName) }}"
+                           class="{{ request()->routeIs(Str::before($routeName, '.').'*', ...($item[4] ?? [])) ? 'on' : '' }}"
+                           title="{{ $label }}"
+                           data-tooltip="{{ $label }}">
+                            <x-icon :name="$icon" />{{ $label }}
+                        </a>
+                    @endif
                 @endforeach
             @endforeach
         </nav>

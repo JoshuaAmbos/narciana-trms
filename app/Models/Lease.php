@@ -116,6 +116,11 @@ class Lease extends Model
             + (float) $this->deposit_bills + (float) $this->deposit_keys, 2);
     }
 
+    public function totalDeposit(): float
+    {
+        return $this->depositTotal();
+    }
+
     /** "1st", "2nd", "25th"... for "Every 25th". */
     public function dueDayLabel(): string
     {
@@ -128,6 +133,23 @@ class Lease extends Model
     public function principal(): HasOne
     {
         return $this->hasOne(Occupant::class, 'lease_id')->where('is_principal', true);
+    }
+
+    public function coTenant(): ?Occupant
+    {
+        if ($this->relationLoaded('activeOccupants')) {
+            $co = $this->activeOccupants->firstWhere('is_principal', false);
+            if ($co) {
+                return $co;
+            }
+        }
+
+        if ($this->relationLoaded('occupants')) {
+            return $this->occupants->firstWhere('is_principal', false);
+        }
+
+        return $this->activeOccupants()->where('is_principal', false)->first()
+            ?? $this->occupants()->where('is_principal', false)->first();
     }
 
     public function activeOccupants(): HasMany

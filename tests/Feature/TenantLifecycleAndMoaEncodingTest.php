@@ -526,7 +526,7 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
 
         $this->actingAs($this->manager)->get('/leases/create')
             ->assertOk()
-            ->assertSee('Contractual minimum stay')
+            ->assertSee('Contractual Minimum Stay')
             ->assertSee('Months')
             ->assertDontSee('id="min_stay_months" name="min_stay_months" type="number"', false);
 

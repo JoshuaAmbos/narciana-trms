@@ -69,7 +69,7 @@ class LeasesTest extends TestCase
         $expectedDueDay = collect(Lease::STAGGERED_DUE_DAYS)->sortBy(fn ($d) => abs($d - $todayDay))->first();
 
         $this->actingAs($this->manager)->get('/leases/create')
-            ->assertSee('Contractual minimum stay')
+            ->assertSee('Contractual Minimum Stay')
             ->assertSee('4 Months')
             ->assertSee('name="min_stay_months" id="min_stay_months" value="4"', false)
             ->assertSee('name="due_day"', false)

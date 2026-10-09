@@ -22,14 +22,14 @@
         @error('due_day') <div class="err">{{ $message }}</div> @enderror
     </div>
     <div class="f">
-        <label>Contractual minimum stay</label>
+        <label for="min_stay_months">Contractual Minimum Stay</label>
         @php($isAirconLease = (bool) (isset($lease->room) && ($lease->room->room_type === 'Aircon' || $lease->room->is_metered)))
         @php($initialStay = (int) old('min_stay_months', $lease->min_stay_months ?: ($isAirconLease ? 6 : 4)))
-        <input type="hidden" name="min_stay_months" id="min_stay_months" value="{{ $initialStay }}">
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 7px 12px; font-size: 13px; color: #334155; display: flex; align-items: center; gap: 8px;">
-            <span id="min_stay_text" style="font-weight: 600; color: #1e293b;">{{ $initialStay }} Months</span>
-            <span class="muted" style="font-size: 12px;">(Mandatory lock-in period)</span>
+        <div id="minStayBadge" class="readonly-box">
+            <span id="min_stay_text">{{ $initialStay }} Months</span>
         </div>
+        <input type="hidden" name="min_stay_months" id="min_stay_months" value="{{ $initialStay }}">
+        <input type="hidden" id="minStayInput" value="{{ $initialStay }}">
         @error('min_stay_months') <div class="err">{{ $message }}</div> @enderror
     </div>
 </div>
@@ -47,12 +47,12 @@
 </style>
 <div class="row">
     <div class="f @error('monthly_rent') has-err @enderror">
-        <label for="monthly_rent">Monthly rent (₱)</label>
+        <label for="monthly_rent">Monthly Rent (₱)</label>
         <input id="monthly_rent" name="monthly_rent" type="number" min="0.01" step="0.01" inputmode="decimal" value="{{ old('monthly_rent', $lease->monthly_rent) }}">
         @error('monthly_rent') <div class="err">{{ $message }}</div> @enderror
     </div>
     <div class="f @error('advance_amount') has-err @enderror">
-        <label for="advance_amount">One-month advance paid (₱)</label>
+        <label for="advance_amount">One-Month Advance Paid (₱)</label>
         <input id="advance_amount" name="advance_amount" type="number" min="0" step="0.01" inputmode="decimal" readonly
                class="no-spin"
                style="background-color: #f8fafc; cursor: not-allowed; -moz-appearance: textfield; appearance: textfield;"
@@ -62,7 +62,7 @@
 </div>
 
 <div class="f" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-    <label style="margin-bottom: 0;">Deposit breakdown (₱)</label>
+    <label style="margin-bottom: 0;">Deposit Breakdown (₱)</label>
     <button type="button" class="btn sec" id="btn-split-deposits" style="padding: 2px 8px; font-size: 11px;">
         Auto-split 1-Month Deposit
     </button>
@@ -121,9 +121,9 @@
             function autoSplitDeposits() {
                 var r = parseFloat(rent.value) || 0;
                 if (r <= 0) return;
-                var maint = Math.round(r * 0.30 * 100) / 100;
-                var dam = Math.round(r * 0.40 * 100) / 100;
-                var bills = Math.round(r * 0.20 * 100) / 100;
+                var maint = 500.00;
+                var dam = Math.round(r * 0.30 * 100) / 100;
+                var bills = Math.round(r * 0.30 * 100) / 100;
                 var keys = Math.round((r - maint - dam - bills) * 100) / 100;
                 var mInput = document.getElementById('deposit_maintenance');
                 var dInput = document.getElementById('deposit_damage');

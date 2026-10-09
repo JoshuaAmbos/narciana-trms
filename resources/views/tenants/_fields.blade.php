@@ -96,7 +96,9 @@
     </div>
 
     <div style="margin-top: 8px; padding: 10px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; font-size: 12.5px; color: #1e40af; display: flex; align-items: flex-start; gap: 8px;">
-        <span style="font-size: 16px; line-height: 1.1;">ⓘ</span>
+        <svg class="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 20px; height: 20px; flex-shrink: 0;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
         <div>
             <strong>PhilSys Identity Compliance (RA 10173 & PhilSys Act):</strong>
             For PhilSys National ID, strictly record the 16-digit <em>PhilSys Card Number (PCN)</em> printed on the card face. Never record or request the confidential 12-digit PhilSys Number (PSN).
@@ -106,7 +108,7 @@
 
 <div style="margin-bottom: 20px;">
     <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--color-ink, #1e293b);">
-        Socio-Demographic Details & Profile Status
+        Socio-Demographic Details
     </h3>
     <div class="row" style="display: flex; gap: 12px; flex-wrap: wrap;">
         <div class="f @error('provincial_address') has-err @enderror" style="flex: 2 1 300px; min-height: 44px;">

@@ -53,6 +53,9 @@ class StoreLeaseRequest extends LeaseRequest
             'gcash_ref_no' => $gcashRef,
             'inquiry_id' => $this->input('inquiry_id') ? (int) $this->input('inquiry_id') : null,
             'appliance_name' => trim((string) $this->input('appliance_name')) ?: null,
+            'min_stay_months' => ($this->input('min_stay_months') !== null && $this->input('min_stay_months') !== '')
+                ? $this->input('min_stay_months')
+                : ((($r = Room::find($this->input('room_id'))) && $r->room_type === 'Aircon') ? 6 : 4),
         ]);
     }
 
@@ -134,6 +137,10 @@ class StoreLeaseRequest extends LeaseRequest
             ],
             'inquiry_id' => ['nullable', 'integer', Rule::exists('tbl_inquiry', 'inquiry_id')],
             'appliance_name' => ['nullable', 'string', 'max:100'],
+            'declared_appliances' => ['nullable', 'array'],
+            'declared_appliances.*.device_type' => ['nullable', 'string', 'max:100'],
+            'declared_appliances.*.custom_name' => ['nullable', 'string', 'max:100'],
+            'declared_appliances.*.monthly_fee' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 
@@ -154,6 +161,44 @@ class StoreLeaseRequest extends LeaseRequest
                 }
                 if (abs($totalDeposit - round($rent, 2)) >= 0.005) {
                     $validator->errors()->add('deposit_maintenance', 'The total deposit (₱'.number_format($totalDeposit, 2).') must equal exactly one month\'s rent (₱'.number_format($rent, 2).') per MOA Clause 6.');
+                }
+            }
+
+            // Prohibited device guardrail for Basic rooms
+            if (! $this->isAirconRoom()) {
+                $prohibitedKeywords = ['refrigerator', 'fridge', 'television', 'tv', 'air conditioner', 'aircon'];
+                $isProhibited = function (?string $name) use ($prohibitedKeywords) {
+                    if (! $name) return false;
+                    $lower = strtolower(trim($name));
+                    foreach ($prohibitedKeywords as $kw) {
+                        if ($kw === 'tv') {
+                            if (preg_match('/\btv\b/i', $lower)) return true;
+                        } elseif (str_contains($lower, $kw)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+
+                foreach ((array) $this->input('declared_appliances', []) as $idx => $item) {
+                    $name = ($item['device_type'] ?? '') === 'Other Surchargeable Appliance'
+                        ? ($item['custom_name'] ?? '')
+                        : ($item['device_type'] ?? '');
+                    if ($isProhibited($name)) {
+                        $validator->errors()->add(
+                            "declared_appliances.{$idx}.custom_name",
+                            'Refrigerators and TVs are strictly prohibited in Basic rooms per house policy. The tenant must transfer to an Aircon/Metered room to use heavy appliances.'
+                        );
+                    }
+                }
+
+                if ($legacy = $this->input('appliance_name')) {
+                    if ($isProhibited($legacy)) {
+                        $validator->errors()->add(
+                            'appliance_name',
+                            'Refrigerators and TVs are strictly prohibited in Basic rooms per house policy. The tenant must transfer to an Aircon/Metered room to use heavy appliances.'
+                        );
+                    }
                 }
             }
         });
@@ -178,6 +223,33 @@ class StoreLeaseRequest extends LeaseRequest
     public function applianceName(): ?string
     {
         return $this->validated('appliance_name') ?: null;
+    }
+
+    public function declaredAppliances(): array
+    {
+        $list = [];
+        $defaultFee = (float) (\App\Models\Setting::current()->appliance_fee ?? 200.00);
+
+        foreach ((array) $this->input('declared_appliances', []) as $item) {
+            $type = trim((string) ($item['device_type'] ?? ''));
+            $name = $type === 'Other Surchargeable Appliance' ? trim((string) ($item['custom_name'] ?? '')) : $type;
+            if ($name !== '') {
+                $fee = isset($item['monthly_fee']) && is_numeric($item['monthly_fee']) ? (float) $item['monthly_fee'] : $defaultFee;
+                $list[] = [
+                    'name' => $name,
+                    'monthly_fee' => $fee,
+                ];
+            }
+        }
+
+        if (empty($list) && ($legacy = trim((string) $this->input('appliance_name', '')))) {
+            $list[] = [
+                'name' => $legacy,
+                'monthly_fee' => $defaultFee,
+            ];
+        }
+
+        return $list;
     }
 
     public function paymentData(): array

@@ -34,10 +34,13 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-rooms', fn (User $user) => $user->hasRole('Owner'));
 
         // Owner and Manager encode and view MOAs, end leases. Never the Caretaker (decision 10).
-        Gate::define('manage-leases', fn (User $user) => $user->hasRole('Owner', 'Manager'));
+        Gate::define('manage-leases', function (User $user) {
+            return in_array($user->role, ['Owner', 'Manager']);
+        });
 
         Gate::policy(Room::class, RoomPolicy::class);
         Gate::policy(Inquiry::class, InquiryPolicy::class);
+        Gate::policy(\App\Models\Lease::class, \App\Policies\LeasePolicy::class);
 
         Paginator::defaultView('partials.pagination');
     }

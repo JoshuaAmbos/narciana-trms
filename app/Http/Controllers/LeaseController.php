@@ -33,7 +33,7 @@ class LeaseController extends Controller
         $search = trim((string) $request->input('search', ''));
         $roomType = $request->input('room_type', 'All');
 
-        $query = Lease::with(['room', 'tenant'])
+        $query = Lease::with(['room', 'tenant', 'activeOccupants'])
             ->withCount('activeOccupants');
 
         if ($status !== 'All') {
@@ -136,6 +136,7 @@ class LeaseController extends Controller
             $request->inquiryId(),
             $request->paymentData(),
             $request->applianceName(),
+            $request->declaredAppliances(),
         );
 
         return redirect()->route('leases.show', $lease)
@@ -202,6 +203,11 @@ class LeaseController extends Controller
 
         return redirect()->route('leases.show', $lease)
             ->with('status', "The lease was cancelled. Room {$lease->room->room_no} is Vacant again.");
+    }
+
+    public function cancelMoa(Lease $lease, Request $request): RedirectResponse
+    {
+        return $this->cancel($lease, $request);
     }
 
     private function depositWarning(Lease $lease): ?string

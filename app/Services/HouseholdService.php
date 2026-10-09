@@ -19,7 +19,11 @@ class HouseholdService
 
     public function summary(Lease $lease, User $viewer): array
     {
-        $lease->loadMissing(['room', 'tenant', 'appliances', 'visitors']);
+        $lease->loadMissing(['room', 'tenant', 'appliances', 'visitors', 'occupants']);
+
+        $coTenant = $viewer->hasRole('Owner', 'Manager')
+            ? $lease->occupants->firstWhere('is_principal', false)
+            : null;
 
         return [
             'lease_id' => $lease->lease_id,
@@ -28,6 +32,7 @@ class HouseholdService
             'room_no' => $lease->room->room_no,
             'room_metered' => $lease->room->is_metered,
             'tenant_name' => $lease->tenant->full_name,
+            'co_tenant_name' => $coTenant?->full_name,
             'appliance_fee' => (float) Setting::current()->appliance_fee,
             // Current appliances first, then removed ones (newest first).
             'appliances' => $lease->appliances

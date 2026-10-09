@@ -44,8 +44,9 @@ class LeaseService
         ?int $inquiryId = null,
         ?array $paymentData = null,
         ?string $applianceName = null,
+        ?array $declaredAppliances = null,
     ): Lease {
-        return DB::transaction(function () use ($tenant, $lease, $coTenantName, $by, $moveInReading, $inquiryId, $paymentData, $applianceName) {
+        return DB::transaction(function () use ($tenant, $lease, $coTenantName, $by, $moveInReading, $inquiryId, $paymentData, $applianceName, $declaredAppliances) {
             // Lock the room row so two people saving at the same time cannot both lease it.
             $room = Room::whereKey($lease['room_id'])->lockForUpdate()->firstOrFail();
 
@@ -109,15 +110,25 @@ class LeaseService
             }
 
             // Optional appliance declaration for basic/unmetered rooms
-            if ($applianceName && ! $room->is_metered) {
-                Appliance::create([
-                    'lease_id' => $leaseModel->lease_id,
-                    'appliance_name' => $applianceName,
-                    'monthly_fee' => Setting::current()->appliance_fee,
-                    'date_added' => $leaseModel->move_in_date,
-                    'source' => 'Declared',
-                    'user_id' => $by->user_id,
-                ]);
+            if (! $room->is_metered) {
+                $appliancesToCreate = $declaredAppliances ?? [];
+                if (empty($appliancesToCreate) && $applianceName) {
+                    $appliancesToCreate[] = [
+                        'name' => $applianceName,
+                        'monthly_fee' => Setting::current()->appliance_fee,
+                    ];
+                }
+
+                foreach ($appliancesToCreate as $app) {
+                    Appliance::create([
+                        'lease_id' => $leaseModel->lease_id,
+                        'appliance_name' => $app['name'],
+                        'monthly_fee' => $app['monthly_fee'] ?? Setting::current()->appliance_fee,
+                        'date_added' => $leaseModel->move_in_date,
+                        'source' => 'Declared',
+                        'user_id' => $by->user_id,
+                    ]);
+                }
             }
 
             // Optional transition of originating inquiry to Rented

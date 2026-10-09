@@ -5,6 +5,9 @@ function toggleSidebarWidth() {
         document.body.classList.toggle('nav-open');
         return;
     }
+    document.documentElement.classList.remove('preload-nav');
+    document.body.classList.remove('preload-nav');
+
     var isLandscapeTablet = width >= 1024 && width <= 1280;
     var current = 'default';
     if (document.body.classList.contains('side-expanded')) current = 'expanded';
@@ -13,6 +16,7 @@ function toggleSidebarWidth() {
     else current = isLandscapeTablet ? 'rail' : 'expanded';
 
     document.body.classList.remove('side-rail', 'side-expanded', 'side-collapsed');
+    document.documentElement.classList.remove('side-rail', 'side-expanded', 'side-collapsed');
 
     var next;
     if (current === 'rail') {
@@ -23,6 +27,7 @@ function toggleSidebarWidth() {
         next = 'rail';
     }
     document.body.classList.add('side-' + next);
+    document.documentElement.classList.add('side-' + next);
     try {
         localStorage.setItem('narciana_nav_mode', next);
     } catch (e) {}
@@ -33,6 +38,16 @@ function toggleSidebarWidth() {
         var saved = localStorage.getItem('narciana_nav_mode');
         if (saved && ['rail', 'expanded', 'collapsed'].indexOf(saved) !== -1) {
             document.body.classList.add('side-' + saved);
+            document.documentElement.classList.add('side-' + saved);
         }
     } catch (e) {}
+
+    // Remove preload-nav so transitions only fire upon subsequent user toggle interactions
+    requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+            document.documentElement.classList.remove('preload-nav');
+            document.body.classList.remove('preload-nav');
+        });
+    });
 })();
+

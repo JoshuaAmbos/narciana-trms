@@ -25,6 +25,9 @@
 
             <dl class="facts">
                 <div><dt>Principal renter</dt><dd><b>{{ $lease->tenant->full_name }}</b> <span class="muted">&bull;</span> <a href="{{ route('tenants.show', $lease->tenant) }}" class="small-link">Master profile</a> <span class="muted">&bull;</span> <a href="{{ route('tenants.edit', $lease->tenant) }}" class="small-link">Edit profile</a></dd></div>
+                @if ($coTenant = $lease->coTenant())
+                    <div><dt>Registered co-tenant</dt><dd><b>{{ $coTenant->full_name }}</b> <span class="muted">(since {{ $coTenant->date_added->format('j M Y') }}{{ $coTenant->date_removed ? ', left '.$coTenant->date_removed->format('j M Y') : '' }})</span></dd></div>
+                @endif
                 <div><dt>Contact number</dt><dd>{{ $lease->tenant->contact_no }}</dd></div>
                 <div><dt>Valid ID</dt><dd>{{ $lease->tenant->valid_id_type }} {{ $lease->tenant->valid_id_no }}</dd></div>
                 <div><dt>Provincial address</dt><dd>{{ $lease->tenant->provincial_address ?? 'Not recorded' }}</dd></div>

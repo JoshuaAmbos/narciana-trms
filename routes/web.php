@@ -44,6 +44,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     // Rooms (availability) and Inquiries (log/update) are separate modules; everyone uses both (decision 19).
     Route::resource('rooms', RoomController::class)->only(['index']);
     Route::resource('inquiries', InquiryController::class)->only(['index', 'store', 'edit', 'update']);
+    Route::patch('/inquiries/{inquiry}/status', [InquiryController::class, 'updateStatus'])->name('inquiries.status');
 
     // Tenants & MOA: every role opens the list (the Caretaker gets a limited version) and
     // manages appliances and visitors. MOA, rent, deposits and occupants are Owner/Manager only (below).

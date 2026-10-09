@@ -19,9 +19,11 @@ class InquiryRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $contact = preg_replace('/[^\d+]/', '', (string) $this->input('contact_no'));
+
         $this->merge([
             'prospect_name' => trim((string) $this->input('prospect_name')),
-            'contact_no' => trim((string) $this->input('contact_no')),
+            'contact_no' => $contact,
             'via_representative' => $this->boolean('via_representative'),
             'wants_contact' => $this->boolean('wants_contact'),
             'status' => $this->input('status', 'Waiting'),
@@ -32,10 +34,9 @@ class InquiryRequest extends FormRequest
     {
         return [
             'prospect_name' => ['required', 'string', 'max:255'],
-            'contact_no' => ['required', 'string', 'max:15', 'regex:/^[0-9+\- ]+$/'],
+            'contact_no' => ['required', 'string', 'max:15', 'regex:/^(09|\+639)\d{9}$/'],
             'preferred_type' => ['required', Rule::in(Inquiry::TYPES)],
-            // Above 2 is allowed so requests the house cannot take are still counted for the demand report.
-            'no_of_occupants' => ['required', 'integer', 'between:1,10'],
+            'no_of_occupants' => ['required', 'integer', 'between:1,2'],
             'channel' => ['required', Rule::in(Inquiry::CHANNELS)],
             'via_representative' => ['boolean'],
             'wants_contact' => ['boolean'],
@@ -72,7 +73,8 @@ class InquiryRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'contact_no.regex' => 'Use only numbers, spaces, + or -.',
+            'contact_no.regex' => 'The contact number must be a valid Philippine mobile number (e.g., 09XXXXXXXXX or +639XXXXXXXXX).',
+            'no_of_occupants.between' => 'A room allows at most 2 occupants (1 or 2 occupants).',
             'inquiry_date.before_or_equal' => 'The inquiry date cannot be in the future.',
             'room_id.required_if' => 'Choose the room that was rented.',
         ];

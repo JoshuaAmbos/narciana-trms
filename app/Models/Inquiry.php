@@ -49,10 +49,54 @@ class Inquiry extends Model
         ];
     }
 
+    /**
+     * Normalized phone number with only digits and optional '+' for native tel: dialer intents.
+     */
+    public function getFormattedPhoneAttribute(): string
+    {
+        return preg_replace('/[^0-9+]/', '', (string) $this->contact_no);
+    }
+
     /** Link that starts a phone call on the tablet, e.g. "tel:09175550142". */
     public function telHref(): string
     {
-        return 'tel:'.preg_replace('/[^0-9+]/', '', $this->contact_no);
+        return 'tel:'.$this->formatted_phone;
+    }
+
+    /**
+     * Determine if there is at least one matching vacant room for this inquiry.
+     */
+    public function hasMatchingVacantRoom(?iterable $vacantRooms = null): bool
+    {
+        if ($this->room_id) {
+            return $this->room?->status === 'Vacant';
+        }
+
+        if ($vacantRooms === null) {
+            $vacantRooms = Room::where('status', 'Vacant')->get();
+        }
+
+        if ($vacantRooms instanceof \Illuminate\Support\Collection) {
+            return match ($this->preferred_type) {
+                'Aircon' => $vacantRooms->contains(fn ($r) => $r->room_type === 'Aircon'),
+                'Basic' => $vacantRooms->contains(fn ($r) => $r->room_type === 'Basic'),
+                default => $vacantRooms->isNotEmpty(),
+            };
+        }
+
+        foreach ($vacantRooms as $r) {
+            if ($this->preferred_type === 'Aircon' && $r->room_type === 'Aircon') {
+                return true;
+            }
+            if ($this->preferred_type === 'Basic' && $r->room_type === 'Basic') {
+                return true;
+            }
+            if ($this->preferred_type === 'Any') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function room(): BelongsTo

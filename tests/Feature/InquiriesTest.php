@@ -91,12 +91,25 @@ class InquiriesTest extends TestCase
 
     public function test_rented_needs_a_room(): void
     {
-        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry(['status' => 'Rented']))
+        $inquiry = $this->inquiry();
+        $this->actingAs($this->caretaker)->put("/inquiries/{$inquiry->inquiry_id}", $this->validInquiry(['status' => 'Rented']))
             ->assertSessionHasErrors(['room_id' => 'Choose the room that was rented.']);
 
         $room = $this->room('203', 'Basic');
-        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry(['status' => 'Rented', 'room_id' => $room->room_id]))
+        $this->actingAs($this->caretaker)->put("/inquiries/{$inquiry->inquiry_id}", $this->validInquiry(['status' => 'Rented', 'room_id' => $room->room_id]))
             ->assertSessionHasNoErrors();
+    }
+
+    public function test_intake_stores_room_id_as_null_regardless_of_payload(): void
+    {
+        $room = $this->room('203', 'Basic');
+        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry([
+            'room_id' => $room->room_id,
+        ]))->assertRedirect('/inquiries');
+
+        $inquiry = Inquiry::latest('inquiry_id')->first();
+        $this->assertNull($inquiry->room_id);
+        $this->assertSame('Waiting', $inquiry->status);
     }
 
     public function test_marking_rented_does_not_change_the_room_status(): void
@@ -112,26 +125,25 @@ class InquiriesTest extends TestCase
         $this->assertSame('Vacant', $room->refresh()->status);
     }
 
-    public function test_three_occupants_can_be_recorded_for_the_demand_report(): void
+    public function test_occupancy_validation_blocks_values_greater_than_two(): void
     {
         $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry(['no_of_occupants' => '3']))
-            ->assertSessionHasNoErrors();
+            ->assertSessionHasErrors(['no_of_occupants' => 'A room allows at most 2 occupants (1 or 2 occupants).']);
+
+        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry(['no_of_occupants' => '0']))
+            ->assertSessionHasErrors('no_of_occupants');
     }
 
     // ---------- Bug 1: occupants must fit the room when Rented ----------
 
     public function test_rented_is_blocked_when_occupants_exceed_the_room_maximum(): void
     {
-        $room = $this->room('3', 'Aircon', 'Vacant', 2);
+        $room = $this->room('3', 'Aircon', 'Vacant', 1);
 
-        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry([
-            'no_of_occupants' => '3', 'status' => 'Rented', 'room_id' => $room->room_id,
-        ]))->assertSessionHasErrors(['no_of_occupants' => 'Room 3 allows at most 2 occupants; this inquiry has 3.']);
-
-        $inquiry = $this->inquiry(['no_of_occupants' => 3, 'preferred_type' => 'Aircon']);
+        $inquiry = $this->inquiry(['no_of_occupants' => 2, 'preferred_type' => 'Aircon']);
         $this->actingAs($this->caretaker)->put("/inquiries/{$inquiry->inquiry_id}", $this->validInquiry([
-            'no_of_occupants' => '3', 'status' => 'Rented', 'room_id' => $room->room_id,
-        ]))->assertSessionHasErrors('no_of_occupants');
+            'no_of_occupants' => '2', 'status' => 'Rented', 'room_id' => $room->room_id,
+        ]))->assertSessionHasErrors(['no_of_occupants' => 'Room 3 allows at most 1 occupant; this inquiry has 2.']);
 
         $this->assertSame('Waiting', $inquiry->refresh()->status);
         $this->assertSame(1, Inquiry::count());
@@ -140,8 +152,9 @@ class InquiriesTest extends TestCase
     public function test_one_occupant_room_blocks_two_occupants(): void
     {
         $room = $this->room('9', 'Basic', 'Vacant', 1);
+        $inquiry = $this->inquiry(['preferred_type' => 'Basic']);
 
-        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry([
+        $this->actingAs($this->caretaker)->put("/inquiries/{$inquiry->inquiry_id}", $this->validInquiry([
             'preferred_type' => 'Basic', 'no_of_occupants' => '2', 'status' => 'Rented', 'room_id' => $room->room_id,
         ]))->assertSessionHasErrors(['no_of_occupants' => 'Room 9 allows at most 1 occupant; this inquiry has 2.']);
     }
@@ -152,7 +165,7 @@ class InquiriesTest extends TestCase
 
         $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry([
             'no_of_occupants' => '3', 'status' => 'Declined', 'room_id' => $room->room_id,
-        ]))->assertSessionHasNoErrors();
+        ]))->assertSessionHasErrors('no_of_occupants');
     }
 
     // ---------- Bug 2: one pending Rented inquiry per room; only Vacant or Vacating rooms ----------
@@ -163,7 +176,8 @@ class InquiriesTest extends TestCase
         $this->inquiry(['prospect_name' => 'Sample First', 'status' => 'Rented', 'room_id' => $room->room_id,
             'inquiry_date' => '2026-09-20']);
 
-        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry([
+        $second = $this->inquiry(['prospect_name' => 'Sample Second']);
+        $this->actingAs($this->caretaker)->put("/inquiries/{$second->inquiry_id}", $this->validInquiry([
             'status' => 'Rented', 'room_id' => $room->room_id,
         ]))->assertSessionHasErrors([
             'room_id' => 'Room 3 is already marked as rented to Sample First (inquiry of 20 Sep 2026) and its MOA has not been encoded yet.',
@@ -186,7 +200,8 @@ class InquiriesTest extends TestCase
             'deposit_damage' => 0, 'deposit_bills' => 0, 'deposit_keys' => 0, 'status' => 'Ended', 'user_id' => $this->caretaker->user_id,
         ]);
 
-        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry([
+        $second = $this->inquiry();
+        $this->actingAs($this->caretaker)->put("/inquiries/{$second->inquiry_id}", $this->validInquiry([
             'status' => 'Rented', 'room_id' => $room->room_id,
         ]))->assertSessionHasNoErrors();
     }
@@ -195,12 +210,13 @@ class InquiriesTest extends TestCase
     {
         $occupied = $this->room('7', 'Aircon', 'Occupied');
         $vacating = $this->room('8', 'Aircon', 'Vacating');
+        $inquiry = $this->inquiry();
 
-        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry([
+        $this->actingAs($this->caretaker)->put("/inquiries/{$inquiry->inquiry_id}", $this->validInquiry([
             'status' => 'Rented', 'room_id' => $occupied->room_id,
         ]))->assertSessionHasErrors(['room_id' => 'Room 7 is Occupied. Only Vacant or Vacating rooms can be marked as rented.']);
 
-        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry([
+        $this->actingAs($this->caretaker)->put("/inquiries/{$inquiry->inquiry_id}", $this->validInquiry([
             'status' => 'Rented', 'room_id' => $vacating->room_id,
         ]))->assertSessionHasNoErrors();
     }
@@ -229,8 +245,9 @@ class InquiriesTest extends TestCase
     public function test_type_mismatch_is_a_warning_not_an_error(): void
     {
         $basic = $this->room('1', 'Basic');
+        $inquiry = $this->inquiry(['preferred_type' => 'Aircon']);
 
-        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry([
+        $this->actingAs($this->caretaker)->put("/inquiries/{$inquiry->inquiry_id}", $this->validInquiry([
             'preferred_type' => 'Aircon', 'status' => 'Rented', 'room_id' => $basic->room_id,
         ]))->assertSessionHasNoErrors()
             ->assertSessionHas('warning', 'Note: Room 1 is a Basic room, but the prospect asked for Aircon.');
@@ -243,12 +260,14 @@ class InquiriesTest extends TestCase
     {
         $basic = $this->room('1', 'Basic');
         $other = $this->room('2', 'Basic');
+        $inquiry1 = $this->inquiry(['preferred_type' => 'Basic']);
+        $inquiry2 = $this->inquiry(['preferred_type' => 'Any']);
 
-        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry([
+        $this->actingAs($this->caretaker)->put("/inquiries/{$inquiry1->inquiry_id}", $this->validInquiry([
             'preferred_type' => 'Basic', 'status' => 'Rented', 'room_id' => $basic->room_id,
         ]))->assertSessionMissing('warning');
 
-        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry([
+        $this->actingAs($this->caretaker)->put("/inquiries/{$inquiry2->inquiry_id}", $this->validInquiry([
             'prospect_name' => 'Sample B', 'preferred_type' => 'Any', 'status' => 'Rented', 'room_id' => $other->room_id,
         ]))->assertSessionMissing('warning');
     }
@@ -303,7 +322,7 @@ class InquiriesTest extends TestCase
         // Every inquiry is still there, unchanged, and listed on the Inquiries page under its status.
         $this->assertSame($before, Inquiry::orderBy('inquiry_id')->get()->toArray());
         $this->actingAs($this->caretaker)->get('/inquiries?status=Waiting')->assertOk()
-            ->assertSeeInOrder(['Sample Newer', 'Sample Older'])->assertDontSee('Sample Declined');
+            ->assertSeeInOrder(['Sample Older', 'Sample Newer'])->assertDontSee('Sample Declined');
     }
 
     public function test_inquiries_page_has_the_form_and_the_status_column(): void
@@ -357,4 +376,185 @@ class InquiriesTest extends TestCase
         $this->get('/inquiries')->assertRedirect('/login');
         $this->post('/inquiries', $this->validInquiry())->assertRedirect('/login');
     }
+
+    public function test_philippine_contact_number_validation(): void
+    {
+        // Valid 09 format
+        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry([
+            'contact_no' => '09181234567',
+        ]))->assertSessionHasNoErrors();
+
+        // Valid +639 format
+        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry([
+            'prospect_name' => 'Sample Prospect International',
+            'contact_no' => '+639171234567',
+        ]))->assertSessionHasNoErrors();
+
+        // Invalid: landline / non-PH / malformed
+        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry([
+            'contact_no' => '0281234567',
+        ]))->assertSessionHasErrors(['contact_no' => 'The contact number must be a valid Philippine mobile number (e.g., 09XXXXXXXXX or +639XXXXXXXXX).']);
+
+        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry([
+            'contact_no' => '09123',
+        ]))->assertSessionHasErrors('contact_no');
+
+        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry([
+            'contact_no' => '+14155552671',
+        ]))->assertSessionHasErrors('contact_no');
+    }
+
+    public function test_formatted_phone_accessor_and_call_intent_link(): void
+    {
+        $inquiry = $this->inquiry(['contact_no' => '0917 555 0142']);
+        $this->assertSame('09175550142', $inquiry->formatted_phone);
+        $this->assertSame('tel:09175550142', $inquiry->telHref());
+
+        $this->actingAs($this->caretaker)->get('/inquiries')
+            ->assertOk()
+            ->assertSee('href="tel:09175550142"', false);
+    }
+
+    public function test_status_pills_display_record_counts_and_waiting_badge(): void
+    {
+        $this->inquiry(['prospect_name' => 'Waiting 1', 'status' => 'Waiting']);
+        $this->inquiry(['prospect_name' => 'Waiting 2', 'status' => 'Waiting']);
+        $this->inquiry(['prospect_name' => 'Rented 1', 'status' => 'Rented', 'room_id' => $this->room('201', 'Basic')->room_id]);
+        $this->inquiry(['prospect_name' => 'Referred 1', 'status' => 'Referred']);
+        $this->inquiry(['prospect_name' => 'Declined 1', 'status' => 'Declined']);
+
+        $res = $this->actingAs($this->caretaker)->get('/inquiries')->assertOk();
+        $res->assertSee('2 waiting');
+        $res->assertSee('All <span class="chip-count">(5)</span>', false);
+        $res->assertSee('Waiting <span class="chip-count">(2)</span>', false);
+        $res->assertSee('Rented <span class="chip-count">(1)</span>', false);
+        $res->assertSee('Referred <span class="chip-count">(1)</span>', false);
+        $res->assertSee('Declined <span class="chip-count">(1)</span>', false);
+    }
+
+    public function test_referred_and_declined_are_tracked_and_stored_independently(): void
+    {
+        $referred = $this->inquiry(['prospect_name' => 'Student Rule Mismatch', 'status' => 'Referred', 'remarks' => 'Student curfew issue']);
+        $declined = $this->inquiry(['prospect_name' => 'Pricing Objection', 'status' => 'Declined', 'remarks' => 'Budget too low']);
+
+        $this->assertDatabaseHas('tbl_inquiry', [
+            'inquiry_id' => $referred->inquiry_id,
+            'status' => 'Referred',
+            'remarks' => 'Student curfew issue',
+        ]);
+        $this->assertDatabaseHas('tbl_inquiry', [
+            'inquiry_id' => $declined->inquiry_id,
+            'status' => 'Declined',
+            'remarks' => 'Budget too low',
+        ]);
+
+        $this->actingAs($this->caretaker)->get('/inquiries?status=Referred')
+            ->assertOk()
+            ->assertSee('Student Rule Mismatch')
+            ->assertDontSee('Pricing Objection');
+
+        $this->actingAs($this->caretaker)->get('/inquiries?status=Declined')
+            ->assertOk()
+            ->assertSee('Pricing Objection')
+            ->assertDontSee('Student Rule Mismatch');
+    }
+
+    public function test_quick_outcome_status_update_endpoint(): void
+    {
+        $inquiry = $this->inquiry(['status' => 'Waiting']);
+
+        $this->actingAs($this->caretaker)->patch("/inquiries/{$inquiry->inquiry_id}/status", [
+            'status' => 'Referred',
+            'remarks' => 'Needs 4 parking spots, referred elsewhere',
+        ])->assertRedirect('/inquiries')->assertSessionHas('status');
+
+        $this->assertSame('Referred', $inquiry->refresh()->status);
+        $this->assertSame('Needs 4 parking spots, referred elsewhere', $inquiry->remarks);
+
+        $this->assertDatabaseHas('tbl_audit_log', [
+            'action' => 'Inquiry status updated',
+            'table_name' => 'tbl_inquiry',
+            'record_id' => $inquiry->inquiry_id,
+        ]);
+    }
+
+    public function test_encode_moa_button_visibility_rules(): void
+    {
+        $room = $this->room('204', 'Basic', 'Vacant');
+        $waitingInquiry = $this->inquiry([
+            'status' => 'Waiting',
+            'preferred_type' => 'Basic',
+            'room_id' => $room->room_id,
+        ]);
+        $referredInquiry = $this->inquiry([
+            'prospect_name' => 'Prospect Referred',
+            'status' => 'Referred',
+        ]);
+
+        $manager = User::factory()->role('Manager')->create();
+        $owner = User::factory()->role('Owner')->create();
+
+        // Manager and Owner see Encode MOA for Waiting inquiry with vacant room
+        $this->actingAs($manager)->get('/inquiries')->assertOk()
+            ->assertSee('Encode MOA')
+            ->assertSee(route('leases.create', ['inquiry_id' => $waitingInquiry->inquiry_id, 'room_id' => $room->room_id]));
+
+        $this->actingAs($owner)->get('/inquiries')->assertOk()
+            ->assertSee('Encode MOA');
+
+        // Caretaker does NOT see Encode MOA
+        $this->actingAs($this->caretaker)->get('/inquiries')->assertOk()
+            ->assertDontSee('Encode MOA');
+
+        // If room is occupied, Encode MOA is not rendered
+        $room->update(['status' => 'Occupied']);
+        $this->actingAs($manager)->get('/inquiries')->assertOk()
+            ->assertDontSee('Encode MOA');
+    }
+
+    public function test_caretaker_can_log_inquiry_and_update_outcome_but_cannot_encode_moa(): void
+    {
+        // Caretaker can log
+        $this->actingAs($this->caretaker)->post('/inquiries', $this->validInquiry([
+            'prospect_name' => 'Caretaker Walk-in Lead',
+        ]))->assertRedirect('/inquiries');
+
+        $inquiry = Inquiry::where('prospect_name', 'Caretaker Walk-in Lead')->firstOrFail();
+
+        // Caretaker can update outcome
+        $this->actingAs($this->caretaker)->patch("/inquiries/{$inquiry->inquiry_id}/status", [
+            'status' => 'Declined',
+            'remarks' => 'Looking for pet-friendly unit',
+        ])->assertRedirect('/inquiries');
+
+        $this->assertSame('Declined', $inquiry->refresh()->status);
+
+        // Caretaker cannot access lease encoding
+        $this->actingAs($this->caretaker)->get(route('leases.create', ['inquiry_id' => $inquiry->inquiry_id]))
+            ->assertForbidden();
+    }
+
+    public function test_intake_form_has_no_room_selector_and_waiting_view_hides_assigned_room_column(): void
+    {
+        $room = $this->room('204', 'Basic');
+        $this->inquiry(['prospect_name' => 'Waiting Lead', 'status' => 'Waiting']);
+        $this->inquiry(['prospect_name' => 'Rented Tenant', 'status' => 'Rented', 'room_id' => $room->room_id]);
+
+        $response = $this->actingAs($this->caretaker)->get('/inquiries')->assertOk();
+
+        // Intake form does NOT have Room Shown or Rented selector
+        $response->assertDontSee('Room shown or rented');
+
+        // Waiting filter view completely hides Assigned Room column
+        $waitingView = $this->actingAs($this->caretaker)->get('/inquiries?status=Waiting')->assertOk();
+        $waitingView->assertDontSee('<th>Assigned Room</th>', false);
+        $waitingView->assertDontSee('Leased room:');
+
+        // All / Rented view displays Assigned Room and the leased room number for Rented inquiries
+        $rentedView = $this->actingAs($this->caretaker)->get('/inquiries?status=Rented')->assertOk();
+        $rentedView->assertSee('<th>Assigned Room</th>', false);
+        $rentedView->assertSee('204');
+        $rentedView->assertSee('Leased room:');
+    }
 }
+

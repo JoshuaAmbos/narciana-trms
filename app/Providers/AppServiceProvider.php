@@ -35,5 +35,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('approve-settlements', fn (User $user) => $user->hasRole('Owner'));
 
         Gate::policy(\App\Models\Room::class, \App\Policies\RoomPolicy::class);
+        Gate::policy(\App\Models\Inquiry::class, \App\Policies\InquiryPolicy::class);
     }
 }

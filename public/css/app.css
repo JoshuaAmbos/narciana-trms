@@ -194,6 +194,7 @@ td.r, th.r { text-align: right; }
 .t-amber { background: #fdf3e1; color: var(--amber); }
 .t-green { background: #e8f6ee; color: var(--green); }
 .t-blue { background: #e8f0fa; color: var(--navy-2); }
+.t-purple { background: #f3e8ff; color: #6b21a8; }
 .t-grey { background: #eef1f4; color: var(--muted); }
 
 /* ---------- Buttons and forms ---------- */
@@ -379,7 +380,86 @@ td.actions .btn { margin-left: 4px; }
 @media (max-width: 760px) {
     .rooms-table-wrap { display: none !important; }
     .room-cards { display: block !important; }
+    .inquiries-table-wrap { display: none !important; }
+    .inquiry-cards { display: block !important; }
 }
+
+/* Responsive inquiry cards for mobile/portrait view */
+.inquiry-cards { display: none; }
+.inquiry-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+.inquiry-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.inquiry-card-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.25;
+}
+.inquiry-card-specs {
+    font-size: 13.5px;
+    color: var(--text);
+    margin-bottom: 6px;
+}
+.inquiry-card-body {
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.inquiry-card-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+.inquiry-card-actions .btn {
+    min-height: var(--tap);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 8px 14px;
+}
+
+.filters-scrollable {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    align-items: center;
+}
+.filters-scrollable .chip {
+    white-space: nowrap;
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+}
+.chip-count {
+    font-size: 11px;
+    opacity: 0.8;
+    margin-left: 4px;
+}
+
 
 /* ---------- Printing (reports, statements): Chrome > Print > Save as PDF ---------- */
 @media print {

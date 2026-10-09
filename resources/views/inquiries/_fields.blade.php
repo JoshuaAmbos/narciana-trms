@@ -11,7 +11,7 @@
     </div>
     <div class="f @error('contact_no') has-err @enderror">
         <label for="contact_no">Contact number</label>
-        <input id="contact_no" name="contact_no" type="tel" maxlength="15" required
+        <input id="contact_no" name="contact_no" type="tel" maxlength="15" placeholder="09XXXXXXXXX" required
                value="{{ old('contact_no', $inquiry->contact_no) }}">
         @error('contact_no') <div class="err">{{ $message }}</div> @enderror
     </div>
@@ -29,7 +29,7 @@
     </div>
     <div class="f @error('no_of_occupants') has-err @enderror">
         <label for="no_of_occupants">Occupants</label>
-        <input id="no_of_occupants" name="no_of_occupants" type="number" min="1" max="10" inputmode="numeric" required
+        <input id="no_of_occupants" name="no_of_occupants" type="number" min="1" max="2" inputmode="numeric" required
                value="{{ old('no_of_occupants', $inquiry->no_of_occupants) }}">
         @error('no_of_occupants') <div class="err">{{ $message }}</div> @enderror
     </div>

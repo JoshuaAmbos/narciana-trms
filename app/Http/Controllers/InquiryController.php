@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\InquiryRequest;
+use App\Http\Requests\StoreInquiryRequest;
+use App\Http\Requests\UpdateInquiryStatusRequest;
+use App\Models\AuditLog;
 use App\Models\Inquiry;
 use App\Models\Room;
 use App\Services\RoomAvailabilityService;
@@ -11,7 +14,10 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
-/** Inquiries: every role logs inquiries (form on the list page) and updates them. */
+/**
+ * Inquiries Module: prospect intake, multi-channel leads, waiting queue,
+ * and lifecycle outcomes (Waiting -> Rented / Referred / Declined).
+ */
 class InquiryController extends Controller
 {
     public function index(Request $request, RoomAvailabilityService $availability): View
@@ -19,19 +25,47 @@ class InquiryController extends Controller
         $filter = $request->validate(['status' => ['nullable', Rule::in(Inquiry::STATUSES)]]);
         $status = $filter['status'] ?? null;
 
-        $inquiries = Inquiry::with(['room', 'user'])
-            ->when($status, fn ($q) => $q->where('status', $status))
-            ->orderByDesc('inquiry_date')
-            ->orderByDesc('inquiry_id')
-            ->paginate(25)
-            ->withQueryString();
+        $counts = [
+            'All' => Inquiry::count(),
+            'Waiting' => Inquiry::where('status', 'Waiting')->count(),
+            'Rented' => Inquiry::where('status', 'Rented')->count(),
+            'Referred' => Inquiry::where('status', 'Referred')->count(),
+            'Declined' => Inquiry::where('status', 'Declined')->count(),
+        ];
+
+        $query = Inquiry::with(['room', 'user'])
+            ->when($status, fn ($q) => $q->where('status', $status));
+
+        // Waiting queue is sorted chronologically (oldest first); others are newest first.
+        if ($status === 'Waiting') {
+            $query->orderBy('inquiry_date')->orderBy('inquiry_id');
+        } else {
+            $query->orderByDesc('inquiry_date')->orderByDesc('inquiry_id');
+        }
+
+        $inquiries = $query->paginate(25)->withQueryString();
+
+        $rooms = Room::orderBy('room_no')->get();
+        $vacantRooms = $rooms->where('status', 'Vacant');
+        $hasVacantAircon = $vacantRooms->where('room_type', 'Aircon')->isNotEmpty();
+        $hasVacantBasic = $vacantRooms->where('room_type', 'Basic')->isNotEmpty();
 
         return view('inquiries.index', [
             'inquiries' => $inquiries,
             'status' => $status,
-            // "Log an inquiry" form
-            'inquiry' => new Inquiry(['inquiry_date' => today(), 'status' => 'Waiting', 'no_of_occupants' => 1]),
-            'rooms' => Room::orderBy('room_no')->get(),
+            'counts' => $counts,
+            'waitingCount' => $counts['Waiting'],
+            'inquiry' => new Inquiry([
+                'inquiry_date' => today(),
+                'status' => 'Waiting',
+                'no_of_occupants' => 1,
+                'preferred_type' => 'Any',
+                'channel' => 'Walk-in',
+            ]),
+            'rooms' => $rooms,
+            'vacantRooms' => $vacantRooms,
+            'hasVacantAircon' => $hasVacantAircon,
+            'hasVacantBasic' => $hasVacantBasic,
             'holds' => $availability->rentalHolds(),
             'types' => Inquiry::TYPES,
             'channels' => Inquiry::CHANNELS,
@@ -39,9 +73,15 @@ class InquiryController extends Controller
         ]);
     }
 
-    public function store(InquiryRequest $request, RoomAvailabilityService $availability): RedirectResponse
+    public function store(StoreInquiryRequest $request, RoomAvailabilityService $availability): RedirectResponse
     {
-        $inquiry = Inquiry::create($request->validated() + ['user_id' => $request->user()->user_id]);
+        $inquiry = Inquiry::create(array_merge($request->validated(), [
+            'status' => 'Waiting',
+            'room_id' => null,
+            'user_id' => $request->user()->user_id,
+        ]));
+
+        AuditLog::record('Inquiry logged', 'tbl_inquiry', $inquiry->inquiry_id, $request->user()->user_id);
 
         return redirect()->route('inquiries.index')
             ->with('status', "Inquiry from {$inquiry->prospect_name} was saved ({$inquiry->status}).")
@@ -62,11 +102,30 @@ class InquiryController extends Controller
 
     public function update(InquiryRequest $request, Inquiry $inquiry, RoomAvailabilityService $availability): RedirectResponse
     {
-        $inquiry->update($request->validated()); // user_id (who logged it) stays the same
+        $inquiry->update($request->validated()); // user_id (who logged it) stays unchanged
+
+        AuditLog::record('Inquiry updated', 'tbl_inquiry', $inquiry->inquiry_id, $request->user()->user_id);
 
         return redirect()->route('inquiries.index')
             ->with('status', "Inquiry from {$inquiry->prospect_name} was updated ({$inquiry->status}).")
             ->with('warning', $this->typeWarning($inquiry, $availability));
+    }
+
+    public function updateStatus(UpdateInquiryStatusRequest $request, Inquiry $inquiry): RedirectResponse
+    {
+        $oldStatus = $inquiry->status;
+        $inquiry->update($request->validated());
+
+        AuditLog::record(
+            'Inquiry status updated',
+            'tbl_inquiry',
+            $inquiry->inquiry_id,
+            $request->user()->user_id,
+            "{$oldStatus} → {$inquiry->status}"
+        );
+
+        return redirect()->route('inquiries.index')
+            ->with('status', "Inquiry from {$inquiry->prospect_name} is now {$inquiry->status}.");
     }
 
     /** Warn (do not block) when the chosen room is not the type the prospect asked for. */

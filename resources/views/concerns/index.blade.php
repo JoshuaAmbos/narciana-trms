@@ -13,7 +13,7 @@
                     <a href="{{ route('concerns.index') }}" class="btn sec" style="min-height: 44px; display: inline-flex; align-items: center;">All Rooms &rarr;</a>
                 @endif
                 <button type="button" class="btn top-add-btn" onclick="openCreateConcernModal()" style="min-height: 44px; display: inline-flex; align-items: center; gap: 6px;">
-                    + New Concern
+                    + New Concern   
                 </button>
             </div>
         </div>
@@ -41,12 +41,12 @@
                 <span class="muted" style="font-size: 13px; font-weight: 600;">Status:</span>
                 <div class="concern-chips-wrap">
                     @foreach (['open' => 'Not resolved', 'Open' => 'Open', 'In progress' => 'In progress', 'Resolved' => 'Resolved', 'all' => 'All'] as $key => $label)
-                        <a href="{{ route('concerns.index', array_filter(['status' => $key, 'room' => $room?->room_id, 'search' => $search ?: null])) }}"
+                        <a href="{{ route('concerns.index', array_filter(['status' => $key, 'room' => $room?->room_id, 'mine' => $mine ?: null, 'search' => $search ?: null])) }}"
                            class="concern-chip {{ $status === $key && !$mine ? 'on' : '' }}">
                             {{ $label }} ({{ $counts[$key] ?? 0 }})
                         </a>
                     @endforeach
-                    <a href="{{ route('concerns.index', array_filter(['mine' => $mine ? null : 1, 'room' => $room?->room_id, 'search' => $search ?: null])) }}"
+                    <a href="{{ route('concerns.index', array_filter(['status' => $status, 'room' => $room?->room_id, 'mine' => $mine ? null : 1, 'search' => $search ?: null])) }}"
                        class="concern-chip {{ $mine ? 'on' : '' }}">
                         Assigned to me ({{ $counts['mine'] ?? 0 }})
                     </a>
@@ -231,114 +231,99 @@
                 <input type="hidden" name="from_index" value="1">
 
                 <div class="row">
-                    <div class="f @error('category') has-err @enderror">
+                    <div class="f">
                         <label for="create_category">Category</label>
                         <select id="create_category" name="category" onchange="handleCreateCategoryChange(this)">
                             @foreach ($categories as $name => $help)
-                                <option value="{{ $name }}" data-help="{{ $help }}" @selected(old('category') === $name)>{{ $name }}</option>
+                                <option value="{{ $name }}" data-help="{{ $help }}">{{ $name }}</option>
                             @endforeach
                         </select>
                         <div class="hint category-help" id="create_category_help">{{ reset($categories) }}</div>
-                        @error('category') <div class="err">{{ $message }}</div> @enderror
                     </div>
-                    <div class="f @error('room_id') has-err @enderror">
+                    <div class="f">
                         <label for="create_room_id">Room</label>
                         <select id="create_room_id" name="room_id" onchange="handleCreateRoomChange(this)">
-                            <option value="" disabled @selected(!old('room_id'))>Choose a room…</option>
+                            <option value="" disabled selected>Choose a room…</option>
                             @foreach ($rooms as $r)
-                                <option value="{{ $r['room_id'] }}" data-lease="{{ $r['lease_id'] }}" data-tenant="{{ $r['tenant'] }}" @selected(old('room_id') == $r['room_id'])>{{ $r['label'] }}{{ $r['tenant'] ? ' — '.$r['tenant'] : ' — vacant' }}</option>
+                                <option value="{{ $r['room_id'] }}" data-lease="{{ $r['lease_id'] }}" data-tenant="{{ $r['tenant'] }}">{{ $r['label'] }}{{ $r['tenant'] ? ' — '.$r['tenant'] : ' — vacant' }}</option>
                             @endforeach
-                            <option value="shared" data-lease="" @selected(old('room_id') === 'shared')>No room (shared area)</option>
+                            <option value="shared" data-lease="">No room (shared area)</option>
                         </select>
-                        @error('room_id') <div class="err">{{ $message }}</div> @enderror
                     </div>
-                    <div class="f @error('lease_id') has-err @enderror">
+                    <div class="f">
                         <label for="create_lease_id">Tenant</label>
                         <select id="create_lease_id" name="lease_id">
                             <option value="">None</option>
                             @foreach ($rooms->whereNotNull('lease_id') as $r)
-                                <option value="{{ $r['lease_id'] }}" @selected(old('lease_id') == $r['lease_id'])>{{ $r['tenant'] }} ({{ $r['label'] }})</option>
+                                <option value="{{ $r['lease_id'] }}">{{ $r['tenant'] }} ({{ $r['label'] }})</option>
                             @endforeach
                         </select>
                         <div class="hint">Filled in from the room. Needed to charge the tenant.</div>
-                        @error('lease_id') <div class="err">{{ $message }}</div> @enderror
                     </div>
                 </div>
 
                 <div class="row">
-                    <div class="f @error('reported_at') has-err @enderror">
+                    <div class="f">
                         <label for="create_reported_at">Reported on</label>
-                        <input id="create_reported_at" name="reported_at" type="datetime-local" max="{{ now()->format('Y-m-d\TH:i') }}" value="{{ old('reported_at', now()->format('Y-m-d\TH:i')) }}">
-                        @error('reported_at') <div class="err">{{ $message }}</div> @enderror
+                        <input id="create_reported_at" name="reported_at" type="datetime-local" max="{{ now()->format('Y-m-d\TH:i') }}" value="{{ now()->format('Y-m-d\TH:i') }}">
                     </div>
-                    <div class="f @error('channel') has-err @enderror">
+                    <div class="f">
                         <label for="create_channel">Reported by</label>
                         <select id="create_channel" name="channel">
                             @foreach ($channels as $c)
-                                <option value="{{ $c }}" @selected(old('channel') === $c)>{{ $c }}</option>
+                                <option value="{{ $c }}">{{ $c }}</option>
                             @endforeach
                         </select>
-                        @error('channel') <div class="err">{{ $message }}</div> @enderror
                     </div>
-                    <div class="f @error('priority') has-err @enderror">
+                    <div class="f">
                         <label for="create_priority">Priority</label>
                         <select id="create_priority" name="priority">
                             @foreach ($priorities as $p)
-                                <option value="{{ $p }}" @selected(old('priority') === $p)>{{ $p }}</option>
+                                <option value="{{ $p }}">{{ $p }}</option>
                             @endforeach
                         </select>
-                        @error('priority') <div class="err">{{ $message }}</div> @enderror
                     </div>
-                    <div class="f @error('assigned_to') has-err @enderror">
+                    <div class="f">
                         <label for="create_assigned_to">Assigned to</label>
                         <select id="create_assigned_to" name="assigned_to">
                             @foreach ($users as $u)
-                                <option value="{{ $u->user_id }}" @selected(old('assigned_to', auth()->id()) == $u->user_id)>{{ $u->role }} ({{ $u->full_name }})</option>
+                                <option value="{{ $u->user_id }}" @selected($u->user_id === auth()->id())>{{ $u->role }} ({{ $u->full_name }})</option>
                             @endforeach
                         </select>
-                        @error('assigned_to') <div class="err">{{ $message }}</div> @enderror
                     </div>
                 </div>
 
-                <div class="f @error('description') has-err @enderror">
+                <div class="f">
                     <label for="create_description">Concern</label>
-                    <textarea id="create_description" name="description" rows="3" maxlength="500" placeholder="What is the problem? For a shared area, specify the exact location (e.g. 2nd-floor hallway or CR).">{{ old('description') }}</textarea>
-                    @error('description') <div class="err">{{ $message }}</div> @enderror
+                    <textarea id="create_description" name="description" rows="3" maxlength="500" placeholder="What is the problem? For a shared area, specify the exact location (e.g. 2nd-floor hallway or CR)."></textarea>
                 </div>
 
-                <div class="f @error('photo') has-err @enderror">
+                <div class="f">
                     <label for="create_photo">Photo of the problem (optional)</label>
                     <input id="create_photo" name="photo" type="file" accept="image/jpeg,image/png" capture="environment">
                     <div class="hint">Proof of the problem when it was reported. Take it with the tablet camera or pick one. JPG or PNG, up to 5 MB.</div>
-                    @error('photo') <div class="err">{{ $message }}</div> @enderror
                 </div>
 
                 <fieldset class="resolution-box" style="margin-top: 14px;">
                     <legend>Progress &amp; Financials</legend>
                     <div class="row">
-                        <div class="f @error('status') has-err @enderror">
+                        <div class="f">
                             <label for="create_status">Status</label>
                             <select id="create_status" name="status">
                                 @foreach ($statuses as $s)
-                                    <option value="{{ $s }}" @selected(old('status') === $s)>{{ $s }}</option>
+                                    <option value="{{ $s }}">{{ $s }}</option>
                                 @endforeach
                             </select>
-                            @error('status') <div class="err">{{ $message }}</div> @enderror
                         </div>
                     </div>
                     @if ($canSetMoney)
-                        <div class="row concern-cost-row">
-                            <div class="f @error('cost') has-err @enderror">
+                        <div class="row">
+                            <div class="f">
                                 <label for="create_cost">Cost of repair (₱)</label>
-                                <input id="create_cost" name="cost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" value="{{ old('cost') }}">
-                                @error('cost') <div class="err">{{ $message }}</div> @enderror
+                                <input id="create_cost" name="cost" type="number" min="0" step="0.01" inputmode="decimal">
                             </div>
-                            <div class="f concern-checkbox-f @error('charged_to_tenant') has-err @enderror">
-                                <label class="concern-checkbox-label">
-                                    <input type="checkbox" id="create_charged_to_tenant" name="charged_to_tenant" value="1" class="concern-checkbox-input" @checked(old('charged_to_tenant'))>
-                                    Charge to Tenant
-                                </label>
-                                @error('charged_to_tenant') <div class="err">{{ $message }}</div> @enderror
+                            <div class="f check">
+                                <label><input type="checkbox" id="create_charged_to_tenant" name="charged_to_tenant" value="1"> Charge to Tenant</label>
                             </div>
                         </div>
                     @else
@@ -439,89 +424,74 @@
                 @csrf
                 @method('PUT')
                 <input type="hidden" name="from_index" value="1">
-                <input type="hidden" name="concern_id" id="update_concern_id" value="{{ old('concern_id') }}">
-                <input type="hidden" name="room_id" id="update_room_id" value="{{ old('room_id') }}">
-                <input type="hidden" name="lease_id" id="update_lease_id" value="{{ old('lease_id') }}">
-                <input type="hidden" name="reported_at" id="update_reported_at" value="{{ old('reported_at') }}">
-                <input type="hidden" name="channel" id="update_channel" value="{{ old('channel') }}">
-                <input type="hidden" name="category" id="update_category" value="{{ old('category') }}">
-                <input type="hidden" name="description" id="update_description" value="{{ old('description') }}">
+                <input type="hidden" name="room_id" id="update_room_id">
+                <input type="hidden" name="lease_id" id="update_lease_id">
+                <input type="hidden" name="reported_at" id="update_reported_at">
+                <input type="hidden" name="channel" id="update_channel">
+                <input type="hidden" name="category" id="update_category">
+                <input type="hidden" name="description" id="update_description">
 
                 <div class="row">
-                    <div class="f @error('status') has-err @enderror">
+                    <div class="f">
                         <label for="update_status">Status</label>
-                        <select id="update_status" name="status" onchange="handleUpdateStatusChange(this.value)">
+                        <select id="update_status" name="status">
                             @foreach ($statuses as $s)
-                                <option value="{{ $s }}" @selected(old('status') === $s)>{{ $s }}</option>
+                                <option value="{{ $s }}">{{ $s }}</option>
                             @endforeach
                         </select>
                         <input type="hidden" name="status" id="update_status_hidden" disabled>
-                        @error('status') <div class="err">{{ $message }}</div> @enderror
                     </div>
-                    <div class="f @error('priority') has-err @enderror">
+                    <div class="f">
                         <label for="update_priority">Priority</label>
                         <select id="update_priority" name="priority">
                             @foreach ($priorities as $p)
-                                <option value="{{ $p }}" @selected(old('priority') === $p)>{{ $p }}</option>
+                                <option value="{{ $p }}">{{ $p }}</option>
                             @endforeach
                         </select>
-                        @error('priority') <div class="err">{{ $message }}</div> @enderror
                     </div>
-                    <div class="f @error('assigned_to') has-err @enderror">
+                    <div class="f">
                         <label for="update_assigned_to">Assigned to</label>
                         <select id="update_assigned_to" name="assigned_to">
                             @foreach ($users as $u)
-                                <option value="{{ $u->user_id }}" @selected(old('assigned_to') == $u->user_id)>{{ $u->role }} ({{ $u->full_name }})</option>
+                                <option value="{{ $u->user_id }}">{{ $u->role }} ({{ $u->full_name }})</option>
                             @endforeach
                         </select>
-                        @error('assigned_to') <div class="err">{{ $message }}</div> @enderror
                     </div>
                 </div>
 
-                <div class="f @error('resolved_at') has-err @enderror">
+                <div class="f">
                     <label for="update_resolved_at">Resolved on</label>
-                    <input id="update_resolved_at" name="resolved_at" type="datetime-local" max="{{ now()->format('Y-m-d\TH:i') }}" value="{{ old('resolved_at') }}">
+                    <input id="update_resolved_at" name="resolved_at" type="datetime-local" max="{{ now()->format('Y-m-d\TH:i') }}">
                     <div class="hint">Left blank = now, when the status is Resolved.</div>
-                    @error('resolved_at') <div class="err">{{ $message }}</div> @enderror
                 </div>
 
-                <div class="f @error('resolution') has-err @enderror">
-                    <label for="update_resolution">
-                        How it was resolved <span id="update_resolution_req" style="color: var(--red); display: none;">*</span>
-                    </label>
-                    <textarea id="update_resolution" name="resolution" rows="3" maxlength="500" placeholder="Describe how the problem was resolved (required if marked Resolved)...">{{ old('resolution') }}</textarea>
-                    <div id="update_resolution_client_err" class="err" style="display: none; margin-top: 4px;">Describe how the concern was resolved.</div>
-                    @error('resolution') <div class="err">{{ $message }}</div> @enderror
+                <div class="f">
+                    <label for="update_resolution">How it was resolved</label>
+                    <textarea id="update_resolution" name="resolution" rows="3" maxlength="500" placeholder="Describe how the problem was resolved (required if marked Resolved)..."></textarea>
                 </div>
 
-                <div class="f @error('resolution_photo') has-err @enderror">
+                <div class="f">
                     <label for="update_resolution_photo">Photo after the fix (optional)</label>
                     <div id="update_current_resolution_photo_box" style="display: none; margin-bottom: 8px;">
                         <img id="update_current_resolution_img" src="" alt="Fix photo" style="max-height: 120px; border-radius: 6px; border: 1px solid var(--border); display: block; margin-bottom: 4px;">
-                        <label class="inline-check"><input type="checkbox" name="remove_resolution_photo" value="1" @checked(old('remove_resolution_photo'))> Remove this photo</label>
+                        <label class="inline-check"><input type="checkbox" name="remove_resolution_photo" value="1"> Remove this photo</label>
                     </div>
                     <input id="update_resolution_photo" name="resolution_photo" type="file" accept="image/jpeg,image/png" capture="environment">
                     <div class="hint">Proof it was fixed. Add it when you mark the concern Resolved. JPG or PNG, up to 5 MB.</div>
-                    @error('resolution_photo') <div class="err">{{ $message }}</div> @enderror
                 </div>
 
                 <fieldset class="resolution-box" style="margin-top: 14px;">
                     <legend>Cost &amp; Charge</legend>
                     @if ($canSetMoney)
-                        <div class="row concern-cost-row">
-                            <div class="f @error('cost') has-err @enderror">
+                        <div class="row">
+                            <div class="f">
                                 <label for="update_cost">Cost of repair (₱)</label>
-                                <input id="update_cost" name="cost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" value="{{ old('cost') }}">
+                                <input id="update_cost" name="cost" type="number" min="0" step="0.01" inputmode="decimal">
                                 <input type="hidden" name="cost" id="update_cost_hidden" disabled>
-                                @error('cost') <div class="err">{{ $message }}</div> @enderror
                             </div>
-                            <div class="f concern-checkbox-f @error('charged_to_tenant') has-err @enderror">
-                                <label class="concern-checkbox-label">
-                                    <input type="checkbox" id="update_charged_to_tenant" name="charged_to_tenant" value="1" class="concern-checkbox-input" @checked(old('charged_to_tenant'))>
-                                    Charge to Tenant
-                                </label>
+                            <div class="f check">
+                                <label><input type="checkbox" id="update_charged_to_tenant" name="charged_to_tenant" value="1"> Charge to Tenant</label>
                                 <input type="hidden" name="charged_to_tenant" id="update_charged_to_tenant_hidden" disabled>
-                                @error('charged_to_tenant') <div class="err">{{ $message }}</div> @enderror
                             </div>
                         </div>
                         <div id="update_billed_warning" class="hint" style="display: none; color: var(--navy); font-weight: 600; margin-top: 6px;">
@@ -658,22 +628,7 @@
             document.getElementById('createConcernModal').setAttribute('hidden', '');
         }
 
-        function handleUpdateStatusChange(status) {
-            const reqSpan = document.getElementById('update_resolution_req');
-            const resArea = document.getElementById('update_resolution');
-            const resErr = document.getElementById('update_resolution_client_err');
-
-            if (status === 'Resolved') {
-                if (reqSpan) reqSpan.style.display = 'inline';
-                if (resArea) resArea.setAttribute('required', 'required');
-            } else {
-                if (reqSpan) reqSpan.style.display = 'none';
-                if (resArea) resArea.removeAttribute('required');
-                if (resErr) resErr.style.display = 'none';
-            }
-        }
-
-        function openUpdateModal(id, preserveOld = false) {
+        function openUpdateModal(id) {
             const data = concernsMap[id];
             if (!data) return;
             currentConcernId = id;
@@ -681,7 +636,6 @@
             const form = document.getElementById('updateConcernForm');
             form.action = data.update_url;
 
-            document.getElementById('update_concern_id').value = id;
             document.getElementById('update_modal_title').textContent = 'Update: ' + data.location;
             document.getElementById('update_room_id').value = data.room_id;
             document.getElementById('update_lease_id').value = data.lease_id || '';
@@ -690,13 +644,11 @@
             document.getElementById('update_category').value = data.category;
             document.getElementById('update_description').value = data.description;
 
-            if (!preserveOld) {
-                document.getElementById('update_status').value = data.status;
-                document.getElementById('update_priority').value = data.priority;
-                document.getElementById('update_assigned_to').value = data.assigned_to;
-                document.getElementById('update_resolved_at').value = data.resolved_at_input || '';
-                document.getElementById('update_resolution').value = data.resolution || '';
-            }
+            document.getElementById('update_status').value = data.status;
+            document.getElementById('update_priority').value = data.priority;
+            document.getElementById('update_assigned_to').value = data.assigned_to;
+            document.getElementById('update_resolved_at').value = data.resolved_at_input || '';
+            document.getElementById('update_resolution').value = data.resolution || '';
 
             // Fix photo
             const currentFixPhotoBox = document.getElementById('update_current_resolution_photo_box');
@@ -718,10 +670,8 @@
             const chargeHidden = document.getElementById('update_charged_to_tenant_hidden');
 
             if (costInput && chargeCheck) {
-                if (!preserveOld) {
-                    costInput.value = data.cost !== null ? data.cost : '';
-                    chargeCheck.checked = !!data.charged_to_tenant;
-                }
+                costInput.value = data.cost !== null ? data.cost : '';
+                chargeCheck.checked = !!data.charged_to_tenant;
 
                 if (data.is_billed) {
                     costInput.disabled = true;
@@ -734,8 +684,7 @@
                     if (chargeHidden) { chargeHidden.value = data.charged_to_tenant ? 1 : 0; chargeHidden.disabled = false; }
                 } else {
                     costInput.disabled = false;
-                    chargeCheck.disabled = !data.lease_id;
-                    if (!data.lease_id) chargeCheck.checked = false;
+                    chargeCheck.disabled = false;
                     statusSelect.disabled = false;
                     if (billedWarning) billedWarning.style.display = 'none';
 
@@ -744,8 +693,6 @@
                     if (chargeHidden) chargeHidden.disabled = true;
                 }
             }
-
-            handleUpdateStatusChange(document.getElementById('update_status').value);
 
             document.getElementById('updateConcernModal').removeAttribute('hidden');
         }
@@ -810,43 +757,9 @@
             });
         }
 
-        // Form submit validation & error clearing
-        const updateForm = document.getElementById('updateConcernForm');
-        if (updateForm) {
-            updateForm.addEventListener('submit', function (e) {
-                const status = document.getElementById('update_status').value;
-                const resInput = document.getElementById('update_resolution');
-                const resolution = (resInput ? resInput.value : '').trim();
-                const clientErr = document.getElementById('update_resolution_client_err');
-
-                if (status === 'Resolved' && !resolution) {
-                    e.preventDefault();
-                    if (clientErr) clientErr.style.display = 'block';
-                    if (resInput) resInput.focus();
-                    return false;
-                }
-            });
-
-            const resInput = document.getElementById('update_resolution');
-            if (resInput) {
-                resInput.addEventListener('input', function () {
-                    if (this.value.trim()) {
-                        const clientErr = document.getElementById('update_resolution_client_err');
-                        if (clientErr) clientErr.style.display = 'none';
-                    }
-                });
-            }
-        }
-
-        // Auto-open modal if redirected with concern ID or validation errors
+        // Auto-open modal if redirected with concern ID
         document.addEventListener('DOMContentLoaded', function () {
-            @if ($errors->any() && old('from_index'))
-                @if (old('concern_id'))
-                    openUpdateModal({{ (int) old('concern_id') }}, true);
-                @else
-                    openCreateConcernModal();
-                @endif
-            @elseif ($selectedConcernId)
+            @if ($selectedConcernId)
                 openDetailModal({{ $selectedConcernId }});
             @endif
         });

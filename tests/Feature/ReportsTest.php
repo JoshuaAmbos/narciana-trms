@@ -27,7 +27,7 @@ class ReportsTest extends TestCase
     use RefreshDatabase, RentalFixtures;
 
     private const ROUTES = ['reports.index', 'reports.collections', 'reports.due', 'reports.statement',
-        'reports.concerns', 'reports.inquiries'];
+        'reports.concerns', 'reports.inquiries', 'reports.settlements'];
 
     private User $owner;
 
@@ -248,5 +248,65 @@ class ReportsTest extends TestCase
 
         $this->actingAs($this->manager)->get(route('reports.inquiries', ['from' => '2026-09-01', 'to' => '2026-09-30']))->assertOk()
             ->assertSee('Most asked for')->assertSee('Referred elsewhere');
+    }
+
+    // ---------- 6. Move-out settlements ----------
+
+    public function test_move_out_settlements_summary(): void
+    {
+        $lease = $this->makeLease($this->makeRoom('204'), $this->manager, null, 'Departing Tenant');
+        $lease->update([
+            'deposit_maintenance' => 500.00,
+            'deposit_damage' => 1500.00,
+            'deposit_bills' => 1500.00,
+            'deposit_keys' => 500.00,
+        ]);
+
+        // Add an unpaid final utility bill
+        $bill = $this->billOn($lease, '2026-09-25');
+
+        // End the lease
+        app(\App\Services\LeaseService::class)->endLease($lease, [
+            'actual_end_date' => '2026-10-01',
+            'termination_notes' => 'Room inspected and keys returned',
+        ], $this->manager);
+
+        // Add a damage concern charged to tenant
+        Concern::create([
+            'room_id' => $lease->room_id,
+            'lease_id' => $lease->lease_id,
+            'reported_at' => '2026-09-28 10:00:00',
+            'channel' => 'Verbal',
+            'category' => 'Door/Lock/Keys',
+            'priority' => 'Routine',
+            'description' => 'Damaged door lock replacement',
+            'assigned_to' => $this->manager->user_id,
+            'status' => 'Resolved',
+            'resolution' => 'Replaced lock mechanism',
+            'cost' => 350.00,
+            'charged_to_tenant' => true,
+            'resolved_at' => '2026-09-28 11:00:00',
+        ]);
+
+        $report = $this->reports()->moveOutSettlements();
+
+        $this->assertSame(1, $report['count']);
+        $this->assertSame(4000.0, $report['total_deposits']);
+        // Deductions: 500 (maint) + 350 (damage) + 3700 (unpaid bill) = 4550.00
+        $this->assertSame(4550.0, $report['total_deductions']);
+        // Net: 4000 - 4550 = -550.00 excess owed
+        $this->assertSame(550.0, $report['total_excess']);
+
+        $row = $report['rows']->first();
+        $this->assertSame('Excess', $row['status']);
+        $this->assertSame(-550.0, $row['net_refund']);
+        $this->assertSame('Departing Tenant', $row['tenant_name']);
+
+        $response = $this->actingAs($this->manager)->get(route('reports.settlements'))
+            ->assertOk()
+            ->assertSee('Move-Out Settlements')
+            ->assertSee('Departing Tenant')
+            ->assertSee('Room 204')
+            ->assertSee('Excess Due: ₱550.00');
     }
 }

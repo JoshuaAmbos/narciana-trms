@@ -28,6 +28,8 @@ class Room extends Model
         'max_occupants',
         'monthly_rent',
         'status',
+        'is_rentable',
+        'disabled_reason',
         'expected_vacant_date',
     ];
 
@@ -35,16 +37,22 @@ class Room extends Model
     {
         return [
             'is_metered' => 'boolean',
+            'is_rentable' => 'boolean',
             'max_occupants' => 'integer',
             'monthly_rent' => 'decimal:2',
             'expected_vacant_date' => 'date',
         ];
     }
 
-    /** Vacant rooms can be offered to waiting prospects. */
+    /** Vacant and rentable rooms can be offered to waiting prospects. */
     public function isAvailable(): bool
     {
-        return $this->status === 'Vacant';
+        return $this->status === 'Vacant' && (bool) ($this->is_rentable ?? true);
+    }
+
+    public function isRentable(): bool
+    {
+        return (bool) ($this->is_rentable ?? true);
     }
 
     public function leases(): HasMany

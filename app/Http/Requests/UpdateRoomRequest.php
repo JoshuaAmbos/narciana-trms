@@ -21,9 +21,14 @@ class UpdateRoomRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        /** @var Room|null $room */
+        $room = $this->route('room');
+
         $this->merge([
             'room_no' => trim((string) $this->input('room_no')),
             'is_metered' => $this->boolean('is_metered'),
+            'is_rentable' => $this->has('is_rentable') ? $this->boolean('is_rentable') : ($room?->is_rentable ?? true),
+            'disabled_reason' => $this->filled('disabled_reason') ? trim((string) $this->input('disabled_reason')) : null,
         ]);
     }
 
@@ -42,9 +47,23 @@ class UpdateRoomRequest extends FormRequest
             ],
             'room_type' => ['required', Rule::in(Room::TYPES)],
             'is_metered' => ['boolean'],
+            'is_rentable' => ['boolean'],
+            'disabled_reason' => ['nullable', 'string', 'max:255'],
             'max_occupants' => ['required', 'integer', 'between:1,'.Room::MAX_OCCUPANTS],
             'monthly_rent' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:99999999.99'],
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            /** @var Room|null $room */
+            $room = $this->route('room');
+
+            if ($room && $room->status === 'Occupied' && ! $this->boolean('is_rentable')) {
+                $validator->errors()->add('is_rentable', 'An occupied room cannot be disabled for renting.');
+            }
+        });
     }
 
     public function messages(): array

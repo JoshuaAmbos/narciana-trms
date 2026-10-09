@@ -53,11 +53,11 @@ class RoomsTest extends TestCase
         $room = $this->room();
 
         $this->actingAs($this->owner)->get('/rooms')
-            ->assertSee('+ Add room')->assertSee(route('rooms.edit', $room), false);
+            ->assertSee('Add room')->assertSee(route('rooms.edit', $room), false);
 
         foreach (['Manager', 'Caretaker'] as $role) {
             $this->actingAs(User::factory()->role($role)->create())->get('/rooms')
-                ->assertDontSee('+ Add room')->assertDontSee(route('rooms.edit', $room), false);
+                ->assertDontSee('Add room')->assertDontSee(route('rooms.edit', $room), false);
         }
     }
 
@@ -337,5 +337,164 @@ class RoomsTest extends TestCase
         $response = $this->actingAs($this->owner)->get(route('rooms.index', ['search' => '999']))->assertOk();
         $response->assertSee('No rooms found matching your search and filter criteria.');
         $response->assertSee('Clear all filters');
+    }
+
+    public function test_owner_can_disable_room_for_renting_and_enable_again(): void
+    {
+        $room = $this->room(['room_no' => '301', 'is_rentable' => true]);
+
+        // Disable room via toggle
+        $this->actingAs($this->owner)
+            ->patch(route('rooms.toggle-rentable', $room), ['disabled_reason' => 'Renovation in progress'])
+            ->assertRedirect();
+
+        $room->refresh();
+        $this->assertFalse($room->isRentable());
+        $this->assertSame('Renovation in progress', $room->disabled_reason);
+        $this->assertDatabaseHas('tbl_audit_log', [
+            'action' => 'Room changed',
+            'record_id' => $room->room_id,
+            'details' => 'Room disabled for renting',
+        ]);
+
+        // Re-enable room
+        $this->actingAs($this->owner)
+            ->patch(route('rooms.toggle-rentable', $room))
+            ->assertRedirect();
+
+        $room->refresh();
+        $this->assertTrue($room->isRentable());
+        $this->assertNull($room->disabled_reason);
+
+        // Manager cannot toggle rentable state
+        $manager = User::factory()->role('Manager')->create();
+        $this->actingAs($manager)
+            ->patch(route('rooms.toggle-rentable', $room))
+            ->assertForbidden();
+    }
+
+    public function test_disabled_room_hides_encode_moa_and_prevents_leasing(): void
+    {
+        $room = $this->room(['room_no' => '302', 'status' => 'Vacant', 'is_rentable' => false, 'disabled_reason' => 'Ceiling repair']);
+
+        // Policy denies encodeMoa
+        $this->assertFalse($this->owner->can('encodeMoa', $room));
+
+        // Index page does not render Encode MOA link for disabled room, but displays Disabled badge
+        $response = $this->actingAs($this->owner)->get(route('rooms.index'))->assertOk();
+        $response->assertDontSee(route('leases.create', ['room_id' => $room->room_id]), false);
+        $response->assertSee('Disabled (Out)');
+        $response->assertSee('Ceiling repair');
+
+        // Filter by Disabled status displays this room
+        $filterResponse = $this->actingAs($this->owner)->get(route('rooms.index', ['status' => 'Disabled']))->assertOk();
+        $filterResponse->assertSee('Room 302');
+    }
+
+    public function test_occupied_room_cannot_be_disabled_via_toggle_or_update(): void
+    {
+        $occupiedRoom = $this->room(['room_no' => '401', 'status' => 'Occupied', 'is_rentable' => true]);
+
+        // Attempting to toggle rentable on occupied room returns session error and keeps room rentable
+        $this->actingAs($this->owner)
+            ->patch(route('rooms.toggle-rentable', $occupiedRoom))
+            ->assertSessionHasErrors('room');
+
+        $occupiedRoom->refresh();
+        $this->assertTrue($occupiedRoom->isRentable());
+
+        // Attempting to update occupied room with is_rentable = 0 fails validation
+        $this->actingAs($this->owner)
+            ->put(route('rooms.update', $occupiedRoom), $this->validRoom([
+                'room_no' => '401',
+                'is_rentable' => '0',
+            ]))
+            ->assertSessionHasErrors('is_rentable');
+
+        $occupiedRoom->refresh();
+        $this->assertTrue($occupiedRoom->isRentable());
+
+        // Modal for occupied room does not render the Disable Room button
+        $response = $this->actingAs($this->owner)->get(route('rooms.index'))->assertOk();
+        $response->assertDontSee('Disable Room 401');
+        $response->assertDontSee(route('rooms.toggle-rentable', $occupiedRoom), false);
+    }
+
+    public function test_table_consolidates_rental_availability_into_unit_status(): void
+    {
+        $vacantRoom = $this->room(['room_no' => '101', 'status' => 'Vacant', 'is_rentable' => true]);
+        $disabledRoom = $this->room(['room_no' => '102', 'status' => 'Vacant', 'is_rentable' => false, 'disabled_reason' => 'Water leak']);
+        $occupiedRoom = $this->room(['room_no' => '103', 'status' => 'Occupied', 'is_rentable' => true]);
+
+        $response = $this->actingAs($this->owner)->get(route('rooms.index'))->assertOk();
+
+        // Unit Status column exists, separate Rental Availability column does not
+        $response->assertSee('<th>Unit Status</th>', false);
+        $response->assertDontSee('<th>Rental Availability</th>', false);
+        $response->assertDontSee('Rental Availability');
+
+        // Status badges render appropriately
+        $response->assertSee('Vacant');
+        $response->assertSee('Disabled (Out)');
+        $response->assertSee('Occupied');
+    }
+
+    public function test_add_and_edit_modals_rendered_for_owner(): void
+    {
+        $room = $this->room(['room_no' => '303']);
+
+        $response = $this->actingAs($this->owner)->get(route('rooms.index'))->assertOk();
+        $response->assertSee('id="createRoomModal"', false);
+        $response->assertSee('id="editRoomModal"', false);
+        $response->assertSee('openCreateRoomModal()', false);
+        $response->assertSee('openEditRoomModal(', false);
+
+        // Caretaker does not see create or edit modals
+        $caretaker = User::factory()->role('Caretaker')->create();
+        $caretakerResponse = $this->actingAs($caretaker)->get(route('rooms.index'))->assertOk();
+        $caretakerResponse->assertDontSee('id="createRoomModal"', false);
+        $caretakerResponse->assertDontSee('id="editRoomModal"', false);
+    }
+
+    public function test_realtime_room_number_validation_and_check_endpoint(): void
+    {
+        $r1 = $this->room(['room_no' => '201']);
+        $this->room(['room_no' => '202']);
+
+        // Check availability endpoint returns exists=true for used room
+        $this->actingAs($this->owner)->getJson(route('rooms.check-availability', ['room_no' => '201']))
+            ->assertOk()
+            ->assertJson([
+                'available' => false,
+                'exists' => true,
+                'room_no' => '201',
+            ]);
+
+        // Returns available=true for unused room
+        $this->actingAs($this->owner)->getJson(route('rooms.check-availability', ['room_no' => '299']))
+            ->assertOk()
+            ->assertJson([
+                'available' => true,
+                'exists' => false,
+                'room_no' => '299',
+            ]);
+
+        // Excluding own id when editing returns available=true
+        $this->actingAs($this->owner)->getJson(route('rooms.check-availability', ['room_no' => '201', 'exclude_id' => $r1->room_id]))
+            ->assertOk()
+            ->assertJson([
+                'available' => true,
+                'exists' => false,
+            ]);
+
+        // Index page renders real-time validation elements and functions
+        $response = $this->actingAs($this->owner)->get(route('rooms.index'))->assertOk();
+        $response->assertSee('create_room_no_feedback', false);
+        $response->assertSee('edit_room_no_feedback', false);
+        $response->assertSee('validateCreateRoomNoRealtime', false);
+
+        // Standalone create page renders feedback container
+        $createResponse = $this->actingAs($this->owner)->get(route('rooms.create'))->assertOk();
+        $createResponse->assertSee('standalone_room_no_feedback', false);
     }
 }

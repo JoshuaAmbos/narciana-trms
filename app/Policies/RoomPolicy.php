@@ -47,11 +47,11 @@ class RoomPolicy
     }
 
     /**
-     * Owner and Manager can encode an MOA, strictly on a Vacant unit.
+     * Owner and Manager can encode an MOA, strictly on a Vacant, rentable unit.
      * Caretaker is strictly forbidden.
      */
     public function encodeMoa(User $user, Room $room): bool
     {
-        return $user->hasRole('Owner', 'Manager') && $room->status === 'Vacant';
+        return $user->hasRole('Owner', 'Manager') && $room->status === 'Vacant' && (bool) ($room->is_rentable ?? true);
     }
 }

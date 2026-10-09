@@ -116,7 +116,7 @@ class StoreLeaseRequest extends LeaseRequest
             'provincial_address' => ['nullable', $new, 'string', 'max:255'],
             'occupation' => ['nullable', $new, 'string', 'max:100'],
             'prev_building' => ['nullable', 'string', 'max:150'],
-            'room_id' => ['required', Rule::exists('tbl_room', 'room_id')->where('status', 'Vacant')],
+            'room_id' => ['required', Rule::exists('tbl_room', 'room_id')->where('status', 'Vacant')->where('is_rentable', 1)],
             'co_tenant_name' => ['nullable', 'string', 'max:255'],
             // Baseline move-in reading: required for aircon rooms per Aircon MOA Clause 6, nullable for unmetered units.
             'move_in_reading' => [

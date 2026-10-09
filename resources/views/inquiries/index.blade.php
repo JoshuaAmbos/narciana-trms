@@ -17,7 +17,6 @@
         </div>
 
         {{-- Search & Filters Bar --}}
-        {{-- Search & Filters Bar --}}
         <form method="GET" action="{{ route('inquiries.index') }}" class="inquiry-filter-bar" id="inquiry-filter-form">
             @if ($status)
                 <input type="hidden" name="status" value="{{ $status }}">

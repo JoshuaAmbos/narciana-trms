@@ -62,4 +62,12 @@ class ReportController extends Controller
         return view('reports.inquiries', $this->reports->inquiryDemand(
             $request->from(today()->startOfMonth()), $request->to(today()->endOfMonth()->startOfDay())));
     }
+
+    public function settlements(ReportFilterRequest $request): View
+    {
+        return view('reports.settlements', [
+            'from' => $request->from(),
+            'to' => $request->to(),
+        ] + $this->reports->moveOutSettlements($request->from(), $request->to()));
+    }
 }

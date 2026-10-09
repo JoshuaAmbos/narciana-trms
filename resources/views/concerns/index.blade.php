@@ -41,7 +41,7 @@
                 <span class="muted" style="font-size: 13px; font-weight: 600;">Status:</span>
                 <div class="concern-chips-wrap">
                     @foreach (['open' => 'Not resolved', 'Open' => 'Open', 'In progress' => 'In progress', 'Resolved' => 'Resolved', 'all' => 'All'] as $key => $label)
-                        <a href="{{ route('concerns.index', array_filter(['status' => $key, 'room' => $room?->room_id, 'mine' => $mine ?: null, 'search' => $search ?: null])) }}"
+                        <a href="{{ route('concerns.index', array_filter(['status' => $key, 'room' => $room?->room_id, 'search' => $search ?: null])) }}"
                            class="concern-chip {{ $status === $key && !$mine ? 'on' : '' }}">
                             {{ $label }} ({{ $counts[$key] ?? 0 }})
                         </a>
@@ -424,6 +424,7 @@
                 @csrf
                 @method('PUT')
                 <input type="hidden" name="from_index" value="1">
+                <input type="hidden" name="concern_id" id="update_concern_id" value="{{ old('concern_id') }}">
                 <input type="hidden" name="room_id" id="update_room_id">
                 <input type="hidden" name="lease_id" id="update_lease_id">
                 <input type="hidden" name="reported_at" id="update_reported_at">
@@ -465,9 +466,10 @@
                     <div class="hint">Left blank = now, when the status is Resolved.</div>
                 </div>
 
-                <div class="f">
+                <div class="f @error('resolution') has-err @enderror">
                     <label for="update_resolution">How it was resolved</label>
-                    <textarea id="update_resolution" name="resolution" rows="3" maxlength="500" placeholder="Describe how the problem was resolved (required if marked Resolved)..."></textarea>
+                    <textarea id="update_resolution" name="resolution" rows="3" maxlength="500" placeholder="Describe how the problem was resolved (required if marked Resolved)...">{{ old('resolution') }}</textarea>
+                    @error('resolution') <div class="err">{{ $message }}</div> @enderror
                 </div>
 
                 <div class="f">
@@ -628,13 +630,16 @@
             document.getElementById('createConcernModal').setAttribute('hidden', '');
         }
 
-        function openUpdateModal(id) {
+        function openUpdateModal(id, preserveOld = false) {
             const data = concernsMap[id];
             if (!data) return;
             currentConcernId = id;
 
             const form = document.getElementById('updateConcernForm');
             form.action = data.update_url;
+
+            const updateConcernIdInput = document.getElementById('update_concern_id');
+            if (updateConcernIdInput) updateConcernIdInput.value = id;
 
             document.getElementById('update_modal_title').textContent = 'Update: ' + data.location;
             document.getElementById('update_room_id').value = data.room_id;
@@ -644,11 +649,13 @@
             document.getElementById('update_category').value = data.category;
             document.getElementById('update_description').value = data.description;
 
-            document.getElementById('update_status').value = data.status;
-            document.getElementById('update_priority').value = data.priority;
-            document.getElementById('update_assigned_to').value = data.assigned_to;
-            document.getElementById('update_resolved_at').value = data.resolved_at_input || '';
-            document.getElementById('update_resolution').value = data.resolution || '';
+            if (!preserveOld) {
+                document.getElementById('update_status').value = data.status;
+                document.getElementById('update_priority').value = data.priority;
+                document.getElementById('update_assigned_to').value = data.assigned_to;
+                document.getElementById('update_resolved_at').value = data.resolved_at_input || '';
+                document.getElementById('update_resolution').value = data.resolution || '';
+            }
 
             // Fix photo
             const currentFixPhotoBox = document.getElementById('update_current_resolution_photo_box');
@@ -670,8 +677,10 @@
             const chargeHidden = document.getElementById('update_charged_to_tenant_hidden');
 
             if (costInput && chargeCheck) {
-                costInput.value = data.cost !== null ? data.cost : '';
-                chargeCheck.checked = !!data.charged_to_tenant;
+                if (!preserveOld) {
+                    costInput.value = data.cost !== null ? data.cost : '';
+                    chargeCheck.checked = !!data.charged_to_tenant;
+                }
 
                 if (data.is_billed) {
                     costInput.disabled = true;
@@ -757,9 +766,15 @@
             });
         }
 
-        // Auto-open modal if redirected with concern ID
+        // Auto-open modal if redirected with concern ID or validation errors
         document.addEventListener('DOMContentLoaded', function () {
-            @if ($selectedConcernId)
+            @if ($errors->any() && old('from_index'))
+                @if (old('concern_id'))
+                    openUpdateModal({{ (int) old('concern_id') }}, true);
+                @else
+                    openCreateConcernModal();
+                @endif
+            @elseif ($selectedConcernId)
                 openDetailModal({{ $selectedConcernId }});
             @endif
         });

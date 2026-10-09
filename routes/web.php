@@ -39,6 +39,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::put('/my-password', [PasswordController::class, 'update'])->name('password.update');
 
     // Rooms (availability) and Inquiries (log/update) are separate modules; everyone uses both (decision 19).
+    Route::get('/rooms/check-availability', [RoomController::class, 'checkAvailability'])->name('rooms.check-availability');
     Route::resource('rooms', RoomController::class)->only(['index']);
     Route::resource('inquiries', InquiryController::class)->only(['index', 'store', 'edit', 'update']);
     Route::patch('/inquiries/{inquiry}/status', [InquiryController::class, 'updateStatus'])->name('inquiries.status');
@@ -88,12 +89,14 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('/statement', 'statement')->name('statement');
             Route::get('/concerns', 'concerns')->name('concerns');
             Route::get('/inquiries', 'inquiries')->name('inquiries');
+            Route::get('/settlements', 'settlements')->name('settlements');
         });
     });
 
     // ---------- Owner only ----------
     Route::middleware('role:Owner')->group(function () {
         Route::resource('rooms', RoomController::class)->only(['create', 'store', 'edit', 'update']);
+        Route::patch('/rooms/{room}/toggle-rentable', [RoomController::class, 'toggleRentable'])->name('rooms.toggle-rentable');
         Route::resource('users', UserController::class)->only(['index', 'create', 'store', 'edit', 'update']);
         Route::patch('/users/{user}/deactivate', [UserController::class, 'deactivate'])->name('users.deactivate');
         Route::patch('/users/{user}/activate', [UserController::class, 'activate'])->name('users.activate');

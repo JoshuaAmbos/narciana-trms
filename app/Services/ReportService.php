@@ -273,6 +273,110 @@ class ReportService
         ];
     }
 
+    // ---------- 6. Move-out settlements ----------
+
+    /**
+     * Departed leases summary: security deposit breakdown, deductions
+     * (maintenance fee, damages, utility bills), and net refunds/excess.
+     */
+    public function moveOutSettlements(?Carbon $from = null, ?Carbon $to = null): array
+    {
+        $leases = Lease::with(['room', 'tenant', 'bills'])
+            ->where('status', 'Ended')
+            ->get();
+
+        $endLogs = AuditLog::where('action', 'Lease ended and room marked vacant')
+            ->whereIn('record_id', $leases->pluck('lease_id'))
+            ->get()
+            ->groupBy('record_id');
+
+        $settledBillIds = AuditLog::where('action', 'Bill settled from deposit')
+            ->pluck('record_id');
+
+        $rows = collect();
+        foreach ($leases as $lease) {
+            $log = $endLogs->get($lease->lease_id)?->sortByDesc('logged_at')->first();
+            $moveOutDate = null;
+            if ($log) {
+                if (preg_match('/Actual move-out date:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/', (string) $log->details, $m)) {
+                    $moveOutDate = Carbon::parse($m[1])->startOfDay();
+                } else {
+                    $moveOutDate = $log->logged_at->copy()->startOfDay();
+                }
+            } else {
+                $moveOutDate = $lease->move_in_date->copy()->addMonths($lease->min_stay_months ?: 6)->startOfDay();
+            }
+
+            if ($from && $moveOutDate->lt($from)) {
+                continue;
+            }
+            if ($to && $moveOutDate->gt($to)) {
+                continue;
+            }
+
+            $totalDeposit = $lease->depositTotal();
+            $maintenanceDeduction = (float) $lease->deposit_maintenance;
+
+            // Damage deduction from concerns charged to tenant
+            $damageDeduction = (float) Concern::where('lease_id', $lease->lease_id)
+                ->where('charged_to_tenant', true)
+                ->sum('cost');
+
+            // Utilities / unpaid bills
+            $unpaidBills = (float) Bill::where('lease_id', $lease->lease_id)
+                ->where('status', '!=', 'Paid')
+                ->sum('total_amount');
+            $depositSettledBills = (float) Bill::where('lease_id', $lease->lease_id)
+                ->whereIn('bill_id', $settledBillIds)
+                ->sum('total_amount');
+            $billsDeduction = round($unpaidBills + $depositSettledBills, 2);
+
+            $totalDeductions = round($maintenanceDeduction + $damageDeduction + $billsDeduction, 2);
+            $netRefund = round($totalDeposit - $totalDeductions, 2);
+
+            $rows->push([
+                'lease' => $lease,
+                'room_no' => $lease->room->room_no,
+                'room_type' => $lease->room->room_type,
+                'tenant_name' => $lease->tenant->full_name,
+                'tenant_contact' => $lease->tenant->contact_no,
+                'move_in_date' => $lease->move_in_date,
+                'move_out_date' => $moveOutDate,
+                'deposit_maintenance' => $maintenanceDeduction,
+                'deposit_damage' => (float) $lease->deposit_damage,
+                'deposit_bills' => (float) $lease->deposit_bills,
+                'deposit_keys' => (float) $lease->deposit_keys,
+                'total_deposit' => $totalDeposit,
+                'deductions' => [
+                    'maintenance' => $maintenanceDeduction,
+                    'damages' => $damageDeduction,
+                    'bills' => $billsDeduction,
+                    'total' => $totalDeductions,
+                ],
+                'net_refund' => $netRefund,
+                'status' => $netRefund > 0 ? 'Refund' : ($netRefund < 0 ? 'Excess' : 'Settled'),
+            ]);
+        }
+
+        $rows = $rows->sortByDesc(fn ($r) => $r['move_out_date']?->timestamp ?? 0)->values();
+
+        $totalDeposits = round($rows->sum('total_deposit'), 2);
+        $totalDeductionsSum = round($rows->sum('deductions.total'), 2);
+        $totalRefunds = round($rows->filter(fn ($r) => $r['net_refund'] > 0)->sum('net_refund'), 2);
+        $totalExcess = round(abs($rows->filter(fn ($r) => $r['net_refund'] < 0)->sum('net_refund')), 2);
+
+        return [
+            'from' => $from,
+            'to' => $to,
+            'rows' => $rows,
+            'count' => $rows->count(),
+            'total_deposits' => $totalDeposits,
+            'total_deductions' => $totalDeductionsSum,
+            'total_refunds' => $totalRefunds,
+            'total_excess' => $totalExcess,
+        ];
+    }
+
     private function graceDays(): int
     {
         return (int) Setting::current()->grace_days;

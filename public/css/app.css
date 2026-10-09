@@ -842,8 +842,16 @@ body.side-collapsed .side {
     box-sizing: border-box;
 }
 
+/* Responsive visibility utilities matching Tailwind semantics */
+.hidden { display: none !important; }
+@media (min-width: 1024px) {
+    .lg\:inline-flex { display: inline-flex !important; }
+    .lg\:hidden { display: none !important; }
+}
+
 /* Floating Action Button (FAB) */
-.inquiry-fab {
+.inquiry-fab,
+.room-fab {
     position: fixed;
     bottom: 24px;
     right: 24px;
@@ -867,15 +875,18 @@ body.side-collapsed .side {
     text-decoration: none;
     transition: transform 0.15s ease, background-color 0.15s ease;
 }
-.inquiry-fab:hover, .inquiry-fab:focus-visible {
+.inquiry-fab:hover, .inquiry-fab:focus-visible,
+.room-fab:hover, .room-fab:focus-visible {
     background: var(--navy-2);
     transform: scale(1.06);
 }
-.inquiry-fab:active {
+.inquiry-fab:active,
+.room-fab:active {
     transform: scale(0.94);
 }
 @media (min-width: 1024px) {
-    .inquiry-fab {
+    .inquiry-fab,
+    .room-fab {
         display: none !important;
     }
 }
@@ -1948,36 +1959,19 @@ input[type="number"].no-spin::-webkit-inner-spin-button,
 .room-filter-bar {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 12px 14px;
+    gap: 14px;
+    padding: 14px 16px;
     background: var(--head-bg);
     border: 1px solid var(--border);
     border-radius: 8px;
     margin-bottom: 16px;
 }
 
-.room-filter-row {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
-}
-
-@media (min-width: 1024px) {
-    .room-filter-row {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-    }
-}
-
 .room-filter-groups {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 12px 20px;
-    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
 }
 
 .room-filter-group {
@@ -2034,9 +2028,9 @@ input[type="number"].no-spin::-webkit-inner-spin-button,
 .room-search-form {
     display: flex;
     align-items: center;
-    gap: 6px;
-    flex: 0 1 380px;
-    max-width: 100%;
+    gap: 8px;
+    width: 100%;
+    max-width: 520px;
 }
 
 .room-search-input-wrap {
@@ -2653,6 +2647,242 @@ svg.w-4 {
     box-sizing: border-box !important;
     appearance: auto !important;
 }
+
+/* ---------- Operational Reports Module: Responsive & Touch Standards ---------- */
+.reports-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.report-row-clickable {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+.report-row-clickable:hover {
+    background-color: #f8fafc !important;
+}
+.report-row-clickable:focus-visible {
+    outline: 2px solid var(--navy-2);
+    outline-offset: -2px;
+}
+
+.report-table-wrap {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.report-cards {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 14px;
+    margin-bottom: 14px;
+}
+
+.report-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 44px;
+}
+.report-card:hover {
+    border-color: var(--navy-2);
+    box-shadow: 0 2px 8px rgba(15, 28, 46, 0.08);
+}
+.report-card:focus-visible {
+    outline: 2px solid var(--navy-2);
+    outline-offset: -2px;
+}
+
+.report-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.report-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--navy);
+}
+
+.report-card-sub {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.report-card-desc {
+    font-size: 13px;
+    color: var(--muted-2);
+    line-height: 1.4;
+}
+
+.report-card-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.report-chevron {
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+}
+
+.report-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    background: #f8fafc;
+    border-radius: 6px;
+    padding: 8px 10px;
+}
+
+.report-card-metric {
+    display: flex;
+    flex-direction: column;
+    font-size: 12px;
+}
+.report-card-metric .lbl {
+    color: var(--muted);
+    font-size: 11px;
+}
+.report-card-metric .val {
+    font-weight: 600;
+    color: var(--navy);
+    margin-top: 2px;
+}
+
+.report-card-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+    color: var(--muted);
+}
+.report-card-link-text {
+    color: var(--navy);
+    font-weight: 600;
+}
+
+@media (max-width: 900px) {
+    .report-table-wrap {
+        display: none !important;
+    }
+    .report-cards {
+        display: flex !important;
+    }
+    .report-filters .f {
+        flex: 1 1 100% !important;
+    }
+}
+
+@media print {
+    .report-actions,
+    .print-report-btn,
+    .report-filters {
+        display: none !important;
+    }
+    .report-table-wrap {
+        display: block !important;
+        overflow: visible !important;
+    }
+    .report-cards {
+        display: none !important;
+    }
+    .panel.printable {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+}
+
+/* Rooms Module Responsive Styles & Modals */
+.rooms-table-wrap {
+    width: 100%;
+}
+.room-row-clickable {
+    cursor: pointer;
+    transition: background-color .15s ease;
+}
+.room-row-clickable:hover {
+    background-color: #f8fafc;
+}
+.room-cards {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.room-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    transition: border-color .15s ease, box-shadow .15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.room-card:hover {
+    border-color: var(--navy-2);
+    box-shadow: 0 2px 8px rgba(15, 28, 46, 0.08);
+}
+.room-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+.room-card-no {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--navy);
+}
+.room-card-specs {
+    font-size: 13px;
+    color: var(--muted);
+}
+.room-card-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+.room-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+@media (max-width: 900px) {
+    .rooms-table-wrap {
+        display: none !important;
+    }
+    .room-cards {
+        display: flex !important;
+    }
+}
+
+
 
 
 

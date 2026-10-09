@@ -75,7 +75,7 @@ class LeaseController extends Controller
 
     public function create(Request $request): View
     {
-        $rooms = Room::where('status', 'Vacant')->orderBy('room_no')->get();
+        $rooms = Room::where('status', 'Vacant')->where('is_rentable', true)->orderBy('room_no')->get();
         $selected = $rooms->firstWhere('room_id', $request->integer('room_id'));
 
         $inquiryId = $request->integer('inquiry_id') ?: null;

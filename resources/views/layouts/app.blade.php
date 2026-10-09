@@ -44,7 +44,10 @@
         <nav class="nav">
             @foreach (config('narciana.nav') as $group => $items)
                 @php($visibleItems = collect($items)->filter(function ($item) use ($me) {
-                    if (str_starts_with($item[0], 'leases.') && !Gate::allows('manage-leases')) {
+                    if (str_starts_with($item[0], 'leases.') && !\Illuminate\Support\Facades\Gate::allows('manage-leases')) {
+                        return false;
+                    }
+                    if ((str_starts_with($item[0], 'bills.') || str_starts_with($item[0], 'payments.') || str_starts_with($item[0], 'meter-readings.')) && !\Illuminate\Support\Facades\Gate::allows('manage-billing')) {
                         return false;
                     }
                     return $me?->hasRole(...$item[2]);

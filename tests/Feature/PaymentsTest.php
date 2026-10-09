@@ -283,6 +283,8 @@ class PaymentsTest extends TestCase
         $bill = $this->firstBill();
         $this->pay($bill);
 
+        $this->actingAs($caretaker)->get('/payments')->assertForbidden();
+        $this->actingAs($caretaker)->get('/billing')->assertForbidden();
         $this->actingAs($caretaker)->get(route('payments.index'))->assertForbidden();
         $this->actingAs($caretaker)->get(route('payments.create', ['bill' => $bill->bill_id]))->assertForbidden();
         $this->actingAs($caretaker)->post(route('payments.store'), ['bill_id' => $bill->bill_id])->assertForbidden();

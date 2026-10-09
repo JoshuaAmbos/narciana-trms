@@ -72,12 +72,13 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::resource('leases.occupants', OccupantController::class)->only(['store']);
         Route::patch('/occupants/{occupant}/remove', [OccupantController::class, 'remove'])->name('occupants.remove');
 
-        // Billing
-        Route::resource('bills', BillController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
-        Route::resource('meter-readings', MeterReadingController::class)->only(['index']);
-
-        // Payments (voiding is Owner-only, checked by PaymentPolicy)
-        Route::resource('payments', PaymentController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
+        // Billing & Payments (Owner and Manager only via can:manage-billing)
+        Route::middleware('can:manage-billing')->group(function () {
+            Route::get('/billing', [BillController::class, 'index'])->name('billing.index');
+            Route::resource('bills', BillController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
+            Route::resource('meter-readings', MeterReadingController::class)->only(['index']);
+            Route::resource('payments', PaymentController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
+        });
 
         // Reports (printable; filters are GET parameters)
         Route::controller(ReportController::class)->prefix('reports')->name('reports.')->group(function () {

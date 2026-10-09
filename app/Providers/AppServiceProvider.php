@@ -38,6 +38,11 @@ class AppServiceProvider extends ServiceProvider
             return in_array($user->role, ['Owner', 'Manager']);
         });
 
+        // Owner and Manager manage billing, meter readings, and record payments. Never the Caretaker.
+        Gate::define('manage-billing', function (User $user) {
+            return in_array($user->role, ['Owner', 'Manager']);
+        });
+
         Gate::policy(Room::class, RoomPolicy::class);
         Gate::policy(Inquiry::class, InquiryPolicy::class);
         Gate::policy(\App\Models\Lease::class, \App\Policies\LeasePolicy::class);

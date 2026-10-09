@@ -289,6 +289,7 @@ class BillingTest extends TestCase
         $bill = Bill::firstOrFail();
         $caretaker = User::factory()->role('Caretaker')->create();
 
+        $this->actingAs($caretaker)->get('/billing')->assertForbidden();
         $this->actingAs($caretaker)->get(route('bills.index'))->assertForbidden();
         $this->actingAs($caretaker)->get(route('bills.create', ['lease' => $lease->lease_id]))->assertForbidden();
         $this->actingAs($caretaker)->post(route('bills.store'), ['lease_id' => $lease->lease_id])->assertForbidden();
@@ -296,6 +297,11 @@ class BillingTest extends TestCase
         $this->actingAs($caretaker)->delete(route('bills.destroy', $bill))->assertForbidden();
         $this->actingAs($caretaker)->get(route('meter-readings.index'))->assertForbidden();
         $this->actingAs($caretaker)->get('/')->assertDontSee('Billing');
+    }
+
+    public function test_billing_route_alias_works_for_authorized_users(): void
+    {
+        $this->actingAs($this->manager)->get('/billing')->assertOk()->assertSee('To Bill');
     }
 
     public function test_owner_can_bill_too(): void
@@ -323,12 +329,11 @@ class BillingTest extends TestCase
     {
         $lease = $this->makeLease($this->makeRoom('209', 'Aircon'), $this->manager, null, 'Sample Meter Tenant', 1200.00);
 
-        // Before generation: To-bill displays reading needed and meter calculator tool
+        // Before generation: To-bill displays reading needed and standalone calculator is removed
         $res = $this->actingAs($this->manager)->get(route('bills.index'));
         $res->assertOk()
-            ->assertSee('Reading needed')
-            ->assertSee('Encode meter')
-            ->assertSee('Electric Meter Calculator')
+            ->assertSee('Reading Needed')
+            ->assertDontSee('Electric Meter Calculator')
             ->assertSee('1,200.00');
 
         // Generate the bill with meter reading

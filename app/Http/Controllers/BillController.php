@@ -22,7 +22,7 @@ class BillController extends Controller
 {
     public function __construct(private BillingService $billing) {}
 
-    public function index(Request $request, PaymentService $payments): View
+    public function index(Request $request, PaymentService $payments, PenaltyService $penalties, ConcernService $concerns): View
     {
         $payments->refreshOverdue();
         $filter = $request->validate([
@@ -31,19 +31,38 @@ class BillController extends Controller
             'search' => ['nullable', 'string', 'max:50'],
         ]);
         $month = isset($filter['month']) ? Carbon::createFromFormat('Y-m-d', $filter['month'].'-01') : today()->startOfMonth();
+        $settings = Setting::current();
 
         // Leases whose next bill can be generated now (7 days before the due date, or overdue to generate).
-        $toBill = Lease::with(['room', 'tenant'])->where('status', 'Active')->get()
+        $toBill = Lease::with(['room', 'tenant', 'occupants', 'appliances'])->where('status', 'Active')->get()
             ->filter(fn (Lease $l) => $this->billing->canGenerateNow($l))
-            ->map(fn (Lease $l) => [
-                'lease' => $l,
-                'due_date' => $this->billing->nextDueDate($l),
-                'last_reading' => $l->room->is_metered ? $this->billing->lastReading($l->room_id) : null,
-            ])
+            ->map(function (Lease $l) use ($settings, $concerns) {
+                $dueDate = $this->billing->nextDueDate($l);
+                [$start, $end] = $this->billing->periodFor($l->move_in_date, $l->due_day, $dueDate);
+                $isMetered = (bool) $l->room->is_metered;
+                $lastReading = $isMetered ? $this->billing->lastReading($l->room_id) : null;
+                $occupants = $this->billing->occupantCount($l, $start, $end);
+                $appliances = $isMetered ? 0 : $this->billing->applianceCount($l, $start, $end);
+                $chargeable = $concerns->chargeable($l);
+
+                return [
+                    'lease' => $l,
+                    'due_date' => $dueDate,
+                    'last_reading' => $lastReading,
+                    'period_start' => $start,
+                    'period_end' => $end,
+                    'occupants' => $occupants,
+                    'appliances' => $appliances,
+                    'rent_amount' => (float) $l->monthly_rent,
+                    'water_amount' => round($occupants * (float) $settings->water_rate, 2),
+                    'appliance_amount' => round($appliances * (float) $settings->appliance_fee, 2),
+                    'chargeable_concerns' => $chargeable,
+                ];
+            })
             ->sortBy(fn ($row) => $row['due_date']->toDateString().$row['lease']->room->room_no)
             ->values();
 
-        $billsQuery = Bill::with(['lease.room', 'lease.tenant', 'meterReading'])
+        $billsQuery = Bill::with(['lease.room', 'lease.tenant', 'meterReading', 'concerns', 'payments.user', 'user'])
             ->whereYear('due_date', $month->year)->whereMonth('due_date', $month->month);
 
         $allBills = (clone $billsQuery)->get();
@@ -63,7 +82,12 @@ class BillController extends Controller
         }
 
         $bills = $billsQuery->orderBy('due_date')->get();
-        $settings = Setting::current();
+
+        foreach ($bills as $bill) {
+            $bill->statement_data = $this->billing->statementForBill($bill);
+            $bill->due_today = $bill->status === 'Paid' ? null : $penalties->forBill($bill, today());
+            $bill->can_pay = $payments->canPay($bill);
+        }
 
         $meteredBills = $allBills->filter(fn ($b) => $b->meterReading !== null);
         $totalKwh = $meteredBills->sum(fn ($b) => max(0, (float) $b->meterReading->current_reading - (float) $b->meterReading->previous_reading));
@@ -85,16 +109,102 @@ class BillController extends Controller
             'metered_count' => $meteredBills->count(),
         ];
 
+        $toBillMap = [];
+        foreach ($toBill as $row) {
+            $l = $row['lease'];
+            $toBillMap[$l->lease_id] = [
+                'lease_id' => $l->lease_id,
+                'room_no' => $l->room->room_no,
+                'room_type' => $l->room->room_type,
+                'is_metered' => (bool) $l->room->is_metered,
+                'tenant' => $l->tenant->full_name,
+                'due_date' => $row['due_date']->toDateString(),
+                'due_date_fmt' => $row['due_date']->format('j M Y'),
+                'period_fmt' => $row['period_start']->format('j M') . ' – ' . $row['period_end']->format('j M Y'),
+                'rent' => (float) $row['rent_amount'],
+                'occupants' => (int) $row['occupants'],
+                'water' => (float) $row['water_amount'],
+                'appliances' => (int) $row['appliances'],
+                'appliance_amount' => (float) $row['appliance_amount'],
+                'prev_reading' => (float) ($row['last_reading']?->current_reading ?? 0),
+                'default_date' => min(today(), $row['due_date']->copy()->subDay())->toDateString(),
+                'rate_per_kwh' => (float) ($settings->kwh_rate ?? 0),
+                'concerns' => $row['chargeable_concerns']->map(fn ($c) => [
+                    'id' => $c->concern_id,
+                    'desc' => $c->description,
+                    'category' => $c->category,
+                    'cost' => (float) $c->cost,
+                    'resolved' => $c->resolved_at ? $c->resolved_at->format('j M Y') : '',
+                ])->values()->all(),
+            ];
+        }
+
+        $billsMap = [];
+        foreach ($bills as $b) {
+            $r = $b->meterReading;
+            $firstPayment = $b->payments->first();
+            $billsMap[$b->bill_id] = [
+                'bill_id' => $b->bill_id,
+                'lease_id' => $b->lease_id,
+                'room_no' => $b->lease->room->room_no,
+                'room_type' => $b->lease->room->room_type,
+                'is_metered' => (bool) $b->lease->room->is_metered,
+                'tenant' => $b->lease->tenant->full_name,
+                'due_date_fmt' => $b->due_date->format('j M Y'),
+                'due_date' => $b->due_date->toDateString(),
+                'period_fmt' => $b->period_start->format('j M') . ' – ' . $b->due_date->copy()->subDay()->format('j M Y'),
+                'rent_period_fmt' => $b->due_date->format('j M') . ' – ' . $b->due_date->copy()->startOfMonth()->addMonthNoOverflow()->day(min($b->lease->due_day, $b->due_date->copy()->startOfMonth()->addMonthNoOverflow()->daysInMonth))->subDay()->format('j M Y'),
+                'status' => $b->status,
+                'rent' => (float) $b->rent_amount,
+                'water' => (float) $b->water_amount,
+                'electricity' => (float) $b->electricity_amount,
+                'appliances' => (float) $b->appliance_amount,
+                'penalty' => (float) $b->penalty_amount,
+                'other_charges' => (float) $b->other_charges,
+                'total' => (float) $b->total_amount,
+                'can_pay' => (bool) ($b->can_pay ?? true),
+                'due_today' => $b->due_today,
+                'reading' => $r ? [
+                    'prev' => (float) $r->previous_reading,
+                    'curr' => (float) $r->current_reading,
+                    'kwh' => max(0, (float) $r->current_reading - (float) $r->previous_reading),
+                    'rate' => (float) $r->rate_per_kwh,
+                    'date' => $r->reading_date->format('j M Y'),
+                    'source' => $r->source,
+                ] : null,
+                'payment' => $firstPayment ? [
+                    'ack_no' => $firstPayment->ack_no,
+                    'mode' => $firstPayment->mode,
+                    'date' => $firstPayment->payment_date->format('j M Y'),
+                    'amount' => (float) $firstPayment->amount,
+                    'show_url' => route('payments.show', $firstPayment),
+                ] : null,
+                'concerns' => $b->concerns->map(fn ($c) => [
+                    'desc' => $c->description,
+                    'category' => $c->category,
+                    'cost' => (float) $c->cost,
+                ])->values()->all(),
+            ];
+        }
+
         return view('bills.index', [
             'month' => $month,
             'toBill' => $toBill,
             'bills' => $bills,
-            'totals' => ['count' => $bills->count(), 'amount' => $bills->sum(fn ($b) => (float) $b->total_amount)],
+            'totals' => [
+                'count' => $bills->count(),
+                'rent' => $bills->sum(fn ($b) => (float) $b->rent_amount),
+                'water' => $bills->sum(fn ($b) => (float) $b->water_amount),
+                'utility' => $bills->sum(fn ($b) => (float) $b->electricity_amount + (float) $b->appliance_amount),
+                'amount' => $bills->sum(fn ($b) => (float) $b->total_amount),
+            ],
             'stats' => $stats,
             'settings' => $settings,
             'statusFilter' => $statusFilter,
             'searchQuery' => $searchQuery,
             'sources' => MeterReading::SOURCES,
+            'toBillMap' => $toBillMap,
+            'billsMap' => $billsMap,
         ]);
     }
 
@@ -148,7 +258,7 @@ class BillController extends Controller
         $bill = $this->billing->generate($lease, $request->reading(), $request->validated('due_date'), $request->user(),
             null, (array) $request->validated('concerns', []));
 
-        return redirect()->route('bills.show', $bill)
+        return redirect()->route('bills.index', ['month' => $bill->due_date->format('Y-m'), 'statement' => $bill->bill_id])
             ->with('status', 'Bill generated: ₱'.number_format((float) $bill->total_amount, 2).' due on '.$bill->due_date->format('j M Y').'.');
     }
 

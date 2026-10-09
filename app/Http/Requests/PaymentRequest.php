@@ -17,7 +17,11 @@ class PaymentRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge(['gcash_ref_no' => PaymentService::normalizeRef($this->input('gcash_ref_no'))]);
+        $amount = $this->input('amount') ?? $this->input('amount_paid');
+        $this->merge([
+            'gcash_ref_no' => PaymentService::normalizeRef($this->input('gcash_ref_no')),
+            'amount' => $amount,
+        ]);
     }
 
     public function rules(): array

@@ -1013,7 +1013,17 @@ body.side-collapsed .side {
 /* ---------- Module 3: rooms & inquiries ---------- */
 td .sub, .sub { display: block; font-size: 12px; color: var(--muted-2); margin-top: 1px; }
 .f.check label { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text); font-weight: 400; min-height: var(--tap); cursor: pointer; }
-.f.check input[type="checkbox"] { width: 22px; height: 22px; min-height: 0; flex-shrink: 0; accent-color: var(--navy-2); }
+.f.check input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    padding: 0;
+    margin: 0;
+    flex-shrink: 0;
+    accent-color: var(--navy-2);
+    cursor: pointer;
+}
 .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
 .chip {
     display: inline-flex; align-items: center; min-height: 38px; padding: 6px 14px;
@@ -2279,5 +2289,370 @@ svg.w-4 {
     justify-content: flex-end;
     align-items: center;
 }
+
+/* ---------- Tenant Concerns Module (Responsive Tablet/Mobile & Modals) ---------- */
+.concern-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    background: var(--head-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+}
+.concern-filter-groups {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.concern-chips-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.concern-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: #fff;
+    color: var(--navy-2);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all .15s ease;
+    cursor: pointer;
+}
+.concern-chip:hover {
+    background: #eef5fc;
+    border-color: var(--navy-line);
+}
+.concern-chip.on {
+    background: var(--navy-2);
+    border-color: var(--navy-2);
+    color: #fff;
+}
+.concern-search-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.concern-search-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.concern-search-input-wrap .search-icon {
+    position: absolute;
+    left: 12px;
+    color: var(--muted);
+    pointer-events: none;
+}
+.concern-search-input {
+    min-height: 44px;
+    height: 44px;
+    padding: 0 12px 0 36px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    background: #fff;
+    color: var(--text);
+    min-width: 240px;
+    box-sizing: border-box;
+}
+.concern-search-input:focus {
+    outline: none;
+    border-color: var(--navy-2);
+    box-shadow: 0 0 0 2px rgba(15, 42, 74, 0.15);
+}
+.concern-search-btn,
+.concern-clear-btn {
+    min-height: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    font-size: 13.5px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+/* Landscape / Desktop Table */
+.concerns-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    margin-bottom: 14px;
+}
+.concerns-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.concern-row {
+    cursor: pointer;
+    transition: background-color .15s ease;
+}
+.concern-row:hover {
+    background-color: #f1f5fa;
+}
+.concern-row:focus-visible {
+    outline: 2px solid var(--navy-2);
+    outline-offset: -2px;
+}
+
+/* Portrait / Mobile Stacked Cards */
+.concern-cards {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.concern-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.concern-card:hover {
+    border-color: var(--navy-2);
+    box-shadow: 0 2px 8px rgba(15, 28, 46, 0.08);
+}
+.concern-card:focus-visible {
+    outline: 2px solid var(--navy-2);
+    outline-offset: -2px;
+}
+.concern-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+.concern-card-location {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--navy);
+}
+.concern-card-tenant {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 1px;
+}
+.concern-card-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.concern-card-chevron {
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+}
+.concern-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.concern-card-desc {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.45;
+    word-break: break-word;
+}
+.concern-card-sub-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+.concern-card-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 8px;
+    border-top: 1px solid var(--head-bg);
+    font-size: 12.5px;
+    color: var(--muted);
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* Floating Action Button (FAB) */
+.concern-fab {
+    display: none;
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
+    border-radius: 50%;
+    background: var(--navy-2);
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 14px rgba(15, 28, 46, 0.35);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 90;
+    transition: transform .15s ease, background-color .15s ease;
+}
+.concern-fab:hover, .concern-fab:focus-visible {
+    transform: scale(1.06);
+    background: var(--navy);
+}
+.concern-fab:active {
+    transform: scale(0.96);
+}
+
+/* Detail Modal Styling */
+.detail-description-box {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 14px;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.detail-photos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+.detail-photo-card {
+    background: var(--head-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+}
+.detail-photo-card b {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 8px;
+}
+.detail-photo-img {
+    max-width: 100%;
+    max-height: 220px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: opacity .15s ease;
+}
+.detail-photo-img:hover {
+    opacity: 0.9;
+}
+
+/* Media Query: Portrait View (~712px - 800px) and Mobile View */
+@media (max-width: 900px) {
+    .concerns-table-wrap {
+        display: none !important;
+    }
+    .concern-cards {
+        display: flex !important;
+    }
+    .concern-fab {
+        display: flex !important;
+    }
+    .top-add-btn {
+        display: none !important;
+    }
+    .concern-search-form {
+        width: 100%;
+    }
+    .concern-search-input-wrap {
+        flex: 1;
+        width: 100%;
+    }
+    .concern-search-input {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+/* Cost & Checkbox alignment */
+.concern-cost-row {
+    display: flex;
+    align-items: flex-end !important;
+    gap: 16px;
+    margin-bottom: 6px;
+}
+.concern-cost-row > .f {
+    flex: 1 1 200px;
+    margin-bottom: 0 !important;
+}
+.concern-cost-row > .f label:not(.concern-checkbox-label) {
+    margin-bottom: 6px;
+}
+.concern-checkbox-f {
+    display: flex !important;
+    align-items: center !important;
+    height: var(--tap, 44px) !important;
+    min-height: var(--tap, 44px) !important;
+    margin-bottom: 0 !important;
+}
+.concern-checkbox-label {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: var(--navy) !important;
+    cursor: pointer !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: var(--tap, 44px) !important;
+    min-height: var(--tap, 44px) !important;
+    line-height: 1 !important;
+    user-select: none;
+}
+.concern-checkbox-input {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    max-width: 20px !important;
+    max-height: 20px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 1.5px solid #94a3b8 !important;
+    border-radius: 4px !important;
+    background: #fff !important;
+    accent-color: var(--navy-2) !important;
+    cursor: pointer !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
+    appearance: auto !important;
+}
+
 
 

@@ -402,4 +402,191 @@ class ConcernsTest extends TestCase
     {
         $this->get(route('concerns.index'))->assertRedirect('/login');
     }
+
+    public function test_universal_search_filters_by_room_category_and_keyword(): void
+    {
+        $room301 = $this->makeRoom('301');
+        $this->log(['description' => 'Leaking faucet in bathroom', 'category' => 'Plumbing', 'room_id' => $this->room->room_id], $this->manager);
+        $this->log(['description' => 'Busted ceiling light', 'category' => 'Lights', 'room_id' => $room301->room_id, 'lease_id' => ''], $this->manager);
+
+        // Search by keyword
+        $this->actingAs($this->manager)->get(route('concerns.index', ['search' => 'faucet']))
+            ->assertOk()
+            ->assertSee('Leaking faucet')
+            ->assertDontSee('Busted ceiling light');
+
+        // Search by category
+        $this->actingAs($this->manager)->get(route('concerns.index', ['search' => 'Lights']))
+            ->assertOk()
+            ->assertSee('Busted ceiling light')
+            ->assertDontSee('Leaking faucet');
+
+        // Search by room number
+        $this->actingAs($this->manager)->get(route('concerns.index', ['search' => '301']))
+            ->assertOk()
+            ->assertSee('Busted ceiling light')
+            ->assertDontSee('Leaking faucet');
+    }
+
+    public function test_no_standalone_open_buttons_and_rows_cards_trigger_modals(): void
+    {
+        $this->log(['description' => 'Door lock jammed'], $this->caretaker);
+        $concern = Concern::first();
+
+        $response = $this->actingAs($this->caretaker)->get(route('concerns.index'))->assertOk();
+
+        // No standalone "Open" or "Show" button in the table or cards
+        $response->assertDontSee('class="btn sec">Open<', false);
+        $response->assertDontSee('class="btn">Open<', false);
+        $response->assertDontSee('class="btn sec">Show<', false);
+
+        // Clickable table row and mobile card present
+        $response->assertSee('onclick="openDetailModal('.$concern->concern_id.')"', false);
+        $response->assertSee('class="concern-row"', false);
+        $response->assertSee('class="concern-card"', false);
+
+        // In-page slide-up/popup modals present
+        $response->assertSee('id="createConcernModal"', false);
+        $response->assertSee('id="detailConcernModal"', false);
+        $response->assertSee('id="updateConcernModal"', false);
+    }
+
+    public function test_responsive_portrait_cards_and_fab_button_present(): void
+    {
+        $this->log(['description' => 'No water on second floor', 'category' => 'Water supply'], $this->caretaker);
+
+        $response = $this->actingAs($this->caretaker)->get(route('concerns.index'))->assertOk();
+
+        // Floating Action Button (FAB) present with + icon and trigger
+        $response->assertSee('class="concern-fab"', false);
+        $response->assertSee('aria-label="Log New Concern"', false);
+        $response->assertSee('onclick="openCreateConcernModal()"', false);
+
+        // Stacked cards container present
+        $response->assertSee('class="concern-cards"', false);
+        $response->assertSee('class="concern-card-location"', false);
+    }
+
+    public function test_logging_and_updating_concern_from_index_redirects_to_index_with_flash(): void
+    {
+        $createData = $this->form(['from_index' => '1', 'description' => 'Wall crack reported']);
+        $response = $this->actingAs($this->manager)->post(route('concerns.store'), $createData);
+        $concern = Concern::latest('concern_id')->first();
+        $response->assertRedirect(route('concerns.index', ['concern' => $concern->concern_id]))
+            ->assertSessionHas('status', 'Concern logged.');
+
+        $updateData = $this->form(['from_index' => '1', 'status' => 'Resolved', 'resolution' => 'Patched and repainted']);
+        $this->actingAs($this->manager)->put(route('concerns.update', $concern), $updateData)
+            ->assertRedirect(route('concerns.index', ['concern' => $concern->concern_id]))
+            ->assertSessionHas('status', 'Concern updated.');
+    }
+
+    public function test_cost_recovery_flag_persists_for_billing_integration(): void
+    {
+        $createData = $this->form([
+            'from_index' => '1',
+            'status' => 'Resolved',
+            'resolution' => 'Replaced broken window glass',
+            'cost' => '750.00',
+            'charged_to_tenant' => '1',
+        ]);
+
+        $this->actingAs($this->manager)->post(route('concerns.store'), $createData)->assertSessionHasNoErrors();
+
+        $concern = Concern::latest('concern_id')->first();
+        $this->assertTrue($concern->charged_to_tenant);
+        $this->assertSame('750.00', $concern->cost);
+
+        // Detail modal and cards have the charge reflected when viewing resolved or all concerns
+        $this->actingAs($this->manager)->get(route('concerns.index', ['status' => 'Resolved']))
+            ->assertOk()
+            ->assertSee('Charge: ₱750.00')
+            ->assertSee('Charge to Tenant: ₱750.00');
+    }
+
+    public function test_assigned_to_me_filter_and_switching_to_other_filters(): void
+    {
+        // One concern assigned to manager, one assigned to caretaker
+        $this->log(['description' => 'Manager specific ticket', 'assigned_to' => $this->manager->user_id], $this->manager);
+        $this->log(['description' => 'Caretaker specific ticket', 'assigned_to' => $this->caretaker->user_id], $this->manager);
+
+        // Caretaker views "Assigned to me"
+        $response = $this->actingAs($this->caretaker)->get(route('concerns.index', ['mine' => 1]))
+            ->assertOk()
+            ->assertSee('Caretaker specific ticket')
+            ->assertDontSee('Manager specific ticket');
+
+        // Other filter links on the page must NOT carry mine=1
+        $response->assertDontSee('status=all&amp;mine=1', false);
+        $response->assertDontSee('status=open&amp;mine=1', false);
+        $response->assertDontSee('status=Open&amp;mine=1', false);
+
+        // Clicking "All" filter loads all concerns without getting stuck on mine=1
+        $this->actingAs($this->caretaker)->get(route('concerns.index', ['status' => 'all']))
+            ->assertOk()
+            ->assertSee('Caretaker specific ticket')
+            ->assertSee('Manager specific ticket');
+    }
+
+    public function test_updating_concern_to_resolved_populates_map_and_opens_detail_modal_on_redirect(): void
+    {
+        $this->log(['description' => 'Leaky faucet in bathroom'], $this->manager);
+        $concern = Concern::first();
+        $this->assertSame('Open', $concern->status);
+
+        $updateData = $this->form([
+            'from_index' => '1',
+            'concern_id' => $concern->concern_id,
+            'status' => 'Resolved',
+            'resolution' => 'Replaced faucet washer and valve',
+        ]);
+
+        $response = $this->actingAs($this->manager)->put(route('concerns.update', $concern), $updateData);
+        $response->assertRedirect(route('concerns.index', ['concern' => $concern->concern_id]))
+            ->assertSessionHas('status', 'Concern updated.');
+
+        $concern->refresh();
+        $this->assertSame('Resolved', $concern->status);
+        $this->assertSame('Replaced faucet washer and valve', $concern->resolution);
+        $this->assertNotNull($concern->resolved_at);
+
+        // Follow redirect to index: default filter is "open" (unresolved),
+        // but concernsMap must include the newly resolved concern so the modal auto-opens!
+        $indexResponse = $this->actingAs($this->manager)->get(route('concerns.index', ['concern' => $concern->concern_id]));
+        $indexResponse->assertOk();
+        $concernsMap = $indexResponse->viewData('concernsMap');
+        $this->assertArrayHasKey($concern->concern_id, $concernsMap);
+        $this->assertSame('Resolved', $concernsMap[$concern->concern_id]['status']);
+        $this->assertSame('Replaced faucet washer and valve', $concernsMap[$concern->concern_id]['resolution']);
+        $indexResponse->assertSee("openDetailModal({$concern->concern_id})", false);
+    }
+
+    public function test_updating_concern_to_resolved_without_resolution_fails_validation_and_retains_update_modal(): void
+    {
+        $this->log(['description' => 'Light fixture broken'], $this->manager);
+        $concern = Concern::first();
+
+        $updateData = $this->form([
+            'from_index' => '1',
+            'concern_id' => $concern->concern_id,
+            'status' => 'Resolved',
+            'resolution' => '',
+        ]);
+
+        $response = $this->actingAs($this->manager)->from(route('concerns.index'))
+            ->put(route('concerns.update', $concern), $updateData);
+
+        $response->assertRedirect(route('concerns.index'))
+            ->assertSessionHasErrors(['resolution' => 'Describe how the concern was resolved.']);
+
+        // When visiting index with old input & validation error, the update modal is re-opened with error messages
+        $followResponse = $this->actingAs($this->manager)->withSession([
+            '_old_input' => $updateData,
+            'errors' => session('errors'),
+        ])->get(route('concerns.index'));
+
+        $followResponse->assertOk();
+        $followResponse->assertSee("openUpdateModal({$concern->concern_id}, true)", false);
+        $followResponse->assertSee('Describe how the concern was resolved.');
+    }
 }

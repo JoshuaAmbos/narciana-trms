@@ -25,6 +25,8 @@ class ConcernRequest extends FormRequest
             'shared' => $shared,
             'room_id' => $shared ? null : $this->input('room_id'),
             'description' => trim((string) $this->input('description')),
+            'resolution' => $this->input('resolution') !== null ? trim((string) $this->input('resolution')) : null,
+            'resolved_at' => $this->input('resolved_at') === '' ? null : $this->input('resolved_at'),
             'charged_to_tenant' => $this->boolean('charged_to_tenant'),
             'remove_photo' => $this->boolean('remove_photo'),
             'remove_resolution_photo' => $this->boolean('remove_resolution_photo'),

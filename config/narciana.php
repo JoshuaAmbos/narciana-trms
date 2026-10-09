@@ -18,21 +18,26 @@ return [
     // (same roles as 'role_access' below).
     // Items are hidden from roles not listed (LayoutTest opens every visible link for each role).
     'nav' => [
-        // Order (decision 19): what users check most and what needs action first.
-        ['dashboard', 'Dashboard', ['Owner', 'Manager', 'Caretaker'], 'layout-dashboard'],
-        ['bills.index', 'Billing', ['Owner', 'Manager'], 'receipt', ['meter-readings.*']],
-        ['payments.index', 'Payments', ['Owner', 'Manager'], 'wallet'],
-        // Caretaker sees Tenants list with limited room and name for security/maintenance.
-        ['tenants.index', 'Tenants', ['Owner', 'Manager', 'Caretaker'], 'users', ['tenants.*']],
-        ['leases.index', 'Leases', ['Owner', 'Manager'], 'file-text', ['leases.*']],
-        ['concerns.index', 'Concerns', ['Owner', 'Manager', 'Caretaker'], 'wrench'],
-        ['rooms.index', 'Rooms', ['Owner', 'Manager', 'Caretaker'], 'door-open'],
-        ['inquiries.index', 'Inquiries', ['Owner', 'Manager', 'Caretaker'], 'clipboard-list'],
-        ['moveouts.index', 'Move-out Settlement', ['Owner', 'Manager'], 'package'],
-        ['reports.index', 'Reports', ['Owner', 'Manager'], 'chart-column'],
-        ['users.index', 'User Accounts', ['Owner'], 'user-cog'],
-        ['settings.index', 'Settings & Backup', ['Owner'], 'settings', ['backups.*']],
-        ['audit-log.index', 'Audit Log', ['Owner'], 'scroll-text'],
+        'Navigation' => [
+            ['dashboard', 'Dashboard', ['Owner', 'Manager', 'Caretaker'], 'layout-dashboard'],
+        ],
+        'Operation' => [
+            ['bills.index', 'Billing', ['Owner', 'Manager'], 'receipt', ['meter-readings.*']],
+            ['payments.index', 'Payments', ['Owner', 'Manager'], 'wallet'],
+            ['concerns.index', 'Concerns', ['Owner', 'Manager', 'Caretaker'], 'wrench'],
+            // Caretaker sees Tenants list with limited room and name for security/maintenance.
+            ['tenants.index', 'Tenants', ['Owner', 'Manager', 'Caretaker'], 'users', ['tenants.*']],
+            ['rooms.index', 'Rooms', ['Owner', 'Manager', 'Caretaker'], 'door-open'],
+            ['inquiries.index', 'Inquiries', ['Owner', 'Manager', 'Caretaker'], 'clipboard-list'],
+            ['leases.index', 'Leases', ['Owner', 'Manager'], 'file-text', ['leases.*']],
+            ['moveouts.index', 'Move-out Settlement', ['Owner', 'Manager'], 'package'],
+            ['reports.index', 'Reports', ['Owner', 'Manager'], 'chart-column'],
+        ],
+        'Setting' => [
+            ['users.index', 'User Accounts', ['Owner'], 'user-cog'],
+            ['settings.index', 'Settings & Backup', ['Owner'], 'settings', ['backups.*']],
+            ['audit-log.index', 'Audit Log', ['Owner'], 'scroll-text'],
+        ],
     ],
 
     // "Role access" table shown on the User Accounts screen (same as the roles table in the project rules).

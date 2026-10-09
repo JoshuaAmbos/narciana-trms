@@ -21,13 +21,21 @@
             </div>
         </div>
         <nav class="nav">
-            @foreach (config('narciana.nav') as $item)
-                @php([$routeName, $label, $roles, $icon] = $item)
-                @continue(! $me?->hasRole(...$roles))
-                <a href="{{ route($routeName) }}"
-                   class="{{ request()->routeIs(Str::before($routeName, '.').'*', ...($item[4] ?? [])) ? 'on' : '' }}">
-                    <x-icon :name="$icon" />{{ $label }}
-                </a>
+            @foreach (config('narciana.nav') as $group => $items)
+                @php($visibleItems = collect($items)->filter(fn ($item) => $me?->hasRole(...$item[2])))
+                @continue($visibleItems->isEmpty())
+
+                @if ($group)
+                    <div class="nav-heading">{{ $group }}</div>
+                @endif
+
+                @foreach ($visibleItems as $item)
+                    @php([$routeName, $label, $roles, $icon] = $item)
+                    <a href="{{ route($routeName) }}"
+                       class="{{ request()->routeIs(Str::before($routeName, '.').'*', ...($item[4] ?? [])) ? 'on' : '' }}">
+                        <x-icon :name="$icon" />{{ $label }}
+                    </a>
+                @endforeach
             @endforeach
         </nav>
     </aside>

@@ -47,7 +47,7 @@ class LayoutTest extends TestCase
 
     public function test_every_menu_item_has_an_inline_lucide_icon(): void
     {
-        foreach (config('narciana.nav') as [, $label, , $icon]) {
+        foreach (collect(config('narciana.nav'))->flatten(1) as [, $label, , $icon]) {
             $svg = Blade::render('<x-icon :name="$icon" />', ['icon' => $icon]);
             $this->assertMatchesRegularExpression('/<svg[^>]*>\s*<(path|rect|circle|polyline)/', $svg, "Icon '{$icon}' for {$label} is missing");
         }
@@ -71,7 +71,7 @@ class LayoutTest extends TestCase
             preg_match('#<nav class="nav">(.*?)</nav>#s', $html, $nav);
             preg_match_all('#<a href="([^"]*)"#', $nav[1], $links);
 
-            $expected = collect(config('narciana.nav'))->filter(fn ($item) => in_array($role, $item[2], true))
+            $expected = collect(config('narciana.nav'))->flatten(1)->filter(fn ($item) => in_array($role, $item[2], true))
                 ->map(fn ($item) => route($item[0]))->values()->all();
             $this->assertSame($expected, $links[1], "{$role} sees exactly their menu items");
 
@@ -82,15 +82,15 @@ class LayoutTest extends TestCase
         }
     }
 
-    /** Decision 19: one fixed order, by what is checked most and needs action first; each role sees its own items in it. */
+    /** Decision 19: grouped by section and ordered from most to least used; each role sees its own items in it. */
     public function test_sidebar_order_for_each_role(): void
     {
-        $order = ['Dashboard', 'Billing', 'Payments', 'Tenants', 'Leases', 'Concerns', 'Rooms', 'Inquiries',
-            'Move-out Settlement', 'Reports', 'User Accounts', 'Settings &amp; Backup', 'Audit Log'];
+        $order = ['Dashboard', 'Billing', 'Payments', 'Concerns', 'Tenants', 'Rooms', 'Inquiries',
+            'Leases', 'Move-out Settlement', 'Reports', 'User Accounts', 'Settings &amp; Backup', 'Audit Log'];
         $expected = [
             'Owner' => $order,
             'Manager' => array_slice($order, 0, 10),
-            'Caretaker' => ['Dashboard', 'Tenants', 'Concerns', 'Rooms', 'Inquiries'],
+            'Caretaker' => ['Dashboard', 'Concerns', 'Tenants', 'Rooms', 'Inquiries'],
         ];
 
         foreach ($expected as $role => $labels) {
@@ -99,6 +99,24 @@ class LayoutTest extends TestCase
             preg_match_all('#</svg>([^<]+)</a>#', $nav[1], $items);
             $this->assertSame($labels, array_map('trim', $items[1]), "{$role} menu order");
         }
+    }
+
+    public function test_sidebar_groups_for_each_role(): void
+    {
+        $ownerHtml = $this->actingAs(User::factory()->role('Owner')->create())->get('/')->getContent();
+        $this->assertStringContainsString('<div class="nav-heading">Navigation</div>', $ownerHtml);
+        $this->assertStringContainsString('<div class="nav-heading">Operation</div>', $ownerHtml);
+        $this->assertStringContainsString('<div class="nav-heading">Setting</div>', $ownerHtml);
+
+        $managerHtml = $this->actingAs(User::factory()->role('Manager')->create())->get('/')->getContent();
+        $this->assertStringContainsString('<div class="nav-heading">Navigation</div>', $managerHtml);
+        $this->assertStringContainsString('<div class="nav-heading">Operation</div>', $managerHtml);
+        $this->assertStringNotContainsString('<div class="nav-heading">Setting</div>', $managerHtml);
+
+        $caretakerHtml = $this->actingAs(User::factory()->role('Caretaker')->create())->get('/')->getContent();
+        $this->assertStringContainsString('<div class="nav-heading">Navigation</div>', $caretakerHtml);
+        $this->assertStringContainsString('<div class="nav-heading">Operation</div>', $caretakerHtml);
+        $this->assertStringNotContainsString('<div class="nav-heading">Setting</div>', $caretakerHtml);
     }
 
     public function test_app_runs_in_manila_time(): void

@@ -732,6 +732,6 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
         $this->actingAs($this->manager)->get(route('inquiries.index'))
             ->assertOk()
             ->assertSee('Encode MOA')
-            ->assertSee(route('leases.create', ['inquiry_id' => $inquiry->inquiry_id, 'room_id' => $room->room_id]));
+            ->assertSee(route('leases.create', ['inquiry_id' => $inquiry->inquiry_id]));
     }
 }

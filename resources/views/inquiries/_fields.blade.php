@@ -52,13 +52,6 @@
 
 <div class="f check">
     <label>
-        <input type="checkbox" name="via_representative" value="1"
-               @checked(old('via_representative', $inquiry->via_representative))>
-        Inquiry made by a representative (for someone else)
-    </label>
-</div>
-<div class="f check">
-    <label>
         <input type="checkbox" name="wants_contact" value="1"
                @checked(old('wants_contact', $inquiry->wants_contact))>
         Wants to be contacted when a room is available
@@ -68,27 +61,27 @@
 <div class="row">
     <div class="f @error('status') has-err @enderror">
         <label for="status">Status</label>
-        <select id="status" name="status" required>
+        <select id="status" name="status" required onchange="const dg = document.getElementById('edit_declined_reason_group'); if (dg) dg.style.display = this.value === 'Declined' ? 'block' : 'none';">
             @foreach ($statuses as $status)
                 <option value="{{ $status }}" @selected(old('status', $inquiry->status ?? 'Waiting') === $status)>{{ $status }}</option>
             @endforeach
         </select>
         @error('status') <div class="err">{{ $message }}</div> @enderror
     </div>
-    <div class="f @error('room_id') has-err @enderror">
-        <label for="room_id">Room shown or rented</label>
-        <select id="room_id" name="room_id">
-            <option value="">None</option>
-            @foreach ($rooms as $room)
-                <option value="{{ $room->room_id }}" @selected((string) old('room_id', $inquiry->room_id) === (string) $room->room_id)>
-                    Room {{ $room->room_no }} ({{ $room->room_type }}, max {{ $room->max_occupants }}, {{ $room->status }}){{ isset($holds[$room->room_id]) ? ' – rented to '.$holds[$room->room_id]->prospect_name.', MOA pending' : '' }}
-                </option>
+</div>
+
+@if (isset($declinedReasons))
+    <div class="f" id="edit_declined_reason_group" style="{{ old('status', $inquiry->status ?? 'Waiting') === 'Declined' ? '' : 'display: none;' }}">
+        <label for="edit_declined_reason">Reason for decline</label>
+        <select id="edit_declined_reason" name="declined_reason" onchange="if(this.value && this.value !== 'Other (custom note)') document.getElementById('remarks').value = this.value">
+            <option value="">-- Select structured reason --</option>
+            @foreach ($declinedReasons as $reason)
+                <option value="{{ $reason }}">{{ $reason }}</option>
             @endforeach
         </select>
-        <div class="hint">Required when the outcome is Rented. Only a Vacant room that nobody else has rented can be chosen.</div>
-        @error('room_id') <div class="err">{{ $message }}</div> @enderror
+        <div class="hint">Selecting a structured reason automatically updates the remarks field.</div>
     </div>
-</div>
+@endif
 
 <div class="f @error('remarks') has-err @enderror">
     <label for="remarks">Remarks</label>

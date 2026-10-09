@@ -57,12 +57,6 @@
 
             <div class="f check">
                 <label>
-                    <input type="checkbox" name="via_representative" value="1" @checked(old('via_representative'))>
-                    Inquiry made by a representative (for someone else)
-                </label>
-            </div>
-            <div class="f check">
-                <label>
                     <input type="checkbox" name="wants_contact" value="1" @checked(old('wants_contact'))>
                     Wants to be contacted when a room is available
                 </label>
@@ -71,7 +65,7 @@
             <div class="f @error('remarks') has-err @enderror">
                 <label for="remarks">Remarks</label>
                 <input id="remarks" name="remarks" type="text" maxlength="255" value="{{ old('remarks') }}"
-                       placeholder="e.g. Viewing rooms, interested in 2nd floor, inquiry notes...">
+                       placeholder="e.g. Viewing rooms, interested in 2nd floor, representative details, notes...">
                 @error('remarks') <div class="err">{{ $message }}</div> @enderror
             </div>
 

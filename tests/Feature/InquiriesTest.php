@@ -282,8 +282,9 @@ class InquiriesTest extends TestCase
 
         $response = $this->actingAs($this->caretaker)->get('/inquiries')->assertOk();
 
-        $response->assertSee('<td>305</td>', false);
-        $response->assertDontSee('<td>'.$room->room_id.'</td>', false);
+        $response->assertDontSee('<th>Assigned Room</th>', false);
+        $response->assertSee('Disabled: MOA already encoded (Room 305).');
+        $response->assertDontSee('Disabled: MOA already encoded (Room '.$room->room_id.').');
     }
 
     // ---------- Updating ----------
@@ -494,22 +495,123 @@ class InquiriesTest extends TestCase
         $manager = User::factory()->role('Manager')->create();
         $owner = User::factory()->role('Owner')->create();
 
-        // Manager and Owner see Encode MOA for Waiting inquiry with vacant room
+        // Manager and Owner see active Encode MOA for Waiting inquiry with vacant room
         $this->actingAs($manager)->get('/inquiries')->assertOk()
             ->assertSee('Encode MOA')
-            ->assertSee(route('leases.create', ['inquiry_id' => $waitingInquiry->inquiry_id, 'room_id' => $room->room_id]));
+            ->assertSee(route('leases.create', ['inquiry_id' => $waitingInquiry->inquiry_id]));
 
         $this->actingAs($owner)->get('/inquiries')->assertOk()
             ->assertSee('Encode MOA');
 
-        // Caretaker does NOT see Encode MOA
+        // Caretaker sees Encode MOA disabled with explanatory role tooltip
         $this->actingAs($this->caretaker)->get('/inquiries')->assertOk()
-            ->assertDontSee('Encode MOA');
+            ->assertSee('Encode MOA')
+            ->assertSee('Disabled: Caretaker role cannot encode contracts.');
 
-        // If room is occupied, Encode MOA is not rendered
+        // If no matching vacant room exists, Manager sees Encode MOA disabled with room type tooltip
         $room->update(['status' => 'Occupied']);
         $this->actingAs($manager)->get('/inquiries')->assertOk()
-            ->assertDontSee('Encode MOA');
+            ->assertSee('Encode MOA')
+            ->assertSee('Disabled: No vacant Basic rooms available.');
+
+        // Non-waiting inquiries display Encode MOA disabled with explanatory tooltip for consistency
+        $this->actingAs($manager)->get('/inquiries?status=Referred')->assertOk()
+            ->assertSee('Encode MOA')
+            ->assertSee('Disabled: Inquiry was referred to another property.');
+    }
+
+    public function test_call_button_guardrail_respects_contact_preference(): void
+    {
+        // Prospect opted out of phone contact
+        $optOutInquiry = $this->inquiry([
+            'prospect_name' => 'No Calls Please',
+            'contact_no' => '09171112233',
+            'wants_contact' => false,
+        ]);
+
+        // Prospect wants phone contact
+        $optInInquiry = $this->inquiry([
+            'prospect_name' => 'Call Me Anytime',
+            'contact_no' => '09174445566',
+            'wants_contact' => true,
+        ]);
+
+        $res = $this->actingAs($this->caretaker)->get('/inquiries')->assertOk();
+
+        // Opt-out inquiry has disabled Call button with descriptive tooltip
+        $res->assertSee('Prospect opted out of phone contact.');
+        $res->assertSee('disabled', false);
+
+        // Opt-in inquiry has active tel link
+        $res->assertSee('href="tel:09174445566"', false);
+    }
+
+    public function test_entry_touch_ergonomics_and_no_standalone_show_or_open_buttons(): void
+    {
+        $inquiry = $this->inquiry([
+            'prospect_name' => 'Touch Friendly Prospect',
+            'contact_no' => '09178889900',
+        ]);
+
+        $res = $this->actingAs($this->caretaker)->get('/inquiries')->assertOk();
+
+        // Prospect name acts as clickable trigger to open/edit details
+        $res->assertSee(route('inquiries.edit', $inquiry));
+        $res->assertSee('Touch Friendly Prospect');
+
+        // No standalone "Show", "Open", or legacy "edit" text buttons exist in the actions
+        $res->assertDontSee('>Show<', false);
+        $res->assertDontSee('>Open<', false);
+        $res->assertDontSee('>edit<', false);
+    }
+
+    public function test_floating_action_button_on_portrait_and_mobile_viewports(): void
+    {
+        $this->inquiry(['prospect_name' => 'FAB Prospect']);
+        $res = $this->actingAs($this->caretaker)->get('/inquiries')->assertOk();
+
+        // Prominent (+) FAB rendered for portrait and mobile viewports
+        $res->assertSee('inquiry-fab');
+        $res->assertSee('openLogInquiryModal()');
+
+        // Mobile card container has bottom scroll padding (pb-24)
+        $res->assertSee('pb-24');
+    }
+
+    public function test_outcome_state_integrity_and_structured_declined_reasons(): void
+    {
+        $inquiry = $this->inquiry(['status' => 'Waiting']);
+
+        // Declining with a structured reason persists cleanly to remarks
+        $this->actingAs($this->caretaker)->patch("/inquiries/{$inquiry->inquiry_id}/status", [
+            'status' => 'Declined',
+            'declined_reason' => 'Pricing / Deposit objection',
+        ])->assertRedirect('/inquiries')->assertSessionHas('status');
+
+        $this->assertSame('Declined', $inquiry->refresh()->status);
+        $this->assertSame('Pricing / Deposit objection', $inquiry->remarks);
+
+        // Declining with structured reason and custom note prefixes cleanly
+        $this->actingAs($this->caretaker)->patch("/inquiries/{$inquiry->inquiry_id}/status", [
+            'status' => 'Declined',
+            'declined_reason' => 'Disqualified: Student policy',
+            'remarks' => 'Curfew violation in previous boarding house',
+        ])->assertRedirect('/inquiries')->assertSessionHas('status');
+
+        $this->assertSame('Disqualified: Student policy - Curfew violation in previous boarding house', $inquiry->refresh()->remarks);
+
+        // Declining without reason or remarks fails validation
+        $this->actingAs($this->caretaker)->patch("/inquiries/{$inquiry->inquiry_id}/status", [
+            'status' => 'Declined',
+            'declined_reason' => '',
+            'remarks' => '',
+        ])->assertSessionHasErrors('remarks');
+
+        // Enum integrity: 5th status is rejected
+        $this->actingAs($this->caretaker)->patch("/inquiries/{$inquiry->inquiry_id}/status", [
+            'status' => 'Cancelled',
+            'remarks' => 'Not an allowed status',
+        ])->assertSessionHasErrors('status');
     }
 
     public function test_caretaker_can_log_inquiry_and_update_outcome_but_cannot_encode_moa(): void
@@ -534,26 +636,92 @@ class InquiriesTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_intake_form_has_no_room_selector_and_waiting_view_hides_assigned_room_column(): void
+    public function test_intake_form_and_table_have_no_room_selector_or_assigned_room_column(): void
     {
         $room = $this->room('204', 'Basic');
         $this->inquiry(['prospect_name' => 'Waiting Lead', 'status' => 'Waiting']);
-        $this->inquiry(['prospect_name' => 'Rented Tenant', 'status' => 'Rented', 'room_id' => $room->room_id]);
+        $this->inquiry(['prospect_name' => 'Rented Tenant', 'status' => 'Rented', 'room_id' => $room->room_id, 'via_representative' => true]);
 
         $response = $this->actingAs($this->caretaker)->get('/inquiries')->assertOk();
 
-        // Intake form does NOT have Room Shown or Rented selector
+        // Intake form does NOT have Room Shown or Rented selector or via_representative checkbox
         $response->assertDontSee('Room shown or rented');
+        $response->assertDontSee('name="via_representative"', false);
+        $response->assertDontSee('· rep');
+        $response->assertDontSee('(via representative)');
 
         // Waiting filter view completely hides Assigned Room column
         $waitingView = $this->actingAs($this->caretaker)->get('/inquiries?status=Waiting')->assertOk();
         $waitingView->assertDontSee('<th>Assigned Room</th>', false);
         $waitingView->assertDontSee('Leased room:');
 
-        // All / Rented view displays Assigned Room and the leased room number for Rented inquiries
+        // All / Rented views also do not render Assigned Room column (room tours showcase all rooms; details live in remarks)
         $rentedView = $this->actingAs($this->caretaker)->get('/inquiries?status=Rented')->assertOk();
-        $rentedView->assertSee('<th>Assigned Room</th>', false);
-        $rentedView->assertSee('204');
-        $rentedView->assertSee('Leased room:');
+        $rentedView->assertDontSee('<th>Assigned Room</th>', false);
+        $rentedView->assertDontSee('Leased room:');
+    }
+
+    public function test_inquiries_pagination_and_query_string_retention(): void
+    {
+        // Create 15 inquiries (page size is 10)
+        for ($i = 1; $i <= 15; $i++) {
+            $this->inquiry([
+                'prospect_name' => sprintf('Prospect %02d', $i),
+                'contact_no' => sprintf('0917 000 %04d', $i),
+                'status' => 'Waiting',
+                'inquiry_date' => today()->subDays(20 - $i)->toDateString(),
+            ]);
+        }
+
+        // Page 1 should display 10 inquiries with pager info and Next link
+        $page1 = $this->actingAs($this->caretaker)->get(route('inquiries.index', ['status' => 'Waiting', 'page' => 1]))->assertOk();
+        $page1->assertSee('Page 1 of 2');
+        $page1->assertSee('Prospect 01');
+        $page1->assertSee('Prospect 10');
+        $page1->assertDontSee('Prospect 11');
+        $page1->assertSee('Next');
+
+        // Page 2 should display remaining 5 inquiries with Previous link
+        $page2 = $this->actingAs($this->caretaker)->get(route('inquiries.index', ['status' => 'Waiting', 'page' => 2]))->assertOk();
+        $page2->assertSee('Page 2 of 2');
+        $page2->assertSee('Prospect 11');
+        $page2->assertSee('Prospect 15');
+        $page2->assertDontSee('Prospect 01');
+        $page2->assertSee('Previous');
+
+        // Query string retention: 'status=Waiting' preserved in pagination links
+        $page1->assertSee('status=Waiting');
+    }
+
+    public function test_search_inquiries_by_prospect_name_or_contact_or_remarks(): void
+    {
+        $this->inquiry(['prospect_name' => 'Maria Clara', 'contact_no' => '0917 111 2233', 'remarks' => 'Looking for ground floor']);
+        $this->inquiry(['prospect_name' => 'Crisostomo Ibarra', 'contact_no' => '0918 333 4455', 'remarks' => 'Prefers aircon unit']);
+        $this->inquiry(['prospect_name' => 'Elias Salome', 'contact_no' => '0919 555 6677', 'remarks' => 'Solo occupancy']);
+
+        // Search by prospect name
+        $resName = $this->actingAs($this->caretaker)->get(route('inquiries.index', ['search' => 'Ibarra']))->assertOk();
+        $resName->assertSee('Crisostomo Ibarra');
+        $resName->assertDontSee('Maria Clara');
+        $resName->assertDontSee('Elias Salome');
+
+        // Search by phone
+        $resPhone = $this->actingAs($this->caretaker)->get(route('inquiries.index', ['search' => '111 2233']))->assertOk();
+        $resPhone->assertSee('Maria Clara');
+        $resPhone->assertDontSee('Crisostomo Ibarra');
+
+        // Search by remarks
+        $resRemarks = $this->actingAs($this->caretaker)->get(route('inquiries.index', ['search' => 'ground floor']))->assertOk();
+        $resRemarks->assertSee('Maria Clara');
+        $resRemarks->assertDontSee('Elias Salome');
+    }
+
+    public function test_empty_inquiries_search_results_shows_clear_action(): void
+    {
+        $this->inquiry(['prospect_name' => 'Sample Prospect']);
+
+        $res = $this->actingAs($this->caretaker)->get(route('inquiries.index', ['search' => 'NonExistent999']))->assertOk();
+        $res->assertSee('No inquiries found matching your search criteria.');
+        $res->assertSee('Clear search');
     }
 }

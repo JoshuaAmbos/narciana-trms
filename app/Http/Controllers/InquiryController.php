@@ -24,6 +24,7 @@ class InquiryController extends Controller
     {
         $filter = $request->validate(['status' => ['nullable', Rule::in(Inquiry::STATUSES)]]);
         $status = $filter['status'] ?? null;
+        $search = trim((string) $request->input('search', ''));
 
         $counts = [
             'All' => Inquiry::count(),
@@ -36,6 +37,14 @@ class InquiryController extends Controller
         $query = Inquiry::with(['room', 'user'])
             ->when($status, fn ($q) => $q->where('status', $status));
 
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('prospect_name', 'like', "%{$search}%")
+                    ->orWhere('contact_no', 'like', "%{$search}%")
+                    ->orWhere('remarks', 'like', "%{$search}%");
+            });
+        }
+
         // Waiting queue is sorted chronologically (oldest first); others are newest first.
         if ($status === 'Waiting') {
             $query->orderBy('inquiry_date')->orderBy('inquiry_id');
@@ -43,7 +52,7 @@ class InquiryController extends Controller
             $query->orderByDesc('inquiry_date')->orderByDesc('inquiry_id');
         }
 
-        $inquiries = $query->paginate(25)->withQueryString();
+        $inquiries = $query->paginate(10)->withQueryString();
 
         $rooms = Room::orderBy('room_no')->get();
         $vacantRooms = $rooms->where('status', 'Vacant');
@@ -53,6 +62,7 @@ class InquiryController extends Controller
         return view('inquiries.index', [
             'inquiries' => $inquiries,
             'status' => $status,
+            'search' => $search,
             'counts' => $counts,
             'waitingCount' => $counts['Waiting'],
             'inquiry' => new Inquiry([
@@ -70,6 +80,7 @@ class InquiryController extends Controller
             'types' => Inquiry::TYPES,
             'channels' => Inquiry::CHANNELS,
             'statuses' => Inquiry::STATUSES,
+            'declinedReasons' => Inquiry::DECLINED_REASONS,
         ]);
     }
 
@@ -97,6 +108,7 @@ class InquiryController extends Controller
             'types' => Inquiry::TYPES,
             'channels' => Inquiry::CHANNELS,
             'statuses' => Inquiry::STATUSES,
+            'declinedReasons' => Inquiry::DECLINED_REASONS,
         ]);
     }
 

@@ -5,46 +5,6 @@
 @section('content')
     @error('bill') <div class="alert alert-err">{{ $message }}</div> @enderror
 
-    <div class="panel no-print">
-        <h2>Bills to collect <span class="muted">Oldest first · full payment only</span></h2>
-        @if ($toCollect->isEmpty())
-            <p class="muted">Every bill is paid.</p>
-        @else
-            <div class="table-wrap">
-                <table>
-                    <tr><th>Due date</th><th>Room</th><th>Tenant</th><th class="r">Bill</th><th>Status</th><th class="r">Penalty so far</th><th class="r">Due if paid today</th><th></th></tr>
-                    @foreach ($toCollect as $row)
-                        @php($b = $row['bill'])
-                        <tr>
-                            <td class="nowrap">{{ $b->due_date->format('j M Y') }}</td>
-                            <td><b>{{ $b->lease->room->room_no }}</b></td>
-                            <td>{{ $b->lease->tenant->full_name }}</td>
-                            <td class="money">@peso((float) $b->total_amount - (float) $b->penalty_amount)</td>
-                            <td>
-                                @if ($row['today']['days_late'] > 0)
-                                    <span class="tag t-red">Overdue {{ $row['today']['days_late'] }} {{ Str::plural('day', $row['today']['days_late']) }}</span>
-                                @elseif ($b->due_date->gte(today()))
-                                    <span class="tag t-amber">Due {{ $b->due_date->isToday() ? 'today' : 'in '.today()->diffInDays($b->due_date).' '.Str::plural('day', today()->diffInDays($b->due_date)) }}</span>
-                                @else
-                                    <span class="tag t-amber">In grace period</span>
-                                @endif
-                            </td>
-                            <td class="money">@peso($row['today']['penalty'])</td>
-                            <td class="money"><b>@peso($row['today']['total'])</b></td>
-                            <td class="actions">
-                                @if ($row['can_pay'])
-                                    <a href="{{ route('payments.create', ['bill' => $b->bill_id]) }}" class="btn">Record payment</a>
-                                @else
-                                    <span class="muted small">older bill first</span>
-                                @endif
-                            </td>
-                        </tr>
-                    @endforeach
-                </table>
-            </div>
-        @endif
-    </div>
-
     <div class="panel printable">
         <h2>
             Collections, {{ $month->format('F Y') }}
@@ -81,6 +41,46 @@
                         </tr>
                     @endforeach
                     <tr class="tot-row"><td colspan="6">Total (Cash @peso($totals['Cash']) · GCash @peso($totals['GCash']))</td><td class="money">@peso($totals['All'])</td></tr>
+                </table>
+            </div>
+        @endif
+    </div>
+
+    <div class="panel no-print">
+        <h2>Bills to collect <span class="muted">Oldest first · full payment only</span></h2>
+        @if ($toCollect->isEmpty())
+            <p class="muted">Every bill is paid.</p>
+        @else
+            <div class="table-wrap">
+                <table>
+                    <tr><th>Due date</th><th>Room</th><th>Tenant</th><th class="r">Bill</th><th>Status</th><th class="r">Penalty so far</th><th class="r">Due if paid today</th><th></th></tr>
+                    @foreach ($toCollect as $row)
+                        @php($b = $row['bill'])
+                        <tr>
+                            <td class="nowrap">{{ $b->due_date->format('j M Y') }}</td>
+                            <td><b>{{ $b->lease->room->room_no }}</b></td>
+                            <td>{{ $b->lease->tenant->full_name }}</td>
+                            <td class="money">@peso((float) $b->total_amount - (float) $b->penalty_amount)</td>
+                            <td>
+                                @if ($row['today']['days_late'] > 0)
+                                    <span class="tag t-red">Overdue {{ $row['today']['days_late'] }} {{ Str::plural('day', $row['today']['days_late']) }}</span>
+                                @elseif ($b->due_date->gte(today()))
+                                    <span class="tag t-amber">Due {{ $b->due_date->isToday() ? 'today' : 'in '.today()->diffInDays($b->due_date).' '.Str::plural('day', today()->diffInDays($b->due_date)) }}</span>
+                                @else
+                                    <span class="tag t-amber">In grace period</span>
+                                @endif
+                            </td>
+                            <td class="money">@peso($row['today']['penalty'])</td>
+                            <td class="money"><b>@peso($row['today']['total'])</b></td>
+                            <td class="actions">
+                                @if ($row['can_pay'])
+                                    <a href="{{ route('payments.create', ['bill' => $b->bill_id]) }}" class="btn">Record payment</a>
+                                @else
+                                    <span class="muted small">older bill first</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
                 </table>
             </div>
         @endif

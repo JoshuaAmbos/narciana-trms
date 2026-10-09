@@ -14,8 +14,8 @@
 <div class="app">
     <aside class="side" id="side">
         <div class="brand">
-            <img src="{{ asset('images/logo-64.png') }}" alt="">
-            <div>
+            <img src="{{ asset('images/logo-64.png') }}" alt="Narciana TRMS">
+            <div class="brand-text">
                 <b>Narciana House</b>
                 <span>Tenant and Rental Management</span>
             </div>
@@ -32,20 +32,37 @@
                 @foreach ($visibleItems as $item)
                     @php([$routeName, $label, $roles, $icon] = $item)
                     <a href="{{ route($routeName) }}"
-                       class="{{ request()->routeIs(Str::before($routeName, '.').'*', ...($item[4] ?? [])) ? 'on' : '' }}">
+                       class="{{ request()->routeIs(Str::before($routeName, '.').'*', ...($item[4] ?? [])) ? 'on' : '' }}"
+                       title="{{ $label }}"
+                       data-tooltip="{{ $label }}">
                         <x-icon :name="$icon" />{{ $label }}
                     </a>
                 @endforeach
             @endforeach
         </nav>
+        <div class="side-footer">
+            <button type="button" class="side-rail-toggle-btn" id="side-rail-toggle-btn"
+                    aria-label="Toggle navigation width" title="Toggle navigation rail"
+                    onclick="toggleSidebarWidth()">
+                <x-icon name="panel-left" size="18" />
+                <span class="side-toggle-label">Toggle rail</span>
+            </button>
+        </div>
     </aside>
     <div class="scrim" onclick="document.body.classList.remove('nav-open')"></div>
 
     <div class="main">
         <header class="top">
-            <button type="button" class="menu-btn" aria-label="Open menu"
-                    onclick="document.body.classList.toggle('nav-open')">&#9776;</button>
-            <h1>@yield('title', 'Dashboard')</h1>
+            <div class="top-left">
+                <button type="button" class="menu-btn" aria-label="Open menu"
+                        onclick="document.body.classList.toggle('nav-open')">&#9776;</button>
+                <button type="button" class="rail-toggle-btn" id="header-rail-toggle-btn"
+                        aria-label="Toggle navigation width" title="Toggle navigation rail (Rail / Full / Collapsed)"
+                        onclick="toggleSidebarWidth()">
+                    <x-icon name="panel-left" size="18" />
+                </button>
+                <h1>@yield('title', 'Dashboard')</h1>
+            </div>
             <div class="who">
                 @if ($me)
                     <span class="who-text">
@@ -99,6 +116,7 @@
             data-keep-alive-url="{{ route('keep-alive') }}"
             data-login-url="{{ route('login', ['timeout' => 1]) }}"></script>
 @endif
+<script src="{{ asset('js/sidebar.js') }}?v={{ filemtime(public_path('js/sidebar.js')) }}"></script>
 @stack('scripts')
 </body>
 </html>

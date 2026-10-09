@@ -21,13 +21,21 @@ class InquiryRequest extends FormRequest
     {
         $contact = preg_replace('/[^\d+]/', '', (string) $this->input('contact_no'));
 
-        $this->merge([
+        $data = [
             'prospect_name' => trim((string) $this->input('prospect_name')),
             'contact_no' => $contact,
             'via_representative' => $this->boolean('via_representative'),
             'wants_contact' => $this->boolean('wants_contact'),
             'status' => $this->input('status', 'Waiting'),
-        ]);
+        ];
+
+        if ($this->has('room_id')) {
+            $data['room_id'] = $this->input('room_id') ?: null;
+        } elseif ($inquiry = $this->route('inquiry')) {
+            $data['room_id'] = $inquiry->room_id;
+        }
+
+        $this->merge($data);
     }
 
     public function rules(): array

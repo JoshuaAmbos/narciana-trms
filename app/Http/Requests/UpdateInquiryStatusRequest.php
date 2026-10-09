@@ -21,17 +21,37 @@ class UpdateInquiryStatusRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge([
-            'remarks' => trim((string) $this->input('remarks')),
-        ]);
+        $status = $this->input('status');
+        $remarks = trim((string) $this->input('remarks'));
+        $declinedReason = trim((string) $this->input('declined_reason'));
+
+        if ($status === 'Declined' && $declinedReason !== '') {
+            if ($declinedReason !== 'Other (custom note)') {
+                if ($remarks === '') {
+                    $remarks = $declinedReason;
+                } elseif (! str_starts_with($remarks, $declinedReason)) {
+                    $remarks = $declinedReason . ' - ' . $remarks;
+                }
+            }
+        }
+
+        $merge = [
+            'remarks' => $remarks !== '' ? mb_substr($remarks, 0, 255) : null,
+        ];
+        if (! $this->has('room_id') && $inquiry = $this->route('inquiry')) {
+            $merge['room_id'] = $inquiry->room_id;
+        }
+
+        $this->merge($merge);
     }
 
     public function rules(): array
     {
         return [
             'status' => ['required', Rule::in(Inquiry::STATUSES)],
+            'declined_reason' => ['nullable', 'string', 'max:255', Rule::in(Inquiry::DECLINED_REASONS)],
             'remarks' => ['nullable', 'string', 'max:255'],
-            'room_id' => ['nullable', 'required_if:status,Rented', Rule::exists('tbl_room', 'room_id')],
+            'room_id' => ['nullable', Rule::exists('tbl_room', 'room_id')],
         ];
     }
 
@@ -39,7 +59,18 @@ class UpdateInquiryStatusRequest extends FormRequest
     {
         return [
             function (Validator $validator) {
-                if ($validator->errors()->isNotEmpty() || $this->input('status') !== 'Rented') {
+                if ($validator->errors()->isNotEmpty()) {
+                    return;
+                }
+
+                if ($this->input('status') === 'Declined') {
+                    if (empty($this->input('remarks')) && empty($this->input('declined_reason'))) {
+                        $validator->errors()->add('remarks', 'Please specify a reason when declining an inquiry.');
+                    }
+                    return;
+                }
+
+                if ($this->input('status') !== 'Rented') {
                     return;
                 }
 

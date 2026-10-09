@@ -48,6 +48,8 @@ a { color: var(--navy-2); }
     top: 0;
     height: 100vh;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
 }
 
 .brand {
@@ -64,9 +66,11 @@ a { color: var(--navy-2); }
     border-radius: 9px;
     background: #fff;
     padding: 3px;
+    flex-shrink: 0;
 }
-.brand b { display: block; font-size: 16px; color: #fff; }
-.brand span { font-size: 12px; color: #9fb6d3; }
+.brand-text { min-width: 0; }
+.brand b { display: block; font-size: 16px; color: #fff; white-space: nowrap; }
+.brand span { font-size: 12px; color: #9fb6d3; white-space: nowrap; }
 
 .nav-heading {
     padding: 16px 16px 6px;
@@ -139,6 +143,8 @@ form.inline { display: inline; margin: 0; }
     display: none;
     width: var(--tap);
     height: var(--tap);
+    min-width: var(--tap);
+    min-height: var(--tap);
     border: 1px solid var(--border);
     border-radius: 8px;
     background: #fff;
@@ -146,6 +152,58 @@ form.inline { display: inline; margin: 0; }
     line-height: 1;
     color: var(--navy);
     cursor: pointer;
+    align-items: center;
+    justify-content: center;
+}
+
+.top-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rail-toggle-btn {
+    display: none;
+    width: var(--tap);
+    height: var(--tap);
+    min-width: var(--tap);
+    min-height: var(--tap);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--navy);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s ease;
+}
+.rail-toggle-btn:hover, .rail-toggle-btn:focus-visible {
+    background: #e8f0fa;
+}
+
+.side-footer {
+    margin-top: auto;
+    padding: 10px 12px;
+    border-top: 1px solid var(--navy-line);
+}
+.side-rail-toggle-btn {
+    width: 100%;
+    min-height: 44px;
+    background: transparent;
+    border: 1px solid var(--navy-line);
+    border-radius: 8px;
+    color: #9fb6d3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color .15s ease, color .15s ease;
+}
+.side-rail-toggle-btn:hover, .side-rail-toggle-btn:focus-visible {
+    background: var(--navy-2);
+    color: #fff;
 }
 
 .body { padding: 18px 20px 32px; flex: 1; }
@@ -281,23 +339,28 @@ td.actions .btn { margin-left: 4px; }
 .lbox .btn.block { margin-top: 8px; min-height: 48px; font-size: 16px; }
 .login-foot { margin-top: 14px; }
 
-/* ---------- Smaller tablets (portrait, about 800px): sidebar becomes a slide-in menu (☰) ---------- */
-@media (max-width: 1000px) {
+/* ---------- Smaller tablets (portrait, up to 1023px) & phones: sidebar becomes a slide-in off-canvas menu (☰) ---------- */
+@media (max-width: 1023px) {
     .cards { grid-template-columns: repeat(2, 1fr); }
     .grid3 { grid-template-columns: minmax(0, 1fr); }
 
-    .menu-btn { display: inline-block; }
+    .menu-btn { display: inline-flex !important; }
+    .rail-toggle-btn { display: none !important; }
+    .side-footer { display: none !important; }
+
     .side {
         position: fixed;
         left: 0;
         top: 0;
-        z-index: 20;
+        bottom: 0;
+        width: 230px !important;
+        z-index: 50;
         transform: translateX(-100%);
-        transition: transform .2s ease;
+        transition: transform .25s ease;
         box-shadow: 4px 0 18px rgba(0, 0, 0, .25);
     }
     body.nav-open .side { transform: none; }
-    .scrim { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, .35); z-index: 15; }
+    .scrim { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, .35); z-index: 45; }
     body.nav-open .scrim { display: block; }
     .top { padding: 0 14px; }
     .top h1 { flex: 1; }
@@ -309,6 +372,139 @@ td.actions .btn { margin-left: 4px; }
     td.actions .btn { display: flex; width: max-content; margin: 3px 0 3px auto; }
     td.actions form.inline { display: block; }
     .stack-tablet { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+
+/* ---------- Tablet Landscape (~1024px – 1280px) & Desktop Navigation Rail ---------- */
+@media (min-width: 1024px) {
+    .menu-btn { display: none !important; }
+    .rail-toggle-btn { display: inline-flex !important; }
+
+    /* Default slim rail on Tablet Landscape (1024px - 1280px) */
+    @media (max-width: 1280px) {
+        body:not(.side-expanded):not(.side-collapsed) .side {
+            width: 64px !important;
+            padding: 10px 0 !important;
+            overflow-x: hidden !important;
+        }
+        body:not(.side-expanded):not(.side-collapsed) .brand {
+            padding: 0 0 10px 0 !important;
+            justify-content: center !important;
+        }
+        body:not(.side-expanded):not(.side-collapsed) .brand img {
+            width: 36px !important;
+            height: 36px !important;
+        }
+        body:not(.side-expanded):not(.side-collapsed) .brand .brand-text {
+            display: none !important;
+        }
+        body:not(.side-expanded):not(.side-collapsed) .nav-heading {
+            display: none !important;
+        }
+        body:not(.side-expanded):not(.side-collapsed) .nav a {
+            font-size: 0 !important;
+            padding: 12px 0 !important;
+            justify-content: center !important;
+            gap: 0 !important;
+            min-height: 48px !important;
+            position: relative !important;
+        }
+        body:not(.side-expanded):not(.side-collapsed) .side-footer .side-toggle-label {
+            display: none !important;
+        }
+        body:not(.side-expanded):not(.side-collapsed) .side-footer {
+            padding: 8px 4px !important;
+        }
+    }
+}
+
+/* Explicit body.side-rail state */
+body.side-rail .side {
+    width: 64px !important;
+    padding: 10px 0 !important;
+    overflow-x: hidden !important;
+}
+body.side-rail .brand {
+    padding: 0 0 10px 0 !important;
+    justify-content: center !important;
+}
+body.side-rail .brand img {
+    width: 36px !important;
+    height: 36px !important;
+}
+body.side-rail .brand .brand-text {
+    display: none !important;
+}
+body.side-rail .nav-heading {
+    display: none !important;
+}
+body.side-rail .nav a {
+    font-size: 0 !important;
+    padding: 12px 0 !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    min-height: 48px !important;
+    position: relative !important;
+}
+body.side-rail .side-footer .side-toggle-label {
+    display: none !important;
+}
+body.side-rail .side-footer {
+    padding: 8px 4px !important;
+}
+
+/* Explicit body.side-expanded state */
+body.side-expanded .side {
+    width: var(--side-w, 230px) !important;
+}
+body.side-expanded .brand .brand-text {
+    display: block !important;
+}
+body.side-expanded .nav a {
+    font-size: 15px !important;
+    padding: 8px 16px !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+}
+body.side-expanded .nav-heading {
+    display: block !important;
+}
+
+/* Explicit body.side-collapsed state */
+body.side-collapsed .side {
+    display: none !important;
+    width: 0 !important;
+}
+
+/* Tooltips on hover & focus-visible in rail navigation */
+@media (min-width: 1024px) {
+    body:not(.side-expanded):not(.side-collapsed) .side .nav a[data-tooltip]::after,
+    body.side-rail .side .nav a[data-tooltip]::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        left: calc(100% + 10px);
+        top: 50%;
+        transform: translateY(-50%);
+        background: #0f1c2e;
+        color: #fff;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.15s ease, visibility 0.15s ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+        z-index: 1000;
+    }
+    body:not(.side-expanded):not(.side-collapsed) .side .nav a[data-tooltip]:hover::after,
+    body:not(.side-expanded):not(.side-collapsed) .side .nav a[data-tooltip]:focus-visible::after,
+    body.side-rail .side .nav a[data-tooltip]:hover::after,
+    body.side-rail .side .nav a[data-tooltip]:focus-visible::after {
+        opacity: 1;
+        visibility: visible;
+    }
 }
 
 /* ---------- Phones ---------- */
@@ -380,14 +576,98 @@ td.actions .btn { margin-left: 4px; }
 @media (max-width: 768px) {
     .rooms-table-wrap { display: none !important; }
     .room-cards { display: block !important; }
-    .inquiries-table-wrap { display: none !important; }
-    .inquiry-cards { display: block !important; }
     .leases-table-wrap { display: none !important; }
     .lease-cards { display: block !important; }
 }
 
+/* Inquiries layout transitions:
+   Tablet Landscape (1024px+) & Desktop: Full table view.
+   Tablet Portrait (< 1024px) & Mobile: Stacked card view. */
+@media (max-width: 1023px) {
+    .inquiries-table-wrap { display: none !important; }
+    .inquiry-cards { display: block !important; }
+}
+@media (min-width: 1024px) {
+    .inquiries-table-wrap { display: block !important; }
+    .inquiry-cards { display: none !important; }
+}
+
+.inquiries-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.inquiries-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.inquiries-table th,
+.inquiries-table td {
+    padding: 12px 10px;
+    vertical-align: middle;
+}
+.inquiries-table .nowrap {
+    white-space: nowrap;
+}
+.inquiries-table .prospect-link {
+    display: inline-block;
+    color: var(--navy);
+    font-size: 15px;
+    line-height: 1.3;
+    text-decoration: none;
+}
+.inquiries-table .prospect-link:hover,
+.inquiries-table .prospect-link:focus-visible {
+    color: var(--navy-2);
+    text-decoration: underline;
+}
+
+/* Clickable Table Row */
+.inquiry-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+.inquiry-row:hover {
+    background-color: #f3f7fd !important;
+}
+.inquiry-row:active {
+    background-color: #e9f0fa !important;
+}
+.inquiry-row:focus-visible {
+    outline: 2px solid var(--navy-2);
+    outline-offset: -2px;
+}
+.row-view-indicator {
+    color: var(--navy-2);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0.85;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.inquiry-row:hover .row-view-indicator {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+/* Modal and Action Buttons */
+.inquiry-modal-actions .btn {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    font-size: 13.5px;
+    font-weight: 600;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
 /* Responsive inquiry cards for mobile/portrait view */
 .inquiry-cards { display: none; }
+.inquiry-cards.pb-24 { padding-bottom: 6rem; }
 .inquiry-card {
     background: #fff;
     border: 1px solid var(--border);
@@ -404,10 +684,17 @@ td.actions .btn { margin-left: 4px; }
     margin-bottom: 6px;
 }
 .inquiry-card-name {
+    display: inline-block;
     font-size: 18px;
     font-weight: 700;
     color: var(--navy);
     line-height: 1.25;
+    text-decoration: none;
+}
+.inquiry-card-name:hover,
+.inquiry-card-name:focus-visible {
+    color: var(--navy-2);
+    text-decoration: underline;
 }
 .inquiry-card-specs {
     font-size: 13.5px;
@@ -425,6 +712,33 @@ td.actions .btn { margin-left: 4px; }
     flex-direction: column;
     gap: 4px;
 }
+.inquiry-card-clickable {
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+.inquiry-card-clickable:hover {
+    border-color: var(--navy-2);
+    box-shadow: 0 4px 12px rgba(31, 58, 95, 0.08);
+}
+.inquiry-card-clickable:active {
+    transform: scale(0.99);
+}
+.inquiry-card-tap-hint {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border);
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: var(--muted);
+}
+.inquiry-card-tap-hint .arrow {
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--navy-2);
+}
+
 .inquiry-card-actions {
     display: flex;
     gap: 8px;
@@ -433,12 +747,64 @@ td.actions .btn { margin-left: 4px; }
     flex-wrap: wrap;
 }
 .inquiry-card-actions .btn {
-    min-height: var(--tap);
+    min-height: 44px;
+    min-width: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     text-align: center;
     padding: 8px 14px;
+    box-sizing: border-box;
+}
+
+/* Floating Action Button (FAB) */
+.inquiry-fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 40;
+    width: 56px;
+    height: 56px;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 50%;
+    background: var(--navy);
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+.inquiry-fab:hover, .inquiry-fab:focus-visible {
+    background: var(--navy-2);
+    transform: scale(1.06);
+}
+.inquiry-fab:active {
+    transform: scale(0.94);
+}
+@media (min-width: 1024px) {
+    .inquiry-fab {
+        display: none !important;
+    }
+}
+
+/* Guardrail disabled button styling (pointer-events: auto ensures tooltips work on hover) */
+.btn.disabled,
+.btn:disabled {
+    cursor: not-allowed !important;
+    opacity: 0.45 !important;
+    background: #f1f5f9 !important;
+    color: #94a3b8 !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
+    pointer-events: auto !important;
 }
 
 /* Responsive lease cards for mobile/portrait view */
@@ -1023,19 +1389,161 @@ td.audit-details { min-width: 220px; font-size: 13.5px; overflow-wrap: anywhere;
     }
 }
 
-/* Remove spin buttons from number inputs that should not have arrows (e.g. readonly advance amount) */
+/* Remove spin buttons from number inputs across all forms */
+input[type="number"],
 input[type="number"].no-spin,
 #advance_amount {
     -moz-appearance: textfield;
     appearance: textfield;
 }
 
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button,
 input[type="number"].no-spin::-webkit-outer-spin-button,
 input[type="number"].no-spin::-webkit-inner-spin-button,
 #advance_amount::-webkit-outer-spin-button,
 #advance_amount::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
+}
+
+/* ---------- Inquiries Module: Repositioned Filter & Search Bar ---------- */
+.inquiry-filter-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--head-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 16px;
+}
+
+.inquiry-filter-chips-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.inquiry-filter-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.inquiry-chips-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.inquiry-chips-wrap .chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 22px;
+    box-sizing: border-box;
+    text-decoration: none;
+    line-height: 1;
+    background: #fff;
+    border: 1px solid var(--border);
+    color: var(--navy-2);
+}
+
+.inquiry-chips-wrap .chip.on {
+    background: var(--navy-2);
+    border-color: var(--navy-2);
+    color: #fff;
+}
+
+.inquiry-chips-wrap .chip .chip-count {
+    font-size: 12px;
+    margin-left: 3px;
+    opacity: 0.9;
+}
+
+.inquiry-filter-search-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 520px;
+}
+
+.inquiry-search-input-wrap {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 160px;
+}
+
+.inquiry-search-input-wrap .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    pointer-events: none;
+}
+
+.inquiry-search-input-wrap input.inquiry-search-input {
+    width: 100%;
+    height: 44px;
+    min-height: 44px;
+    padding: 0 44px 0 36px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    background: #fff;
+    box-sizing: border-box;
+    color: var(--text);
+}
+
+.inquiry-search-input-wrap input.inquiry-search-input:focus {
+    outline: none;
+    border-color: var(--navy-2);
+}
+
+.inquiry-search-clear-btn {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--muted);
+    text-decoration: none;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.inquiry-search-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.inquiry-search-submit-btn,
+.inquiry-reset-btn {
+    min-height: 44px;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
 }
 
 /* ---------- Rooms Module: Search, Filter Bar & Touch Controls ---------- */
@@ -1261,14 +1769,16 @@ input[type="number"].no-spin::-webkit-inner-spin-button,
         text-align: center;
     }
 }
-/* Leases pagination */
-.leases-pagination {
+/* Inquiries & Leases pagination */
+.leases-pagination,
+.inquiries-pagination {
     margin-top: 16px;
     padding-top: 12px;
     border-top: 1px solid var(--border);
 }
 
-.leases-pagination .pager {
+.leases-pagination .pager,
+.inquiries-pagination .pager {
     margin-top: 0;
     padding-top: 0;
 }
@@ -1276,6 +1786,7 @@ input[type="number"].no-spin::-webkit-inner-spin-button,
 /* Pagination SVG failsafe: prevent any SVG arrow from expanding */
 .pager svg,
 .leases-pagination svg,
+.inquiries-pagination svg,
 svg.w-5,
 svg.w-4 {
     width: 16px !important;

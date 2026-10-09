@@ -15,6 +15,15 @@ class Inquiry extends Model
 
     public const STATUSES = ['Waiting', 'Rented', 'Referred', 'Declined'];
 
+    public const DECLINED_REASONS = [
+        'Ghosted / Unresponsive',
+        'Changed mind / Found another boarding house',
+        'Disqualified: Student policy',
+        'Disqualified: Financial readiness / Cannot pay 2 months upfront',
+        'Pricing / Deposit objection',
+        'Other (custom note)',
+    ];
+
     protected $table = 'tbl_inquiry';
 
     protected $primaryKey = 'inquiry_id';

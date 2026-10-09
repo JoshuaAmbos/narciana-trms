@@ -6,10 +6,13 @@ use App\Models\Appliance;
 use App\Models\Bill;
 use App\Models\Inquiry;
 use App\Models\Lease;
+use App\Models\MeterReading;
 use App\Models\Payment;
 use App\Models\Room;
+use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\User;
+use Database\Seeders\RoomSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\RentalFixtures;
 use Tests\TestCase;
@@ -19,7 +22,9 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
     use RefreshDatabase, RentalFixtures;
 
     private User $owner;
+
     private User $manager;
+
     private User $caretaker;
 
     protected function setUp(): void
@@ -550,7 +555,7 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
 
     public function test_room_inventory_and_preset_rates_seeder(): void
     {
-        $this->seed(\Database\Seeders\RoomSeeder::class);
+        $this->seed(RoomSeeder::class);
 
         $this->assertSame(17, Room::count());
 
@@ -613,7 +618,7 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
             'refund_days' => 7,
         ])->assertRedirect(route('settings.index'))->assertSessionHasNoErrors();
 
-        $setting = \App\Models\Setting::current();
+        $setting = Setting::current();
         $this->assertSame('3100.00', $setting->standard_basic_rent);
         $this->assertSame('3700.00', $setting->standard_aircon_rent);
 
@@ -689,7 +694,7 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
     public function test_aircon_room_strictly_requires_move_in_meter_reading(): void
     {
         $aircon = $this->makeRoom('218', 'Aircon');
-        \App\Models\Setting::current()->update(['kwh_rate' => 12.00]);
+        Setting::current()->update(['kwh_rate' => 12.00]);
 
         // Missing move_in_reading on Aircon room fails validation
         $formWithoutReading = $this->moaForm($aircon);
@@ -703,7 +708,7 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
         $this->actingAs($this->manager)->post('/leases', $formWithReading)
             ->assertSessionHasNoErrors();
 
-        $reading = \App\Models\MeterReading::where('room_id', $aircon->room_id)->firstOrFail();
+        $reading = MeterReading::where('room_id', $aircon->room_id)->firstOrFail();
         $this->assertSame('1500.25', $reading->previous_reading);
         $this->assertSame('12.00', $reading->rate_per_kwh);
     }
@@ -711,7 +716,7 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
     public function test_inquiry_conversion_action_in_inquiries_index(): void
     {
         $room = $this->makeRoom('219', 'Basic');
-        $inquiry = \App\Models\Inquiry::create([
+        $inquiry = Inquiry::create([
             'prospect_name' => 'Prospect John Doe',
             'contact_no' => '09171234567',
             'preferred_type' => 'Basic',
@@ -730,5 +735,3 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
             ->assertSee(route('leases.create', ['inquiry_id' => $inquiry->inquiry_id, 'room_id' => $room->room_id]));
     }
 }
-
-

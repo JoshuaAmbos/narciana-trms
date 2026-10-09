@@ -2,7 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Inquiry;
+use App\Models\Room;
 use App\Models\User;
+use App\Policies\InquiryPolicy;
+use App\Policies\RoomPolicy;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -28,13 +32,10 @@ class AppServiceProvider extends ServiceProvider
         // Only the Owner adds or edits rooms and rents (used for buttons in views; routes also use role:Owner).
         Gate::define('manage-rooms', fn (User $user) => $user->hasRole('Owner'));
 
-        // Owner and Manager encode and view MOAs (rent, deposits, occupants). Never the Caretaker (decision 10).
+        // Owner and Manager encode and view MOAs, end leases. Never the Caretaker (decision 10).
         Gate::define('manage-leases', fn (User $user) => $user->hasRole('Owner', 'Manager'));
 
-        // Only the Owner approves a move-out settlement and releases refunds (decision 4 and 16).
-        Gate::define('approve-settlements', fn (User $user) => $user->hasRole('Owner'));
-
-        Gate::policy(\App\Models\Room::class, \App\Policies\RoomPolicy::class);
-        Gate::policy(\App\Models\Inquiry::class, \App\Policies\InquiryPolicy::class);
+        Gate::policy(Room::class, RoomPolicy::class);
+        Gate::policy(Inquiry::class, InquiryPolicy::class);
     }
 }

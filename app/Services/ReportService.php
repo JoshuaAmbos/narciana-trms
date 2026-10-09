@@ -7,7 +7,6 @@ use App\Models\Bill;
 use App\Models\Concern;
 use App\Models\Inquiry;
 use App\Models\Lease;
-use App\Models\Moveout;
 use App\Models\Payment;
 use App\Models\Room;
 use App\Models\Setting;
@@ -25,7 +24,6 @@ class ReportService
         private PenaltyService $penalties,
         private BillingService $billing,
         private ConcernService $concerns,
-        private SettlementService $settlements,
     ) {}
 
     /** The 4 cards on the Reports page: collected this month (all, cash, GCash) and unpaid/overdue today. */
@@ -128,8 +126,8 @@ class ReportService
     {
         $today = ($today ?? today())->copy()->startOfDay();
         $this->payments->refreshOverdue($today);
-        $lease->loadMissing(['room', 'tenant', 'moveout']);
-        $bills = $lease->bills()->with(['payments.user', 'meterReading', 'concerns', 'finalOf', 'excessOf'])
+        $lease->loadMissing(['room', 'tenant']);
+        $bills = $lease->bills()->with(['payments.user', 'meterReading', 'concerns'])
             ->orderBy('due_date')->orderBy('bill_id')->get();
         $settledAt = AuditLog::where('action', 'Bill settled from deposit')->whereIn('record_id', $bills->pluck('bill_id'))
             ->pluck('logged_at', 'record_id');
@@ -143,7 +141,7 @@ class ReportService
                 'type' => 'bill', 'bill' => $bill, 'statement' => $this->billing->statementForBill($bill), 'charge' => $base, 'credit' => 0.0]);
 
             $closedOn = $payment?->payment_date
-                ?? ($settledAt->has($bill->bill_id) ? ($lease->moveout?->actual_date ?? $settledAt[$bill->bill_id]->copy()->startOfDay()) : null);
+                ?? ($settledAt->has($bill->bill_id) ? $settledAt[$bill->bill_id]->copy()->startOfDay() : null);
             if ($bill->status === 'Paid' && (float) $bill->penalty_amount > 0) {
                 $entries->push(['date' => $closedOn ?? $bill->due_date, 'order' => 2, 'type' => 'penalty', 'bill' => $bill,
                     'days_late' => $this->penalties->daysLate($bill->due_date, $closedOn ?? $bill->due_date, $this->graceDays()),
@@ -239,7 +237,7 @@ class ReportService
 
     /**
      * Inquiries made in the date range: total, type × status table, channels, types ranked by how often they were
-     * asked for; plus today's picture: prospects still waiting per type next to the vacant / vacating rooms.
+     * asked for; plus today's picture: prospects still waiting per type next to the vacant / occupied rooms.
      */
     public function inquiryDemand(Carbon $from, Carbon $to): array
     {
@@ -258,7 +256,7 @@ class ReportService
             'waiting' => $waitingNow->where('preferred_type', $type)->count(),
             'rooms' => $type === 'Any' ? $rooms->count() : $rooms->where('room_type', $type)->count(),
             'vacant' => ($type === 'Any' ? $rooms : $rooms->where('room_type', $type))->where('status', 'Vacant')->count(),
-            'vacating' => ($type === 'Any' ? $rooms : $rooms->where('room_type', $type))->where('status', 'Vacating')->count(),
+            'occupied' => ($type === 'Any' ? $rooms : $rooms->where('room_type', $type))->where('status', 'Occupied')->count(),
         ]]);
 
         return [
@@ -272,32 +270,6 @@ class ReportService
             'via_representative' => $inquiries->where('via_representative', true)->count(),
             'referred' => $inquiries->where('status', 'Referred')->count(),
             'now' => $now,
-        ];
-    }
-
-    // ---------- 6. Move-out settlements ----------
-
-    /**
-     * Move-outs whose actual date (or planned date, if not moved out yet) falls in the range, with their figures
-     * (live while Pending, the approved ones after; SettlementService::figures). Totals of refunds and excess.
-     */
-    public function moveouts(Carbon $from, Carbon $to): array
-    {
-        $rows = Moveout::with(['lease.room', 'lease.tenant', 'items'])
-            ->whereRaw('coalesce(actual_date, planned_date) between ? and ?', [$from->toDateString(), $to->toDateString()])
-            ->get()
-            ->sortBy(fn (Moveout $m) => ($m->actual_date ?? $m->planned_date)->toDateString())
-            ->map(fn (Moveout $m) => ['moveout' => $m, 'figures' => $this->settlements->figures($m)])->values();
-
-        return [
-            'from' => $from,
-            'to' => $to,
-            'rows' => $rows,
-            'refundable' => round($rows->sum('figures.refundable'), 2),
-            'unpaid' => round($rows->sum('figures.unpaid_total'), 2),
-            'damage' => round($rows->sum('figures.damage_total'), 2),
-            'refund' => round($rows->sum('figures.refund'), 2),
-            'excess' => round($rows->sum('figures.excess'), 2),
         ];
     }
 

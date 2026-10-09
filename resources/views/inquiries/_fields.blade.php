@@ -85,7 +85,7 @@
                 </option>
             @endforeach
         </select>
-        <div class="hint">Required when the outcome is Rented. Only a Vacant or Vacating room that nobody else has rented can be chosen.</div>
+        <div class="hint">Required when the outcome is Rented. Only a Vacant room that nobody else has rented can be chosen.</div>
         @error('room_id') <div class="err">{{ $message }}</div> @enderror
     </div>
 </div>

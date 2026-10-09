@@ -21,7 +21,7 @@
         </a>
         <a href="{{ route('rooms.index') }}" class="card card-link">
             <div class="n green">{{ $c['vacant_rooms'] }}</div>
-            <div class="l">Vacant {{ Str::plural('room', $c['vacant_rooms']) }}@if ($c['vacating_rooms']) / {{ $c['vacating_rooms'] }} vacating @endif</div>
+            <div class="l">Vacant {{ Str::plural('room', $c['vacant_rooms']) }}</div>
         </a>
     </div>
 
@@ -78,7 +78,7 @@
         </div>
     @endif
 
-    <div class="{{ $staff ? 'grid2' : 'grid3' }} stack-tablet">
+    <div class="grid2 stack-tablet">
         <div class="panel">
             <h2>Open concerns <a href="{{ route('concerns.create') }}" class="btn sec">+ Log concern</a></h2>
             @if ($concerns->isEmpty())
@@ -101,71 +101,20 @@
             @endif
         </div>
 
-        @if ($staff)
-            <div>
-            <div class="panel">
-                <h2>Moving out <a href="{{ route('moveouts.index') }}" class="btn sec">Move-outs</a></h2>
-                @if ($movingOut->isEmpty())
-                    <p class="muted">No tenant is moving out.</p>
-                @else
-                    <div class="table-wrap">
-                        <table class="fit">
-                            <tr><th>Room</th><th>Tenant</th><th>Move-out</th><th>Step</th></tr>
-                            @foreach ($movingOut as $m)
-                                <tr>
-                                    <td><b>{{ $m->lease->room->room_no }}</b></td>
-                                    <td><a href="{{ route('moveouts.show', $m) }}">{{ $m->lease->tenant->full_name }}</a>
-                                        <span class="sub"><x-lease-status :lease="$m->lease" /></span></td>
-                                    <td class="nowrap">{{ ($m->actual_date ?? $m->planned_date)->format('j M Y') }}
-                                        <span class="sub">{{ $m->actual_date ? 'moved out' : 'planned' }}</span></td>
-                                    <td><x-moveout-status :moveout="$m" /></td>
-                                </tr>
-                            @endforeach
-                        </table>
-                    </div>
-                @endif
+        <div class="panel">
+            <h2>Rooms <a href="{{ route('rooms.index') }}" class="btn sec">Rooms</a></h2>
+            <div class="table-wrap">
+                <table class="fit">
+                    <tr><th>Room</th><th>Type</th><th>Status</th></tr>
+                    @foreach ($rooms as $room)
+                        <tr>
+                            <td><b>{{ $room->room_no }}</b></td>
+                            <td>{{ $room->room_type }}</td>
+                            <td><x-room-status :room="$room" /></td>
+                        </tr>
+                    @endforeach
+                </table>
             </div>
-            <div class="panel">
-                <h2>Refunds due <a href="{{ route('moveouts.index') }}" class="btn sec">Move-outs</a></h2>
-                @if ($refunds->isEmpty())
-                    <p class="muted">No approved refunds waiting to be handed over.</p>
-                @else
-                    <div class="table-wrap">
-                        <table class="fit">
-                            <tr><th>Room</th><th>Tenant</th><th class="r">Refund</th><th>Due</th></tr>
-                            @foreach ($refunds as $m)
-                                <tr>
-                                    <td><b>{{ $m->lease->room->room_no }}</b></td>
-                                    <td><a href="{{ route('moveouts.show', $m) }}">{{ $m->lease->tenant->full_name }}</a></td>
-                                    <td class="money">@peso($m->refund_amount)</td>
-                                    <td class="nowrap">{{ $m->refund_due_date->format('j M Y') }}
-                                        @if ($m->refund_due_date->lt(today()))<span class="tag t-red">Past due</span>@endif</td>
-                                </tr>
-                            @endforeach
-                        </table>
-                    </div>
-                @endif
-            </div>
-            </div>
-        @else
-            <div class="panel">
-                <h2>Rooms <a href="{{ route('rooms.index') }}" class="btn sec">Rooms</a></h2>
-                <div class="table-wrap">
-                    <table class="fit">
-                        <tr><th>Room</th><th>Type</th><th>Status</th></tr>
-                        @foreach ($rooms as $room)
-                            <tr>
-                                <td><b>{{ $room->room_no }}</b></td>
-                                <td>{{ $room->room_type }}</td>
-                                <td><x-room-status :room="$room" />
-                                    @if ($room->status === 'Vacating' && $room->expected_vacant_date)
-                                        <span class="sub">vacant {{ $room->expected_vacant_date->format('j M Y') }}</span>
-                                    @endif</td>
-                            </tr>
-                        @endforeach
-                    </table>
-                </div>
-            </div>
-        @endif
+        </div>
     </div>
 @endsection

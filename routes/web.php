@@ -7,14 +7,11 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\ConcernController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\FinalBillController;
 use App\Http\Controllers\HouseholdController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\KeepAliveController;
 use App\Http\Controllers\LeaseController;
 use App\Http\Controllers\MeterReadingController;
-use App\Http\Controllers\MoveoutController;
-use App\Http\Controllers\MoveoutItemController;
 use App\Http\Controllers\OccupantController;
 use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\PaymentController;
@@ -66,6 +63,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::patch('/tenants/{tenant}/archive', [TenantController::class, 'archive'])->name('tenants.archive');
         Route::patch('/tenants/{tenant}/restore', [TenantController::class, 'restore'])->withTrashed()->name('tenants.restore');
         Route::resource('leases', LeaseController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update']);
+        Route::patch('/leases/{lease}/end', [LeaseController::class, 'endLease'])->name('leases.end');
         Route::patch('/leases/{lease}/cancel', [LeaseController::class, 'cancel'])->name('leases.cancel');
         Route::resource('leases.occupants', OccupantController::class)->only(['store']);
         Route::patch('/occupants/{occupant}/remove', [OccupantController::class, 'remove'])->name('occupants.remove');
@@ -77,17 +75,6 @@ Route::middleware(['auth', 'active'])->group(function () {
         // Payments (voiding is Owner-only, checked by PaymentPolicy)
         Route::resource('payments', PaymentController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
 
-        // Move-out Settlement (approve / release refund: Owner only, checked by the approve-settlements gate)
-        Route::resource('moveouts', MoveoutController::class)->only(['index', 'create', 'store', 'show', 'update', 'destroy']);
-        Route::patch('/moveouts/{moveout}/inspect', [MoveoutController::class, 'inspect'])->name('moveouts.inspect');
-        Route::post('/moveouts/{moveout}/compute', [MoveoutController::class, 'compute'])->name('moveouts.compute');
-        Route::patch('/moveouts/{moveout}/approve', [MoveoutController::class, 'approve'])->name('moveouts.approve');
-        Route::patch('/moveouts/{moveout}/release', [MoveoutController::class, 'release'])->name('moveouts.release');
-        Route::resource('moveouts.items', MoveoutItemController::class)->only(['store']);
-        Route::delete('/moveout-items/{item}', [MoveoutItemController::class, 'destroy'])->name('moveout-items.destroy');
-        Route::get('/moveouts/{moveout}/final-bill', [FinalBillController::class, 'create'])->name('moveouts.final-bill.create');
-        Route::post('/moveouts/{moveout}/final-bill', [FinalBillController::class, 'store'])->name('moveouts.final-bill.store');
-
         // Reports (printable; filters are GET parameters)
         Route::controller(ReportController::class)->prefix('reports')->name('reports.')->group(function () {
             Route::get('/', 'index')->name('index');
@@ -96,7 +83,6 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('/statement', 'statement')->name('statement');
             Route::get('/concerns', 'concerns')->name('concerns');
             Route::get('/inquiries', 'inquiries')->name('inquiries');
-            Route::get('/moveouts', 'moveouts')->name('moveouts');
         });
     });
 

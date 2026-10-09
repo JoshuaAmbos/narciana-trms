@@ -49,7 +49,7 @@ class InquiryRequest extends FormRequest
 
     /**
      * Extra checks when the outcome is Rented (run after the basic rules pass):
-     * occupants fit the room, the room is Vacant or Vacating, and no other Rented inquiry still holds it.
+     * occupants fit the room, the room is Vacant, and no other Rented inquiry still holds it.
      */
     public function after(): array
     {

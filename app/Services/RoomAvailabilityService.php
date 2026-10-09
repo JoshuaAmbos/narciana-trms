@@ -8,10 +8,10 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
- * Matches waiting prospects (inquiries) to rooms that are Vacant or Vacating.
+ * Matches waiting prospects (inquiries) to rooms that are Vacant.
  *
  * A prospect fits a room when:
- *  - the room is Vacant or Vacating,
+ *  - the room is Vacant,
  *  - the inquiry is Waiting,
  *  - the preferred type is the room's type, or "Any",
  *  - the number of occupants is not more than the room's maximum.
@@ -100,7 +100,7 @@ class RoomAvailabilityService
             && (int) $existing->getOriginal('room_id') === (int) $room->room_id;
 
         if (! $unchanged && ! $room->isAvailable()) {
-            $problems['room_id'] = "Room {$room->room_no} is {$room->status}. Only Vacant or Vacating rooms can be marked as rented.";
+            $problems['room_id'] = "Room {$room->room_no} is {$room->status}. Only Vacant rooms can be marked as rented.";
         } elseif ($hold = $this->rentalHolds($room->room_id, $existing?->inquiry_id)->first()) {
             $problems['room_id'] = "Room {$room->room_no} is already marked as rented to {$hold->prospect_name} "
                 ."(inquiry of {$hold->inquiry_date->format('j M Y')}) and its MOA has not been encoded yet.";

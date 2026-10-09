@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Bill;
 use App\Models\Concern;
 use App\Models\Lease;
-use App\Models\Moveout;
 use App\Models\Room;
 use App\Models\Setting;
 use Illuminate\Support\Carbon;
@@ -48,8 +47,7 @@ class DashboardService
             'toCollect' => $toCollect,
             'unbilled' => $this->unbilledDueSoon($today),
             'concerns' => $concerns,
-            'refunds' => $this->refundsDue(),
-            'movingOut' => $this->movingOut(),
+            'rooms' => Room::orderBy('room_no')->get(['room_id', 'room_no', 'room_type', 'status']),
         ];
     }
 
@@ -61,7 +59,7 @@ class DashboardService
         return [
             'counts' => $this->concernCounts($concerns) + $this->roomCounts(),
             'concerns' => $concerns,
-            'rooms' => Room::orderBy('room_no')->get(['room_id', 'room_no', 'room_type', 'status', 'expected_vacant_date']),
+            'rooms' => Room::orderBy('room_no')->get(['room_id', 'room_no', 'room_type', 'status']),
         ];
     }
 
@@ -82,7 +80,7 @@ class DashboardService
     /** Active leases whose next bill can be generated now but has not been: ['lease', 'due_date']. */
     public function unbilledDueSoon(Carbon $today): Collection
     {
-        return Lease::with(['room', 'tenant', 'moveout'])->where('status', 'Active')->get()
+        return Lease::with(['room', 'tenant'])->where('status', 'Active')->get()
             ->filter(fn (Lease $l) => $this->billing->canGenerateNow($l, $today))
             ->map(fn (Lease $l) => ['lease' => $l, 'due_date' => $this->billing->nextDueDate($l)])
             ->sortBy(fn (array $row) => $row['due_date']->toDateString().' '.$row['lease']->room->room_no)
@@ -96,20 +94,6 @@ class DashboardService
             ->orderByRaw("priority = 'Urgent' desc")->orderBy('reported_at')->get();
     }
 
-    /** Tenants moving out (notice given, not settled yet), earliest move-out first (decision 18). */
-    public function movingOut(): Collection
-    {
-        return Moveout::with(['lease.room', 'lease.tenant'])->where('status', '!=', 'Settled')->get()
-            ->sortBy(fn (Moveout $m) => ($m->actual_date ?? $m->planned_date)->toDateString())->values();
-    }
-
-    /** Approved refunds not handed over yet (status Refunded), earliest refund due date first. */
-    public function refundsDue(): Collection
-    {
-        return Moveout::with(['lease.room', 'lease.tenant'])->where('status', 'Refunded')
-            ->orderBy('refund_due_date')->get();
-    }
-
     private function concernCounts(Collection $open): array
     {
         return ['open_concerns' => $open->count(), 'urgent_concerns' => $open->where('priority', 'Urgent')->count()];
@@ -119,6 +103,6 @@ class DashboardService
     {
         $byStatus = Room::query()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
 
-        return ['vacant_rooms' => (int) ($byStatus['Vacant'] ?? 0), 'vacating_rooms' => (int) ($byStatus['Vacating'] ?? 0)];
+        return ['vacant_rooms' => (int) ($byStatus['Vacant'] ?? 0), 'occupied_rooms' => (int) ($byStatus['Occupied'] ?? 0)];
     }
 }

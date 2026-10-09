@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Bill;
 use App\Models\Lease;
-use App\Models\Moveout;
 use App\Models\User;
 use App\Services\BillingService;
 use App\Services\DashboardService;
@@ -111,31 +110,23 @@ class DashboardTest extends TestCase
         $this->assertCount(0, $this->dashboard('2026-07-18')['unbilled']);
     }
 
-    public function test_open_concerns_vacant_rooms_and_refunds_due_with_demo_data(): void
+    public function test_open_concerns_and_vacant_rooms_with_demo_data(): void
     {
         $this->seed();
         $this->seed(DemoSeeder::class);
         $owner = User::where('username', 'owner')->first();
 
-        // Pretend the settled refund of room 215 is approved but not handed over yet, and late.
-        $moveout = Moveout::whereHas('lease.room', fn ($q) => $q->where('room_no', '215'))->firstOrFail();
-        $moveout->update(['status' => 'Refunded', 'refund_due_date' => today()->subDay()]);
-
         $d = app(DashboardService::class)->forStaff();
         $this->assertSame(6, $d['counts']['open_concerns']);               // 4 open + 2 in progress
         $this->assertSame(1, $d['counts']['urgent_concerns']);
         $this->assertSame('Urgent', $d['concerns']->first()->priority);   // urgent first
-        $this->assertCount(2, $d['refunds']);                             // 215 (made late above) and 216
-
-        // Tenants moving out: every move-out not settled yet (206, 214, 216, 217; 215 was set back to Refunded above).
-        $this->assertEqualsCanonicalizing(['206', '214', '215', '216', '217'], $d['movingOut']->map(fn ($m) => $m->lease->room->room_no)->all());
+        $this->assertSame(4, $d['counts']['vacant_rooms']);               // 203, 205, 208, 215
 
         $this->actingAs($owner)->get('/')->assertOk()
             ->assertSee('Open concerns (1 urgent)')
-            ->assertSee('Moving out')
-            ->assertSee('Refunds due')
-            ->assertSee('₱'.number_format((float) $moveout->refund_amount, 2))
-            ->assertSee('Past due');
+            ->assertSee('Vacant rooms')
+            ->assertDontSee('Refunds due')
+            ->assertDontSee('Move-out');
     }
 
     public function test_caretaker_sees_only_concerns_and_rooms(): void
@@ -146,7 +137,7 @@ class DashboardTest extends TestCase
         $contact = Lease::with('tenant')->first()->tenant->contact_no;
 
         $this->actingAs($caretaker)->get('/')->assertOk()
-            ->assertViewMissing('toCollect')->assertViewMissing('refunds')->assertViewMissing('unbilled')
+            ->assertViewMissing('toCollect')->assertViewMissing('unbilled')
             ->assertSee('Open concerns')->assertSee('Vacant rooms')
             ->assertDontSee('Due and overdue')->assertDontSee('Overdue tenants')->assertDontSee('Refunds due')
             ->assertDontSee('₱')
@@ -157,7 +148,6 @@ class DashboardTest extends TestCase
     {
         $this->actingAs($this->owner)->get('/')->assertOk()
             ->assertSee('No bills due in the next 7 days and nothing overdue.')
-            ->assertSee('No open concerns.')
-            ->assertSee('No approved refunds waiting to be handed over.');
+            ->assertSee('No open concerns.');
     }
 }

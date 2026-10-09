@@ -10,7 +10,7 @@ class Room extends Model
 {
     public const TYPES = ['Aircon', 'Basic'];
 
-    public const STATUSES = ['Vacant', 'Occupied', 'Vacating'];
+    public const STATUSES = ['Vacant', 'Occupied'];
 
     /** Business rule: at most 2 occupants per room. */
     public const MAX_OCCUPANTS = 2;
@@ -41,10 +41,10 @@ class Room extends Model
         ];
     }
 
-    /** Vacant or Vacating rooms can be offered to waiting prospects. */
+    /** Vacant rooms can be offered to waiting prospects. */
     public function isAvailable(): bool
     {
-        return in_array($this->status, ['Vacant', 'Vacating'], true);
+        return $this->status === 'Vacant';
     }
 
     public function leases(): HasMany

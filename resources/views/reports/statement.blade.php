@@ -33,7 +33,7 @@
             <dl class="facts">
                 <div><dt>Tenant</dt><dd>{{ $lease->tenant->full_name }}</dd></div>
                 <div><dt>Room</dt><dd>{{ $lease->room->room_no }} ({{ $lease->room->room_type }})</dd></div>
-                <div><dt>Moved in</dt><dd>{{ $lease->move_in_date->format('j M Y') }}@if ($lease->moveout?->actual_date) · moved out {{ $lease->moveout->actual_date->format('j M Y') }}@endif</dd></div>
+                <div><dt>Moved in</dt><dd>{{ $lease->move_in_date->format('j M Y') }}@if ($lease->status === 'Ended') · ended {{ $lease->updated_at?->format('j M Y') }}@endif</dd></div>
                 <div><dt>Monthly rent / due day</dt><dd>@peso($lease->monthly_rent) · every {{ $lease->dueDayLabel() }}</dd></div>
             </dl>
 

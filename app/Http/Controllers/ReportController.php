@@ -62,10 +62,4 @@ class ReportController extends Controller
         return view('reports.inquiries', $this->reports->inquiryDemand(
             $request->from(today()->startOfMonth()), $request->to(today()->endOfMonth()->startOfDay())));
     }
-
-    public function moveouts(ReportFilterRequest $request): View
-    {
-        return view('reports.moveouts', $this->reports->moveouts(
-            $request->from(today()->startOfYear()), $request->to(today()->endOfYear()->startOfDay())));
-    }
 }

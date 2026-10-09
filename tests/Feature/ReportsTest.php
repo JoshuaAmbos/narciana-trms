@@ -6,7 +6,6 @@ use App\Models\Bill;
 use App\Models\Concern;
 use App\Models\Inquiry;
 use App\Models\Lease;
-use App\Models\Moveout;
 use App\Models\Room;
 use App\Models\User;
 use App\Services\BillingService;
@@ -28,7 +27,7 @@ class ReportsTest extends TestCase
     use RefreshDatabase, RentalFixtures;
 
     private const ROUTES = ['reports.index', 'reports.collections', 'reports.due', 'reports.statement',
-        'reports.concerns', 'reports.inquiries', 'reports.moveouts'];
+        'reports.concerns', 'reports.inquiries'];
 
     private User $owner;
 
@@ -90,8 +89,6 @@ class ReportsTest extends TestCase
 
     public function test_bad_filters_are_rejected(): void
     {
-        $this->actingAs($this->manager)->get(route('reports.moveouts', ['from' => '2026-09-30', 'to' => '2026-09-01']))
-            ->assertSessionHasErrors('to');
         $this->actingAs($this->manager)->get(route('reports.collections', ['month' => 'September']))->assertSessionHasErrors('month');
         $this->actingAs($this->manager)->get(route('reports.concerns', ['room' => 'abc']))->assertSessionHasErrors('room');
         $this->actingAs($this->manager)->get(route('reports.statement', ['lease' => 99999]))->assertSessionHasErrors('lease');
@@ -246,29 +243,10 @@ class ReportsTest extends TestCase
         $this->assertSame(['Waiting' => 1, 'Rented' => 0, 'Referred' => 2, 'Declined' => 0], $r['byType']['Aircon']['statuses']);
         $this->assertSame(['Walk-in' => 3, 'Call' => 2], $r['channels']->all());
         // Today: 2 waiting (one from August); 1 Aircon room, vacant.
-        $this->assertSame(['waiting' => 1, 'rooms' => 1, 'vacant' => 1, 'vacating' => 0], $r['now']['Aircon']);
+        $this->assertSame(['waiting' => 1, 'rooms' => 1, 'vacant' => 1, 'occupied' => 0], $r['now']['Aircon']);
         $this->assertSame(1, $r['now']['Basic']['waiting']);
 
         $this->actingAs($this->manager)->get(route('reports.inquiries', ['from' => '2026-09-01', 'to' => '2026-09-30']))->assertOk()
             ->assertSee('Most asked for')->assertSee('Referred elsewhere');
-    }
-
-    // ---------- 6. Move-outs ----------
-
-    public function test_moveout_report_lists_settlements_with_totals(): void
-    {
-        $this->seed();
-        $this->seed(DemoSeeder::class);
-        $all = Moveout::count();
-
-        $r = $this->reports()->moveouts(today()->subYear(), today()->addYear());
-
-        $this->assertCount($all, $r['rows']);
-        $this->assertSame(round($r['rows']->sum('figures.refund'), 2), $r['refund']);
-        $settled = $r['rows']->first(fn ($row) => $row['moveout']->status === 'Settled');
-        $this->assertSame((float) $settled['moveout']->refund_amount, $settled['figures']['refund']);   // approved figures
-
-        $this->actingAs(User::where('username', 'owner')->first())->get(route('reports.moveouts'))->assertOk()
-            ->assertSee('Refundable deposit')->assertSee('Settled');
     }
 }

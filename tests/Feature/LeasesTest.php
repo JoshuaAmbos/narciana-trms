@@ -89,12 +89,11 @@ class LeasesTest extends TestCase
 
     public function test_only_a_vacant_room_can_get_a_new_lease(): void
     {
-        foreach (['Occupied', 'Vacating'] as $i => $status) {
-            $room = $this->makeRoom("30{$i}", 'Basic', ['status' => $status]);
+        $room = $this->makeRoom('301', 'Basic', ['status' => 'Occupied']);
 
-            $this->actingAs($this->manager)->post('/leases', $this->moaForm($room))
-                ->assertSessionHasErrors(['room_id' => 'Choose a Vacant room. A new MOA can only be made for a Vacant room.']);
-        }
+        $this->actingAs($this->manager)->post('/leases', $this->moaForm($room))
+            ->assertSessionHasErrors(['room_id' => 'Choose a Vacant room. A new MOA can only be made for a Vacant room.']);
+
         $this->assertSame(0, Lease::count());
         $this->assertSame(0, Tenant::count());
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Tenant;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreTenantRequest extends FormRequest
@@ -60,7 +61,7 @@ class StoreTenantRequest extends FormRequest
                 'max:50',
                 function ($attribute, $value, $fail) {
                     $type = $this->input('valid_id_type');
-                    if ($type && $value && ! \App\Models\Tenant::validateIdFormat($type, $value)) {
+                    if ($type && $value && ! Tenant::validateIdFormat($type, $value)) {
                         $fail("The ID number does not match the expected format for {$type}.");
                     }
                 },

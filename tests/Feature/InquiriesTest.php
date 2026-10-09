@@ -168,7 +168,7 @@ class InquiriesTest extends TestCase
         ]))->assertSessionHasErrors('no_of_occupants');
     }
 
-    // ---------- Bug 2: one pending Rented inquiry per room; only Vacant or Vacating rooms ----------
+    // ---------- Bug 2: one pending Rented inquiry per room; only Vacant rooms ----------
 
     public function test_a_room_held_by_another_rented_inquiry_cannot_be_rented_again(): void
     {
@@ -206,18 +206,18 @@ class InquiriesTest extends TestCase
         ]))->assertSessionHasNoErrors();
     }
 
-    public function test_only_vacant_or_vacating_rooms_can_be_rented(): void
+    public function test_only_vacant_rooms_can_be_rented(): void
     {
         $occupied = $this->room('7', 'Aircon', 'Occupied');
-        $vacating = $this->room('8', 'Aircon', 'Vacating');
+        $vacant = $this->room('8', 'Aircon', 'Vacant');
         $inquiry = $this->inquiry();
 
         $this->actingAs($this->caretaker)->put("/inquiries/{$inquiry->inquiry_id}", $this->validInquiry([
             'status' => 'Rented', 'room_id' => $occupied->room_id,
-        ]))->assertSessionHasErrors(['room_id' => 'Room 7 is Occupied. Only Vacant or Vacating rooms can be marked as rented.']);
+        ]))->assertSessionHasErrors(['room_id' => 'Room 7 is Occupied. Only Vacant rooms can be marked as rented.']);
 
         $this->actingAs($this->caretaker)->put("/inquiries/{$inquiry->inquiry_id}", $this->validInquiry([
-            'status' => 'Rented', 'room_id' => $vacating->room_id,
+            'status' => 'Rented', 'room_id' => $vacant->room_id,
         ]))->assertSessionHasNoErrors();
     }
 
@@ -308,7 +308,7 @@ class InquiriesTest extends TestCase
     public function test_rooms_page_has_no_waiting_list_and_inquiries_are_kept(): void
     {
         $this->room('201', 'Basic');
-        $this->room('208', 'Aircon', 'Vacating');
+        $this->room('208', 'Aircon', 'Occupied');
         $this->inquiry(['prospect_name' => 'Sample Newer', 'preferred_type' => 'Aircon', 'inquiry_date' => today()->subDays(1)->toDateString()]);
         $this->inquiry(['prospect_name' => 'Sample Older', 'preferred_type' => 'Basic', 'inquiry_date' => today()->subDays(5)->toDateString()]);
         $this->inquiry(['prospect_name' => 'Sample Declined', 'status' => 'Declined']);
@@ -557,4 +557,3 @@ class InquiriesTest extends TestCase
         $rentedView->assertSee('Leased room:');
     }
 }
-

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Collection;
 
 /** Prospective tenant inquiry. */
 class Inquiry extends Model
@@ -76,7 +77,7 @@ class Inquiry extends Model
             $vacantRooms = Room::where('status', 'Vacant')->get();
         }
 
-        if ($vacantRooms instanceof \Illuminate\Support\Collection) {
+        if ($vacantRooms instanceof Collection) {
             return match ($this->preferred_type) {
                 'Aircon' => $vacantRooms->contains(fn ($r) => $r->room_type === 'Aircon'),
                 'Basic' => $vacantRooms->contains(fn ($r) => $r->room_type === 'Basic'),

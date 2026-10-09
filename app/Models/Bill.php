@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /** Monthly billing statement for a lease. */
 class Bill extends Model
@@ -70,18 +69,6 @@ class Bill extends Model
     public function concerns(): HasMany
     {
         return $this->hasMany(Concern::class, 'bill_id');
-    }
-
-    /** The move-out whose final bill this is (if any). */
-    public function finalOf(): HasOne
-    {
-        return $this->hasOne(Moveout::class, 'final_bill_id');
-    }
-
-    /** The move-out whose excess bill this is (if any). */
-    public function excessOf(): HasOne
-    {
-        return $this->hasOne(Moveout::class, 'excess_bill_id');
     }
 
     public function payments(): HasMany

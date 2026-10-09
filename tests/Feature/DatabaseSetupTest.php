@@ -18,14 +18,16 @@ class DatabaseSetupTest extends TestCase
     private const TABLES = [
         'tbl_user', 'tbl_room', 'tbl_setting', 'tbl_audit_log', 'tbl_inquiry', 'tbl_tenant',
         'tbl_lease', 'tbl_occupant', 'tbl_visitor', 'tbl_appliance', 'tbl_meter_reading',
-        'tbl_bill', 'tbl_payment', 'tbl_concern', 'tbl_moveout', 'tbl_moveout_item',
+        'tbl_bill', 'tbl_payment', 'tbl_concern',
     ];
 
-    public function test_all_sixteen_tables_exist(): void
+    public function test_all_fourteen_tables_exist(): void
     {
         foreach (self::TABLES as $table) {
             $this->assertTrue(Schema::hasTable($table), "Missing table {$table}");
         }
+        $this->assertFalse(Schema::hasTable('tbl_moveout'), 'Decommissioned table tbl_moveout should not exist');
+        $this->assertFalse(Schema::hasTable('tbl_moveout_item'), 'Decommissioned table tbl_moveout_item should not exist');
         $this->assertFalse(Schema::hasTable('users'), "Laravel's default users table should not exist");
     }
 

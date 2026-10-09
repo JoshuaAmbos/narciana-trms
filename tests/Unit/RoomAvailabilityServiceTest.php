@@ -12,7 +12,7 @@ use Tests\TestCase;
  *
  *   Rooms                                    Prospects (inquiries)
  *   201 Basic,  max 2, Vacant                #1 2026-09-01 Aircon, 2 occupants, Waiting
- *   208 Aircon, max 2, Vacating              #2 2026-09-03 Any,    1 occupant,  Waiting
+ *   208 Aircon, max 2, Vacant                #2 2026-09-03 Any,    1 occupant,  Waiting
  *   209 Aircon, max 1, Vacant                #3 2026-08-20 Basic,  1 occupant,  Waiting
  *   210 Aircon, max 2, Occupied              #4 2026-08-25 Aircon, 1 occupant,  Rented   (not waiting)
  *                                            #5 2026-09-02 Basic,  3 occupants, Waiting  (too many)
@@ -61,7 +61,7 @@ class RoomAvailabilityServiceTest extends TestCase
     {
         $rooms = collect([
             $this->room(1, '201', 'Basic', 2, 'Vacant'),
-            $this->room(2, '208', 'Aircon', 2, 'Vacating'),
+            $this->room(2, '208', 'Aircon', 2, 'Vacant'),
             $this->room(3, '209', 'Aircon', 1, 'Vacant'),
             $this->room(4, '210', 'Aircon', 2, 'Occupied'),
         ]);

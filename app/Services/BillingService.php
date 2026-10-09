@@ -7,7 +7,6 @@ use App\Models\Bill;
 use App\Models\Concern;
 use App\Models\Lease;
 use App\Models\MeterReading;
-use App\Models\Moveout;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -100,11 +99,9 @@ class BillingService
     public function canGenerateNow(Lease $lease, ?Carbon $today = null): bool
     {
         $next = $this->nextDueDate($lease);
-        $actual = $lease->moveout?->actual_date;
 
         return $lease->status === 'Active'
-            && $next->lte(($today ?? today())->copy()->addDays(self::DAYS_AHEAD))
-            && ($actual === null || $next->lte($actual)); // no regular bill after the tenant moved out
+            && $next->lte(($today ?? today())->copy()->addDays(self::DAYS_AHEAD));
     }
 
     public function occupantCount(Lease $lease, Carbon $start, Carbon $end): int
@@ -162,64 +159,6 @@ class BillingService
 
             return $this->createBill($lease, fn (?array $r, array $ids) => $this->preview($lease, $r, $ids),
                 $reading, $concernIds, $by, 'Bill generated');
-        });
-    }
-
-    // ---------- Final bill at move-out (decision 16) ----------
-
-    /**
-     * Unbilled utilities period at move-out: from the last due date (or the move-in date) to the actual move-out date.
-     * Null when no final bill is needed (the tenant left before that period starts).
-     *
-     * @return array{0: Carbon, 1: Carbon}|null
-     */
-    public function finalPeriod(Lease $lease, Carbon $actualDate): ?array
-    {
-        $last = $lease->bills()->where('is_initial', false)->whereNotIn('bill_id', Moveout::whereNotNull('excess_bill_id')->pluck('excess_bill_id'))
-            ->orderByDesc('due_date')->first();
-        $start = $last ? $last->due_date->copy() : $lease->move_in_date->copy();
-
-        return $actualDate->lt($start) ? null : [$start, $actualDate->copy()];
-    }
-
-    /** Regular bills due on or before the actual date must exist before the final bill. */
-    public function regularBillsDone(Lease $lease, Carbon $actualDate): bool
-    {
-        return $this->nextDueDate($lease)->gt($actualDate);
-    }
-
-    public function finalPreview(Lease $lease, Carbon $actualDate, ?array $reading = null, array $concernIds = []): ?array
-    {
-        $period = $this->finalPeriod($lease, $actualDate);
-
-        return $period ? $this->statement($lease, $actualDate, $period[0], $period[1], true, $reading, $concernIds) : null;
-    }
-
-    public function generateFinal(Moveout $moveout, ?array $reading, array $concernIds, User $by): Bill
-    {
-        return DB::transaction(function () use ($moveout, $reading, $concernIds, $by) {
-            $moveout = Moveout::whereKey($moveout->moveout_id)->lockForUpdate()->firstOrFail();
-            $lease = Lease::whereKey($moveout->lease_id)->lockForUpdate()->firstOrFail();
-
-            if (! $moveout->isPending() || ! $moveout->actual_date) {
-                throw ValidationException::withMessages(['final' => 'Record the actual move-out date first (settlement still pending).']);
-            }
-            if ($moveout->final_bill_id) {
-                throw ValidationException::withMessages(['final' => 'The final bill was already generated.']);
-            }
-            if (! $this->regularBillsDone($lease, $moveout->actual_date)) {
-                throw ValidationException::withMessages(['final' => 'Generate the regular bill due '.$this->nextDueDate($lease)->format('j M Y').' first (Billing).']);
-            }
-            if (! $this->finalPeriod($lease, $moveout->actual_date)) {
-                throw ValidationException::withMessages(['final' => 'No final bill is needed: the tenant left before the unbilled period started.']);
-            }
-
-            $actual = $moveout->actual_date->copy();
-            $bill = $this->createBill($lease, fn (?array $r, array $ids) => $this->finalPreview($lease, $actual, $r, $ids),
-                $reading, $concernIds, $by, 'Final bill generated');
-            $moveout->update(['final_bill_id' => $bill->bill_id]);
-
-            return $bill;
         });
     }
 
@@ -326,24 +265,23 @@ class BillingService
      */
     public function statementForBill(Bill $bill): array
     {
-        $bill->loadMissing(['lease.room', 'meterReading', 'concerns', 'finalOf', 'excessOf']);
+        $bill->loadMissing(['lease.room', 'meterReading', 'concerns']);
         $lease = $bill->lease;
-        $final = $bill->finalOf !== null;
         $start = $bill->period_start->copy();
-        $end = $final ? $bill->due_date->copy() : $bill->due_date->copy()->subDay(); // final period ends on the move-out date
+        $end = $bill->due_date->copy()->subDay();
         $metered = $bill->reading_id !== null; // every metered bill is saved with its meter reading
         $occupants = $this->occupantCount($lease, $start, $end);
         $appliances = $metered ? 0 : $this->applianceCount($lease, $start, $end);
         $reading = $bill->meterReading;
 
         return [
-            'final' => $final,
-            'excess' => $bill->excessOf,
+            'final' => false,
+            'excess' => null,
             'due_date' => $bill->due_date,
             'period_start' => $start,
             'period_end' => $end,
-            'rent_from' => $final ? null : $bill->due_date,
-            'rent_to' => $final ? null : $this->dueDateIn($lease->due_day, $bill->due_date->copy()->startOfMonth()->addMonthNoOverflow())->subDay(),
+            'rent_from' => $bill->due_date,
+            'rent_to' => $this->dueDateIn($lease->due_day, $bill->due_date->copy()->startOfMonth()->addMonthNoOverflow())->subDay(),
             'metered' => $metered,
             'occupants' => $occupants,
             'appliances' => $appliances,
@@ -367,8 +305,7 @@ class BillingService
 
     public function canDelete(Bill $bill): bool
     {
-        return $bill->status === 'Unpaid' && $bill->payments()->doesntExist()
-            && ! Moveout::where('excess_bill_id', $bill->bill_id)->exists(); // an excess bill belongs to its settlement
+        return $bill->status === 'Unpaid' && $bill->payments()->doesntExist();
     }
 
     /** Delete an Unpaid bill with no payment (and the meter reading made for it). */

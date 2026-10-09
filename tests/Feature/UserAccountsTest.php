@@ -40,7 +40,7 @@ class UserAccountsTest extends TestCase
             ->assertOk()
             ->assertSee('owner')
             ->assertSee('Role access')
-            ->assertSee('Move-out: approve refund / release');
+            ->assertSee('End lease (vacate room)');
     }
 
     public function test_manager_and_caretaker_get_403_on_user_accounts(): void

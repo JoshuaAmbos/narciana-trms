@@ -119,9 +119,6 @@
                             <td>{{ $lease->occupants->whereNull('date_removed')->count() }} heads</td>
                             <td>
                                 <x-lease-status :lease="$lease" />
-                                @if ($lease->status === 'Active' && $lease->moveout)
-                                    <div class="sub">{{ $lease->moveout->actual_date ? 'left '.$lease->moveout->actual_date->format('j M') : 'leaving '.$lease->moveout->planned_date->format('j M') }}</div>
-                                @endif
                             </td>
                             <td class="actions">
                                 <a href="{{ route('leases.show', $lease) }}" class="btn sec">View MOA</a>

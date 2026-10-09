@@ -188,8 +188,34 @@ class LeaseService
     public function canCancel(Lease $lease): bool
     {
         return $lease->status === 'Active'
-            && $lease->bills()->where('is_initial', false)->doesntExist()      // no regular bills means no regular payments either
-            && $lease->moveout()->doesntExist();   // once notice is given, use Move-out Settlement
+            && $lease->bills()->where('is_initial', false)->doesntExist();      // no regular bills means no regular payments either
+    }
+
+    public function endLease(Lease $lease, array $data, User $by): void
+    {
+        DB::transaction(function () use ($lease, $data, $by) {
+            $lease = Lease::whereKey($lease->lease_id)->lockForUpdate()->firstOrFail();
+
+            if ($lease->status !== 'Active') {
+                throw ValidationException::withMessages([
+                    'lease' => 'Only an active lease can be ended.',
+                ]);
+            }
+
+            $lease->update(['status' => 'Ended']);
+
+            $room = Room::whereKey($lease->room_id)->lockForUpdate()->firstOrFail();
+            $room->update([
+                'status' => 'Vacant',
+                'expected_vacant_date' => null,
+            ]);
+
+            $actualEndDate = $data['actual_end_date'] ?? now()->toDateString();
+            $notes = $data['termination_notes'] ?? null;
+            $details = "Actual move-out date: {$actualEndDate}".($notes ? " | Notes: {$notes}" : '');
+
+            AuditLog::record('Lease ended and room marked vacant', 'tbl_lease', $lease->lease_id, $by->user_id, $details);
+        });
     }
 
     public function cancel(Lease $lease, User $by): void
@@ -240,7 +266,7 @@ class LeaseService
     public function removeOccupant(Occupant $occupant, string $dateRemoved): void
     {
         if ($occupant->is_principal) {
-            throw ValidationException::withMessages(['date_removed' => 'The principal renter cannot be removed. End the lease instead (Move-out).']);
+            throw ValidationException::withMessages(['date_removed' => 'The principal renter cannot be removed. End the lease instead.']);
         }
         if ($occupant->date_removed) {
             throw ValidationException::withMessages(['date_removed' => 'This occupant is already marked as no longer staying.']);

@@ -13,15 +13,13 @@ class Lease extends Model
 {
     public const STATUSES = ['Active', 'Ended', 'Cancelled'];
 
-    /**
-     * What staff see (decision 18): Active -> Moving out (move-out notice given, not settled yet) -> Moved out (settled;
-     * stored as Ended). Cancelled = cancelled before any bill. Derived, not stored.
-     */
-    public const DISPLAY_STATUSES = ['Active', 'Moving out', 'Moved out', 'Cancelled'];
+    public const DISPLAY_STATUSES = ['Active', 'Ended', 'Cancelled'];
 
     /** Default minimum stay on the MOA form (decision 3). */
     public const DEFAULT_MIN_STAY_MONTHS = 4;
+
     public const MIN_STAY_BASIC = 4;
+
     public const MIN_STAY_AIRCON = 6;
 
     /** Staggered contractual due dates strictly on the 10th, 15th, 20th, 25th, or 30th. */
@@ -85,14 +83,9 @@ class Lease extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    /** Active / Moving out / Moved out / Cancelled (see DISPLAY_STATUSES). */
     public function displayStatus(): string
     {
-        return match ($this->status) {
-            'Ended' => 'Moved out',
-            'Active' => $this->moveout ? 'Moving out' : 'Active',
-            default => $this->status,
-        };
+        return $this->status;
     }
 
     public function scopeActive(Builder $query): Builder
@@ -113,12 +106,7 @@ class Lease extends Model
     /** Leases shown under one display status (Tenants list filter). */
     public function scopeDisplayStatus(Builder $query, string $status): Builder
     {
-        return match ($status) {
-            'Moving out' => $query->where('status', 'Active')->whereHas('moveout'),
-            'Active' => $query->where('status', 'Active')->whereDoesntHave('moveout'),
-            'Moved out' => $query->where('status', 'Ended'),
-            default => $query->where('status', $status),
-        };
+        return $query->where('status', $status);
     }
 
     /** Sum of the 4 deposit parts (maintenance + damage + bills + keys). */
@@ -175,10 +163,5 @@ class Lease extends Model
     public function concerns(): HasMany
     {
         return $this->hasMany(Concern::class, 'lease_id');
-    }
-
-    public function moveout(): HasOne
-    {
-        return $this->hasOne(Moveout::class, 'lease_id');
     }
 }

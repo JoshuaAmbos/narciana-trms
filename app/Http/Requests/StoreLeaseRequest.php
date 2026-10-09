@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Tenant;
+use App\Services\PaymentService;
 use Illuminate\Validation\Rule;
 
 /** Encode a new MOA: tenant (new or returning) + room + MOA details + optional co-tenant. */
@@ -33,7 +35,7 @@ class StoreLeaseRequest extends LeaseRequest
         if (blank($mode)) {
             $mode = 'Cash';
         }
-        $gcashRef = \App\Services\PaymentService::normalizeRef($this->input('gcash_ref_no'));
+        $gcashRef = PaymentService::normalizeRef($this->input('gcash_ref_no'));
 
         $this->merge([
             'tenant_mode' => $this->input('tenant_mode', 'new'),
@@ -84,7 +86,7 @@ class StoreLeaseRequest extends LeaseRequest
                 function ($attribute, $value, $fail) {
                     if ($this->input('tenant_mode') === 'new') {
                         $type = $this->input('valid_id_type');
-                        if ($type && $value && ! \App\Models\Tenant::validateIdFormat($type, $value)) {
+                        if ($type && $value && ! Tenant::validateIdFormat($type, $value)) {
                             $fail("The ID number does not match the expected format for {$type}.");
                         }
                     }

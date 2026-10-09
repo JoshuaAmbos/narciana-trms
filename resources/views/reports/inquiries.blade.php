@@ -60,14 +60,14 @@
         <h3 class="sub-head">Demand today <span class="muted">prospects waiting (any date) and rooms</span></h3>
         <div class="table-wrap">
             <table class="fit">
-                <tr><th>Room type</th><th class="r">Waiting</th><th class="r">Rooms</th><th class="r">Vacant</th><th class="r">Vacating</th></tr>
+                <tr><th>Room type</th><th class="r">Waiting</th><th class="r">Rooms</th><th class="r">Vacant</th><th class="r">Occupied</th></tr>
                 @foreach ($now as $type => $row)
                     <tr>
                         <td><b>{{ $type === 'Any' ? 'Any (all rooms)' : $type }}</b></td>
                         <td class="r">{{ $row['waiting'] }}</td>
                         <td class="r">{{ $row['rooms'] }}</td>
                         <td class="r">{{ $row['vacant'] }}</td>
-                        <td class="r">{{ $row['vacating'] }}</td>
+                        <td class="r">{{ $row['occupied'] }}</td>
                     </tr>
                 @endforeach
             </table>

@@ -20,7 +20,6 @@
                     ['reports.statement', 'Statement of account per tenant', 'Every bill and payment of one lease, with the running balance'],
                     ['reports.concerns', 'Concern history per room', 'Concerns per room or shared area, repeated issues, costs'],
                     ['reports.inquiries', 'Inquiries and room demand', 'Room types asked for, rented, referred, still waiting'],
-                    ['reports.moveouts', 'Move-out settlements', 'Deposits, deductions, refunds and excess per move-out'],
                 ] as [$route, $label, $about])
                     <tr>
                         <td><b>{{ $label }}</b><span class="sub">{{ $about }}</span></td>

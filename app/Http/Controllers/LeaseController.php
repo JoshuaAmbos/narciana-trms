@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\LeaseRequest;
 use App\Http\Requests\StoreLeaseRequest;
+use App\Models\Inquiry;
 use App\Models\Lease;
 use App\Models\Room;
 use App\Models\Tenant;
@@ -25,23 +26,17 @@ class LeaseController extends Controller
     public function index(Request $request): View
     {
         $status = $request->input('status', 'Active');
-        if (! in_array($status, ['Active', 'Moving out', 'Moved out', 'Ended', 'Cancelled', 'All'], true)) {
+        if (! in_array($status, ['Active', 'Ended', 'Cancelled', 'All'], true)) {
             $status = 'Active';
         }
 
         $search = trim((string) $request->input('search', ''));
         $roomType = $request->input('room_type', 'All');
 
-        $query = Lease::with(['room', 'tenant', 'moveout'])
+        $query = Lease::with(['room', 'tenant'])
             ->withCount('activeOccupants');
 
-        if ($status === 'Moving out') {
-            $query->displayStatus('Moving out');
-        } elseif ($status === 'Moved out') {
-            $query->displayStatus('Moved out');
-        } elseif ($status === 'Active' && $request->has('status')) {
-            $query->displayStatus('Active');
-        } elseif ($status !== 'All') {
+        if ($status !== 'All') {
             $query->where('status', $status);
         }
 
@@ -82,7 +77,7 @@ class LeaseController extends Controller
         $selected = $rooms->firstWhere('room_id', $request->integer('room_id'));
 
         $inquiryId = $request->integer('inquiry_id') ?: null;
-        $inquiry = $inquiryId ? \App\Models\Inquiry::find($inquiryId) : null;
+        $inquiry = $inquiryId ? Inquiry::find($inquiryId) : null;
         if ($inquiry && ! $selected && $inquiry->room_id) {
             $selected = $rooms->firstWhere('room_id', $inquiry->room_id);
         }
@@ -156,7 +151,6 @@ class LeaseController extends Controller
             'appliances' => fn ($q) => $q->orderByDesc('date_added'),
             'visitors' => fn ($q) => $q->orderByDesc('arrival_date'),
             'bills' => fn ($q) => $q->orderByDesc('due_date'),
-            'moveout',
         ]);
 
         return view('leases.show', [
@@ -182,6 +176,21 @@ class LeaseController extends Controller
         return redirect()->route('leases.show', $lease)
             ->with('status', 'MOA details were updated.')
             ->with('warning', $this->depositWarning($lease));
+    }
+
+    public function endLease(Request $request, Lease $lease): RedirectResponse
+    {
+        Gate::authorize('manage-leases');
+
+        $validated = $request->validate([
+            'actual_end_date' => ['nullable', 'date'],
+            'termination_notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $this->leases->endLease($lease, $validated, $request->user());
+
+        return redirect()->route('leases.show', $lease)
+            ->with('status', "Lease ended. Room {$lease->room->room_no} is now Vacant.");
     }
 
     public function cancel(Lease $lease, Request $request): RedirectResponse

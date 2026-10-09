@@ -128,7 +128,7 @@ class TenantController extends Controller
     public function show(Tenant $tenant): View
     {
         $tenant->load([
-            'leases' => fn ($q) => $q->with(['room', 'occupants', 'moveout'])->orderByDesc('move_in_date'),
+            'leases' => fn ($q) => $q->with(['room', 'occupants'])->orderByDesc('move_in_date'),
             'activeLease.room',
         ]);
 

@@ -30,7 +30,6 @@ return [
             ['rooms.index', 'Rooms', ['Owner', 'Manager', 'Caretaker'], 'door-open'],
             ['inquiries.index', 'Inquiries', ['Owner', 'Manager', 'Caretaker'], 'clipboard-list'],
             ['leases.index', 'Leases', ['Owner', 'Manager'], 'file-text', ['leases.*']],
-            ['moveouts.index', 'Move-out Settlement', ['Owner', 'Manager'], 'package'],
             ['reports.index', 'Reports', ['Owner', 'Manager'], 'chart-column'],
         ],
         'Setting' => [
@@ -53,8 +52,7 @@ return [
         ['Billing', true, true, false],
         ['Payments', true, true, false],
         ['Concerns: log / update', true, true, true],
-        ['Move-out: notice, inspection, compute', true, true, false],
-        ['Move-out: approve refund / release', true, false, false],
+        ['End lease (vacate room)', true, true, false],
         ['Reports', true, true, false],
         ['User accounts', true, false, false],
         ['Settings (rates and rules)', true, false, false],

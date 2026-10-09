@@ -12,10 +12,15 @@
                 <span>MOA details: Room {{ $lease->room->room_no }}
                     <x-lease-status :lease="$lease" />
                 </span>
-                @if ($lease->status === 'Active')
-                    <a href="{{ route('leases.edit', $lease) }}" class="btn sec">Edit MOA</a>
-                @endif
-                <a href="{{ route('leases.index') }}" class="btn sec">&larr; Back to Leases</a>
+                <div class="actions" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    @can('manage-leases')
+                        @if ($lease->status === 'Active')
+                            <button type="button" class="btn danger" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 16px; font-weight: 600;" onclick="openEndLeaseModal()">End Lease</button>
+                            <a href="{{ route('leases.edit', $lease) }}" class="btn sec" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center;">Edit MOA</a>
+                        @endif
+                    @endcan
+                    <a href="{{ route('leases.index') }}" class="btn sec" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center;">&larr; Back to Leases</a>
+                </div>
             </h2>
 
             <dl class="facts">
@@ -49,21 +54,12 @@
             </div>
             <p class="muted">Encoded by the {{ $lease->user->role }}.</p>
 
-            <div class="moveout-link">
-                @if ($lease->moveout)
-                    Move-out: <x-moveout-status :moveout="$lease->moveout" />
-                    <a href="{{ route('moveouts.show', $lease->moveout) }}" class="btn sec">Open the move-out settlement</a>
-                @elseif ($lease->status === 'Active')
-                    <a href="{{ route('moveouts.create', ['lease' => $lease->lease_id]) }}" class="btn sec">Give move-out notice</a>
-                @endif
-            </div>
-
             @if ($canCancel)
                 <form method="POST" action="{{ route('leases.cancel', $lease) }}" class="danger-zone"
                       onsubmit="return confirm('Cancel this MOA? Room {{ $lease->room->room_no }} will be Vacant again. Use this only for an MOA encoded by mistake or cancelled before any bill.')">
                     @csrf @method('PATCH')
                     <button type="submit" class="btn danger">Cancel this MOA</button>
-                    <span class="muted">Only possible while there are no bills or payments. A normal move-out is done in Move-out Settlement.</span>
+                    <span class="muted">Only possible while there are no bills or payments. To conclude a tenancy, use End Lease.</span>
                 </form>
             @endif
         </div>
@@ -113,4 +109,61 @@
 
     @include('household._appliances')
     @include('household._visitors')
+
+    @if ($lease->status === 'Active')
+        @can('manage-leases')
+            <div id="end-lease-modal" class="modal-backdrop" hidden>
+                <div class="modal-box" style="max-width: 480px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 style="margin: 0;">End Lease &amp; Vacate Room</h3>
+                        <button type="button" class="modal-close-btn" onclick="closeEndLeaseModal()">&times;</button>
+                    </div>
+
+                    <form method="POST" action="{{ route('leases.end', $lease) }}">
+                        @csrf
+                        @method('PATCH')
+
+                        <div class="facts" style="margin-bottom: 14px;">
+                            <div><dt>Tenant</dt><dd><b>{{ $lease->tenant->full_name }}</b></dd></div>
+                            <div><dt>Room</dt><dd><b>Room {{ $lease->room->room_no }}</b> ({{ $lease->room->room_type }})</dd></div>
+                        </div>
+
+                        <div class="f" style="margin-bottom: 14px;">
+                            <label for="actual_end_date">Actual Move-out Date</label>
+                            <input id="actual_end_date" type="date" name="actual_end_date" value="{{ today()->toDateString() }}" max="{{ today()->toDateString() }}">
+                        </div>
+
+                        <div class="f" style="margin-bottom: 14px;">
+                            <label for="termination_notes">Termination Notes (optional)</label>
+                            <textarea id="termination_notes" name="termination_notes" rows="2" placeholder="e.g. Keys returned, room vacated without incident."></textarea>
+                        </div>
+
+                        <div class="alert alert-warn" style="margin-bottom: 16px; font-size: 13px;">
+                            Ending this lease will immediately mark Room {{ $lease->room->room_no }} as Vacant. All physical room inspections and deposit returns are handled offline per MOA terms.
+                        </div>
+
+                        <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 8px;">
+                            <button type="button" class="btn sec" style="min-height: 44px; padding: 0 16px;" onclick="closeEndLeaseModal()">Cancel</button>
+                            <button type="submit" class="btn danger" style="min-height: 44px; padding: 0 16px;">Confirm &amp; Vacate Room</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <script>
+                function openEndLeaseModal() {
+                    document.getElementById('end-lease-modal').removeAttribute('hidden');
+                }
+                function closeEndLeaseModal() {
+                    document.getElementById('end-lease-modal').setAttribute('hidden', '');
+                }
+                document.addEventListener('click', function(e) {
+                    const modal = document.getElementById('end-lease-modal');
+                    if (modal && e.target === modal) {
+                        closeEndLeaseModal();
+                    }
+                });
+            </script>
+        @endcan
+    @endif
 @endsection

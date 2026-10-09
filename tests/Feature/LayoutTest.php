@@ -86,10 +86,10 @@ class LayoutTest extends TestCase
     public function test_sidebar_order_for_each_role(): void
     {
         $order = ['Dashboard', 'Billing', 'Payments', 'Concerns', 'Tenants', 'Rooms', 'Inquiries',
-            'Leases', 'Move-out Settlement', 'Reports', 'User Accounts', 'Settings &amp; Backup', 'Audit Log'];
+            'Leases', 'Reports', 'User Accounts', 'Settings &amp; Backup', 'Audit Log'];
         $expected = [
             'Owner' => $order,
-            'Manager' => array_slice($order, 0, 10),
+            'Manager' => array_slice($order, 0, 9),
             'Caretaker' => ['Dashboard', 'Concerns', 'Tenants', 'Rooms', 'Inquiries'],
         ];
 

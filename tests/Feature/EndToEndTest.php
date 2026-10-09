@@ -7,7 +7,6 @@ use App\Models\Bill;
 use App\Models\Concern;
 use App\Models\Inquiry;
 use App\Models\Lease;
-use App\Models\Moveout;
 use App\Models\Payment;
 use App\Models\Room;
 use App\Models\User;
@@ -115,7 +114,7 @@ class EndToEndTest extends TestCase
         $leaseA = Lease::whereHas('tenant', fn ($q) => $q->where('full_name', 'Sample Tenant A'))->sole();
         $this->assertSame(2, $leaseA->activeOccupants()->count());
         $this->assertSame('Occupied', $aircon->refresh()->status);
-        $this->assertSame('Active', $leaseA->load('moveout')->displayStatus());
+        $this->assertSame('Active', $leaseA->displayStatus());
 
         // Second tenant in a Basic room (appliances are charged only in rooms without a meter).
         $this->actingAs($this->manager)->post(route('leases.store'), $this->moa($basic, 'Sample Tenant B', '3000.00', ['900.00', '1200.00', '600.00', '300.00']))
@@ -208,72 +207,38 @@ class EndToEndTest extends TestCase
         $monthly('2026-08', 1120, 1220);
         $monthly('2026-09', 1220, 1320);
 
-        // ---------- 8. Move-out: one month's notice on 25 Sep (Manager) ----------
-        $this->actingAs($this->manager)->post(route('moveouts.store'), ['lease_id' => $leaseA->lease_id,
-            'notice_date' => '2026-09-25', 'planned_date' => '2026-10-28'])->assertSessionHasNoErrors()->assertSessionMissing('warning');
-        $moveout = Moveout::sole();
-        $this->assertSame('Vacating', $aircon->refresh()->status);
-        $this->assertSame('2026-10-28', $aircon->expected_vacant_date->toDateString());
-        $this->assertSame('Moving out', $leaseA->refresh()->load('moveout')->displayStatus());
-        $this->actingAs($this->manager)->get(route('leases.index', ['status' => 'Moving out']))->assertSee('Sample Tenant A');
-        $this->actingAs($this->manager)->get('/')->assertSee('Moving out')->assertSee('Sample Tenant A');
-
-        // The October bill still falls before the move-out date.
+        // The October bill falls on 25 Oct before ending the lease.
         $monthly('2026-10', 1320, 1420);
 
-        // Moved out on 28 Oct: final bill (final reading + the repair), inspection, computation.
+        // ---------- 8. End lease on 28 Oct (Manager / Owner) ----------
         $this->on('2026-10-28 16:00');
-        $this->actingAs($this->manager)->put(route('moveouts.update', $moveout), ['notice_date' => '2026-09-25',
-            'planned_date' => '2026-10-28', 'actual_date' => '2026-10-28'])->assertSessionHasNoErrors();
-        $this->actingAs($this->manager)->post(route('moveouts.final-bill.store', $moveout),
-            $this->reading(1420, 1450, '2026-10-28') + ['concerns' => [$concern->concern_id]])->assertSessionHasNoErrors();
-        $final = $moveout->refresh()->finalBill;
-        $this->assertSame(['0.00', '400.00', '450.00', '500.00', '1350.00', '2026-10-28'],
-            [$final->rent_amount, $final->water_amount, $final->electricity_amount, $final->other_charges, $final->total_amount, $final->due_date->toDateString()]);
-        $this->assertSame($final->bill_id, $concern->refresh()->bill_id, 'The repair is charged once, on the final bill');
 
-        $this->actingAs($this->manager)->post(route('moveouts.compute', $moveout))->assertSessionHasErrors('moveout'); // inspection first
-        $this->actingAs($this->manager)->post(route('moveouts.items.store', $moveout), ['description' => 'Aircon remote control missing', 'cost' => '300.00'])
-            ->assertSessionHasNoErrors();
-        $this->actingAs($this->manager)->patch(route('moveouts.inspect', $moveout))->assertSessionHasNoErrors();
-        $this->actingAs($this->manager)->post(route('moveouts.compute', $moveout))->assertSessionHasNoErrors();
+        // Caretaker is forbidden from ending leases
+        $this->actingAs($this->caretaker)->patch(route('leases.end', $leaseA), [
+            'actual_end_date' => '2026-10-28',
+            'termination_notes' => 'Contract concluded; room inspected and deposit settled verbally offline.',
+        ])->assertForbidden();
 
-        $moveout->refresh();
-        $this->assertSame(['1350.00', '300.00', '1150.00', '0.00', '2026-11-04', false],
-            [$moveout->unpaid_balance, $moveout->damage_total, $moveout->refund_amount, $moveout->excess_amount,
-                $moveout->refund_due_date->toDateString(), $moveout->early_departure]);
-        $this->actingAs($this->manager)->get(route('moveouts.show', $moveout))->assertOk()
-            ->assertSeeInOrder(['Refundable deposit', '₱2,800.00', 'Bill due 28 Oct 2026', '(₱1,350.00)',
-                'Aircon remote control missing', '(₱300.00)', 'Final refund to tenant', '₱1,150.00']);
-
-        // ---------- Owner approval, then the refund is released ----------
-        $this->actingAs($this->manager)->patch(route('moveouts.approve', $moveout))->assertForbidden();
-        $this->actingAs($this->owner)->patch(route('moveouts.approve', $moveout))->assertSessionHasNoErrors();
-        $this->assertSame('Refunded', $moveout->refresh()->status);
-        $this->assertSame('Paid', $final->refresh()->status, 'Final bill settled from the deposit');
-
-        $this->on('2026-11-02 10:00');
-        $this->actingAs($this->manager)->patch(route('moveouts.release', $moveout))->assertForbidden();
-        $this->actingAs($this->owner)->patch(route('moveouts.release', $moveout))->assertSessionHasNoErrors();
+        // Manager successfully ends lease
+        $this->actingAs($this->manager)->patch(route('leases.end', $leaseA), [
+            'actual_end_date' => '2026-10-28',
+            'termination_notes' => 'Contract concluded; room inspected and deposit settled verbally offline.',
+        ])->assertRedirect(route('leases.show', $leaseA))
+            ->assertSessionHas('status', 'Lease ended. Room 216 is now Vacant.');
 
         // ---------- The end ----------
-        $this->assertSame('Settled', $moveout->refresh()->status);
         $this->assertSame('Ended', $leaseA->refresh()->status);
-        $this->assertSame('Moved out', $leaseA->load('moveout')->displayStatus());
+        $this->assertSame('Ended', $leaseA->displayStatus());
         $aircon->refresh();
         $this->assertSame('Vacant', $aircon->status);
         $this->assertNull($aircon->expected_vacant_date);
-        $this->assertSame(0, Bill::where('lease_id', $leaseA->lease_id)->where('status', '!=', 'Paid')->count());
-        $this->actingAs($this->manager)->get(route('leases.index', ['status' => 'Moved out']))->assertSee('Sample Tenant A');
+        $this->actingAs($this->manager)->get(route('leases.index', ['status' => 'Ended']))->assertSee('Sample Tenant A');
 
         // Every step left its mark in the audit log, by the right person.
         foreach ([
             ['Room created', $this->owner], ['Lease created', $this->manager], ['Bill generated', $this->manager],
             ['Payment recorded', $this->manager], ['Concern logged', $this->caretaker], ['Concern resolved', $this->caretaker],
-            ['Concern charged', $this->manager], ['Move-out notice', $this->manager], ['Move-out recorded', $this->manager],
-            ['Final bill generated', $this->manager], ['Move-out inspected', $this->manager], ['Settlement computed', $this->manager],
-            ['Settlement approved', $this->owner], ['Bill settled from deposit', $this->owner], ['Refund released', $this->owner],
-            ['Settlement settled', $this->owner],
+            ['Concern charged', $this->manager], ['Lease ended and room marked vacant', $this->manager],
         ] as [$action, $user]) {
             $this->assertTrue(AuditLog::where('action', $action)->where('user_id', $user->user_id)->exists(), "Audit: {$action} by {$user->role}");
         }

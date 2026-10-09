@@ -41,7 +41,9 @@ class LeaseRequest extends FormRequest
 
     protected function requiredMinStay(): int
     {
-        return $this->isAirconRoom() ? Lease::MIN_STAY_AIRCON : Lease::MIN_STAY_BASIC;
+        $room = $this->targetRoom();
+
+        return ($room && $room->room_type === 'Aircon') ? Lease::MIN_STAY_AIRCON : Lease::MIN_STAY_BASIC;
     }
 
     protected function prepareForValidation(): void

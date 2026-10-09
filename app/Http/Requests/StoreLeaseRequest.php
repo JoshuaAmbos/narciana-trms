@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Room;
 use App\Models\Tenant;
 use App\Services\PaymentService;
 use Illuminate\Validation\Rule;
@@ -59,7 +60,24 @@ class StoreLeaseRequest extends LeaseRequest
     {
         $new = 'required_if:tenant_mode,new';
 
-        return parent::rules() + [
+        $rules = parent::rules();
+        $rules['min_stay_months'] = [
+            'required',
+            'integer',
+            function ($attribute, $value, $fail) {
+                $room = $this->targetRoom();
+                if ($room) {
+                    $expected = ($room->room_type === 'Aircon') ? 6 : 4;
+                    if ((int) $value !== $expected) {
+                        $fail("The minimum stay for a {$room->room_type} room must be {$expected} months.");
+                    }
+                } elseif ((int) $value < 4) {
+                    $fail('The contractual minimum stay must be at least 4 months per property policy.');
+                }
+            },
+        ];
+
+        return $rules + [
             'tenant_mode' => ['required', Rule::in(['new', 'existing'])],
             // Returning tenant: must not already have an active lease, and must not be blacklisted or archived.
             'tenant_id' => [
@@ -196,7 +214,13 @@ class StoreLeaseRequest extends LeaseRequest
 
     public function leaseData(): array
     {
-        return parent::leaseData() + ['room_id' => (int) $this->validated('room_id')];
+        $data = parent::leaseData() + ['room_id' => (int) $this->validated('room_id')];
+        $room = Room::find($data['room_id']);
+        if ($room) {
+            $data['min_stay_months'] = ($room->room_type === 'Aircon') ? 6 : 4;
+        }
+
+        return $data;
     }
 
     public function messages(): array

@@ -1261,6 +1261,28 @@ input[type="number"].no-spin::-webkit-inner-spin-button,
         text-align: center;
     }
 }
+/* Leases pagination */
+.leases-pagination {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
 
+.leases-pagination .pager {
+    margin-top: 0;
+    padding-top: 0;
+}
 
+/* Pagination SVG failsafe: prevent any SVG arrow from expanding */
+.pager svg,
+.leases-pagination svg,
+svg.w-5,
+svg.w-4 {
+    width: 16px !important;
+    height: 16px !important;
+    max-width: 16px !important;
+    max-height: 16px !important;
+    display: inline-block !important;
+    vertical-align: middle;
+}
 

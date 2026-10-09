@@ -180,6 +180,12 @@
                     </div>
                 @endforeach
             </div>
+
+            @if ($leases->hasPages())
+                <div class="leases-pagination">
+                    @include('partials.pagination', ['paginator' => $leases])
+                </div>
+            @endif
         @endif
     </div>
 

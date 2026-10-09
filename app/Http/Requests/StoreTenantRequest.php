@@ -69,7 +69,6 @@ class StoreTenantRequest extends FormRequest
             'provincial_address' => ['required', 'string', 'max:255'],
             'occupation' => ['required', 'string', 'max:100'],
             'prev_building' => ['nullable', 'string', 'max:150'],
-            'status' => ['nullable', 'in:Active,Inactive,Blacklisted'],
         ];
     }
 

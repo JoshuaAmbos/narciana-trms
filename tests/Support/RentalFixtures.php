@@ -39,7 +39,7 @@ trait RentalFixtures
             'provincial_address' => 'Purok 1, Sample Barangay, Davao del Norte', 'occupation' => 'Student',
             'room_id' => $room->room_id,
             'moa_date' => '2026-06-24', 'move_in_date' => '2026-06-25', 'due_day' => '25',
-            'monthly_rent' => '3500.00', 'min_stay_months' => '4', 'advance_amount' => '3500.00',
+            'monthly_rent' => '3500.00', 'min_stay_months' => $isAircon ? '6' : '4', 'advance_amount' => '3500.00',
             'deposit_maintenance' => '1000.00', 'deposit_damage' => '1500.00', 'deposit_bills' => '700.00', 'deposit_keys' => '300.00',
         ];
         if ($isAircon) {

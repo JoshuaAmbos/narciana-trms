@@ -52,7 +52,9 @@ class LeaseController extends Controller
             $query->whereHas('room', fn ($rq) => $rq->where('room_type', $roomType));
         }
 
-        $leases = $query->orderByDesc('move_in_date')->get();
+        $leases = $query->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->withQueryString();
 
         $counts = [
             'Active' => Lease::where('status', 'Active')->count(),

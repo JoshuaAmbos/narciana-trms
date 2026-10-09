@@ -114,7 +114,10 @@ class TenantController extends Controller
 
     public function store(StoreTenantRequest $request): RedirectResponse
     {
-        $tenant = Tenant::create($request->validated());
+        $tenant = Tenant::create([
+            ...$request->validated(),
+            'status' => 'Active',
+        ]);
 
         AuditLog::record('Tenant registered', 'tbl_tenant', $tenant->tenant_id, $request->user()->user_id);
 

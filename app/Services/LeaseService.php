@@ -72,11 +72,7 @@ class LeaseService
                 AuditLog::record('Tenant registered', 'tbl_tenant', $tenantModel->tenant_id, $by->user_id);
             }
 
-            if (empty($lease['min_stay_months'])) {
-                $lease['min_stay_months'] = ($room->room_type === 'Aircon' || $room->is_metered)
-                    ? Lease::MIN_STAY_AIRCON
-                    : Lease::MIN_STAY_BASIC;
-            }
+            $lease['min_stay_months'] = ($room->room_type === 'Aircon') ? 6 : 4;
 
             $leaseModel = Lease::create($lease + [
                 'tenant_id' => $tenantModel->tenant_id,

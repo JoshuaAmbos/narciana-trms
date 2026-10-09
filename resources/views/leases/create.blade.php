@@ -68,9 +68,9 @@
                     <span style="font-size: 16px; line-height: 1;">ℹ️</span>
                     <div id="min-stay-banner-text">
                         @if ($isAirconSelected)
-                            <strong>Air-conditioned Unit Lock-in: 6 Months.</strong> Per Aircon MOA Clause 9, vacating before completing the 6-month minimum stay contractually forfeits all deposits.
+                            Minimum Stay: 6 Months (MOA Aircon Terms — premature departure forfeits deposit)
                         @else
-                            <strong>Standard Unit Lock-in: 4 Months.</strong> Per MOA Clause 9, vacating before completing the 4-month minimum stay contractually forfeits all deposits.
+                            Minimum Stay: 4 Months (MOA Basic Terms — premature departure forfeits deposit)
                         @endif
                     </div>
                 </div>
@@ -197,9 +197,9 @@
                         if (minStayText) minStayText.textContent = minStayMonths + ' Months';
                         if (bannerText) {
                             if (isAircon) {
-                                bannerText.innerHTML = '<strong>Air-conditioned Unit Lock-in: 6 Months.</strong> Per Aircon MOA Clause 9, vacating before completing the 6-month minimum stay contractually forfeits all deposits.';
+                                bannerText.textContent = 'Minimum Stay: 6 Months (MOA Aircon Terms — premature departure forfeits deposit)';
                             } else {
-                                bannerText.innerHTML = '<strong>Standard Unit Lock-in: 4 Months.</strong> Per MOA Clause 9, vacating before completing the 4-month minimum stay contractually forfeits all deposits.';
+                                bannerText.textContent = 'Minimum Stay: 4 Months (MOA Basic Terms — premature departure forfeits deposit)';
                             }
                         }
 

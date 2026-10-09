@@ -290,4 +290,93 @@ class TenantsModuleTest extends TestCase
             ->assertSee($tenant->masked_id_number)
             ->assertDontSee('CRN-987654321');
     }
+
+    public function test_tenant_creation_form_omits_status_input_and_defaults_status_to_active(): void
+    {
+        // Form intake doesn't have a status selector
+        $this->actingAs($this->manager)->get(route('leases.create'))
+            ->assertOk()
+            ->assertDontSee('<select id="status" name="status"', false);
+
+        $payload = [
+            'first_name' => 'Juan',
+            'last_name' => 'Luna',
+            'contact_no' => '09171234567',
+            'valid_id_type' => 'Driver\'s License',
+            'valid_id_no' => 'D01-12-345678',
+            'provincial_address' => 'Badoc, Ilocos Norte',
+            'occupation' => 'Painter',
+        ];
+
+        $res = $this->actingAs($this->manager)->post(route('tenants.store'), $payload);
+        $res->assertRedirect(route('tenants.index'));
+
+        $tenant = Tenant::where('first_name', 'Juan')->firstOrFail();
+        $this->assertSame('Active', $tenant->status);
+    }
+
+    public function test_leases_index_paginates_and_retains_query_strings(): void
+    {
+        for ($i = 1; $i <= 15; $i++) {
+            $room = $this->makeRoom((string) (300 + $i));
+            $this->makeLease($room, $this->manager, null, "Tenant {$i}");
+        }
+
+        $resPage1 = $this->actingAs($this->manager)->get(route('leases.index', ['status' => 'Active', 'page' => 1]));
+        $resPage1->assertOk()
+            ->assertSee('Page 1 of 2')
+            ->assertSee('pager-btn')
+            ->assertSee('Next');
+
+        $resPage2 = $this->actingAs($this->manager)->get(route('leases.index', ['status' => 'Active', 'page' => 2]));
+        $resPage2->assertOk()
+            ->assertSee('Page 2 of 2')
+            ->assertSee('Previous');
+    }
+
+    public function test_household_show_back_to_leases_button_navigates_to_leases_index(): void
+    {
+        $room = $this->makeRoom('201');
+        $lease = $this->makeLease($room, $this->manager, null, 'Household Test Tenant');
+
+        $res = $this->actingAs($this->manager)->get(route('leases.household', $lease));
+        $res->assertOk()
+            ->assertSee('Back to Leases')
+            ->assertSee('href="'.route('leases.index').'"', false);
+    }
+
+    public function test_differential_minimum_stay_enforcement_for_basic_and_aircon(): void
+    {
+        $basicRoom = $this->makeRoom('201', 'Basic');
+        $airconRoom = $this->makeRoom('202', 'Aircon');
+
+        // Check badge text when room is preselected
+        $resBasic = $this->actingAs($this->manager)->get(route('leases.create', ['room_id' => $basicRoom->room_id]));
+        $resBasic->assertOk()
+            ->assertSee('Minimum Stay: 4 Months (MOA Basic Terms — premature departure forfeits deposit)');
+
+        $resAircon = $this->actingAs($this->manager)->get(route('leases.create', ['room_id' => $airconRoom->room_id]));
+        $resAircon->assertOk()
+            ->assertSee('Minimum Stay: 6 Months (MOA Aircon Terms — premature departure forfeits deposit)');
+
+        // Basic room with 3 months fails validation
+        $this->actingAs($this->manager)->post('/leases', $this->moaForm($basicRoom, [
+            'min_stay_months' => 3,
+        ]))->assertSessionHasErrors('min_stay_months');
+
+        // Aircon room with 4 months fails validation
+        $this->actingAs($this->manager)->post('/leases', $this->moaForm($airconRoom, [
+            'min_stay_months' => 4,
+            'move_in_reading' => '1000.00',
+        ]))->assertSessionHasErrors('min_stay_months');
+
+        // Aircon room with 6 months passes
+        $this->actingAs($this->manager)->post('/leases', $this->moaForm($airconRoom, [
+            'min_stay_months' => 6,
+            'move_in_reading' => '1000.00',
+        ]))->assertSessionHasNoErrors();
+
+        $airconLease = Lease::where('room_id', $airconRoom->room_id)->firstOrFail();
+        $this->assertSame(6, (int) $airconLease->min_stay_months);
+    }
 }

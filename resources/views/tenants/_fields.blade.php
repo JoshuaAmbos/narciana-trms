@@ -125,16 +125,18 @@
             @error('occupation') <div class="err">{{ $message }}</div> @enderror
         </div>
 
-        <div class="f @error('status') has-err @enderror" style="flex: 1 1 160px; min-height: 44px;">
-            <label for="status">Profile Status</label>
-            <select id="status" name="status" style="min-height: 44px;">
-                @php($currentStatus = old('status', $tenant->status ?: 'Active'))
-                <option value="Active" {{ $currentStatus === 'Active' ? 'selected' : '' }}>Active (Eligible)</option>
-                <option value="Inactive" {{ $currentStatus === 'Inactive' ? 'selected' : '' }}>Inactive (Not Renting)</option>
-                <option value="Blacklisted" {{ $currentStatus === 'Blacklisted' ? 'selected' : '' }}>Blacklisted (Barred)</option>
-            </select>
-            @error('status') <div class="err">{{ $message }}</div> @enderror
-        </div>
+        @if ($tenant->exists)
+            <div class="f @error('status') has-err @enderror" style="flex: 1 1 160px; min-height: 44px;">
+                <label for="status">Profile Status</label>
+                <select id="status" name="status" style="min-height: 44px;">
+                    @php($currentStatus = old('status', $tenant->status ?: 'Active'))
+                    <option value="Active" {{ $currentStatus === 'Active' ? 'selected' : '' }}>Active (Eligible)</option>
+                    <option value="Inactive" {{ $currentStatus === 'Inactive' ? 'selected' : '' }}>Inactive (Not Renting)</option>
+                    <option value="Blacklisted" {{ $currentStatus === 'Blacklisted' ? 'selected' : '' }}>Blacklisted (Barred)</option>
+                </select>
+                @error('status') <div class="err">{{ $message }}</div> @enderror
+            </div>
+        @endif
     </div>
 </div>
 

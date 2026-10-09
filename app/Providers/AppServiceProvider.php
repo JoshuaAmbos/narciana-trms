@@ -7,6 +7,7 @@ use App\Models\Room;
 use App\Models\User;
 use App\Policies\InquiryPolicy;
 use App\Policies\RoomPolicy;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -37,5 +38,7 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::policy(Room::class, RoomPolicy::class);
         Gate::policy(Inquiry::class, InquiryPolicy::class);
+
+        Paginator::defaultView('partials.pagination');
     }
 }

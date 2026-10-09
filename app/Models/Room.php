@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /** Rentable room and its availability. */
 class Room extends Model
@@ -55,9 +56,19 @@ class Room extends Model
         return (bool) ($this->is_rentable ?? true);
     }
 
+    public function isVacating(): bool
+    {
+        return $this->status === 'Occupied' && $this->expected_vacant_date !== null;
+    }
+
     public function leases(): HasMany
     {
         return $this->hasMany(Lease::class, 'room_id');
+    }
+
+    public function activeLease(): HasOne
+    {
+        return $this->hasOne(Lease::class, 'room_id')->where('status', 'Active');
     }
 
     public function inquiries(): HasMany

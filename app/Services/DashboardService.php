@@ -26,6 +26,8 @@ class DashboardService
         private PaymentService $payments,
         private PenaltyService $penalties,
         private BillingService $billing,
+        private ReportService $reports,
+        private DelinquencyService $delinquency,
     ) {}
 
     /** Everything the Owner and Manager see. */
@@ -38,16 +40,32 @@ class DashboardService
 
         $toCollect = $this->dueAndOverdue($today);
         $concerns = $this->openConcerns();
+        $unbilled = $this->unbilledDueSoon($today);
+        $readingsNeeded = $this->readingsNeeded($unbilled);
+        $vacatingRooms = $this->vacatingRooms();
+        $pendingRefunds = $this->pendingRefunds();
+        $breachedLeases = $this->delinquency->breachedLeases($today);
+
+        $rooms = Room::with(['leases' => fn ($q) => $q->where('status', 'Active')->with(['tenant', 'occupants'])])
+            ->orderBy('room_no')
+            ->get();
 
         return [
             'counts' => [
                 'due_soon' => $toCollect->where('bill.status', 'Unpaid')->count(),
                 'overdue_tenants' => $toCollect->where('bill.status', 'Overdue')->pluck('bill.lease_id')->unique()->count(),
+                'readings_needed' => $readingsNeeded->count(),
+                'pending_refunds' => $pendingRefunds->count(),
+                'breached_leases' => $breachedLeases->count(),
             ] + $this->concernCounts($concerns) + $this->roomCounts(),
             'toCollect' => $toCollect,
-            'unbilled' => $this->unbilledDueSoon($today),
+            'unbilled' => $unbilled,
+            'readingsNeeded' => $readingsNeeded,
             'concerns' => $concerns,
-            'rooms' => Room::orderBy('room_no')->get(['room_id', 'room_no', 'room_type', 'status']),
+            'rooms' => $rooms,
+            'vacatingRooms' => $vacatingRooms,
+            'pendingRefunds' => $pendingRefunds,
+            'breachedLeases' => $breachedLeases,
         ];
     }
 
@@ -55,11 +73,16 @@ class DashboardService
     public function forCaretaker(): array
     {
         $concerns = $this->openConcerns();
+        $vacatingRooms = Room::where('status', 'Occupied')
+            ->whereNotNull('expected_vacant_date')
+            ->orderBy('expected_vacant_date')
+            ->get();
 
         return [
             'counts' => $this->concernCounts($concerns) + $this->roomCounts(),
             'concerns' => $concerns,
-            'rooms' => Room::orderBy('room_no')->get(['room_id', 'room_no', 'room_type', 'status']),
+            'rooms' => Room::orderBy('room_no')->get(['room_id', 'room_no', 'room_type', 'status', 'expected_vacant_date', 'is_rentable']),
+            'vacatingRooms' => $vacatingRooms,
         ];
     }
 
@@ -69,7 +92,7 @@ class DashboardService
      */
     public function dueAndOverdue(Carbon $today): Collection
     {
-        return Bill::with(['lease.room', 'lease.tenant'])
+        return Bill::with(['lease.room', 'lease.tenant', 'lease.occupants'])
             ->where(fn ($q) => $q->where('status', 'Overdue')
                 ->orWhere(fn ($q) => $q->where('status', 'Unpaid')->whereDate('due_date', '<=', $today->copy()->addDays(self::DAYS_AHEAD))))
             ->orderBy('due_date')->orderBy('bill_id')->get()
@@ -80,11 +103,35 @@ class DashboardService
     /** Active leases whose next bill can be generated now but has not been: ['lease', 'due_date']. */
     public function unbilledDueSoon(Carbon $today): Collection
     {
-        return Lease::with(['room', 'tenant'])->where('status', 'Active')->get()
+        return Lease::with(['room', 'tenant', 'occupants'])->where('status', 'Active')->get()
             ->filter(fn (Lease $l) => $this->billing->canGenerateNow($l, $today))
             ->map(fn (Lease $l) => ['lease' => $l, 'due_date' => $this->billing->nextDueDate($l)])
             ->sortBy(fn (array $row) => $row['due_date']->toDateString().' '.$row['lease']->room->room_no)
             ->values();
+    }
+
+    /** Aircon units due within 7 days whose bill has not been generated (no current reading entered). */
+    public function readingsNeeded(Collection $unbilled): Collection
+    {
+        return $unbilled->filter(fn (array $row) => (bool) $row['lease']->room->is_metered)->values();
+    }
+
+    /** Occupied rooms with an upcoming move-out date. */
+    public function vacatingRooms(): Collection
+    {
+        return Room::with(['leases' => fn ($q) => $q->where('status', 'Active')->with(['tenant', 'occupants'])])
+            ->where('status', 'Occupied')
+            ->whereNotNull('expected_vacant_date')
+            ->orderBy('expected_vacant_date')
+            ->get();
+    }
+
+    /** Ended leases with positive net deposit refund awaiting settlement/approval. */
+    public function pendingRefunds(): Collection
+    {
+        $settlements = $this->reports->moveOutSettlements();
+
+        return collect($settlements['rows'] ?? [])->filter(fn ($r) => ($r['net_refund'] ?? 0) > 0)->values();
     }
 
     /** Open and in-progress concerns: urgent first, then oldest. */
@@ -102,7 +149,12 @@ class DashboardService
     private function roomCounts(): array
     {
         $byStatus = Room::query()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status');
+        $vacating = Room::query()->where('status', 'Occupied')->whereNotNull('expected_vacant_date')->count();
 
-        return ['vacant_rooms' => (int) ($byStatus['Vacant'] ?? 0), 'occupied_rooms' => (int) ($byStatus['Occupied'] ?? 0)];
+        return [
+            'vacant_rooms' => (int) ($byStatus['Vacant'] ?? 0),
+            'occupied_rooms' => (int) ($byStatus['Occupied'] ?? 0),
+            'vacating_rooms' => $vacating,
+        ];
     }
 }

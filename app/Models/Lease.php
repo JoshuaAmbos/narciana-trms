@@ -172,6 +172,25 @@ class Lease extends Model
             ?? $this->occupants()->where('is_principal', false)->first();
     }
 
+    /**
+     * Display string for tenants. If dual occupancy, displays both registered occupants:
+     * e.g. "Maria Santos & Juan Santos".
+     */
+    public function occupantsDisplay(): string
+    {
+        $primary = $this->tenant?->full_name ?? 'Vacant';
+        $coTenant = $this->coTenant();
+
+        return $coTenant && $coTenant->full_name
+            ? "{$primary} & {$coTenant->full_name}"
+            : $primary;
+    }
+
+    public function tenantsDisplay(): string
+    {
+        return $this->occupantsDisplay();
+    }
+
     public function activeOccupants(): HasMany
     {
         return $this->occupants()->whereNull('date_removed');

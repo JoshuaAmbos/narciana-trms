@@ -15,6 +15,13 @@
                 <div class="actions" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                     @can('manage-leases')
                         @if ($lease->status === 'Active')
+                            @if (!empty($delinquency['is_breached']))
+                                <form method="POST" action="{{ route('leases.terminate-clause8', $lease) }}" style="display: inline;"
+                                      onsubmit="return confirm('Terminate this lease under MOA Clause 8?\n\nThis will offset the security deposit against unpaid bills, mark the lease Cancelled, deactivate the tenant, and mark the room Vacant immediately.')">
+                                    @csrf
+                                    <button type="submit" class="btn danger" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 16px; font-weight: 600;">Terminate Lease (Clause 8)</button>
+                                </form>
+                            @endif
                             <button type="button" class="btn danger" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 16px; font-weight: 600;" onclick="openEndLeaseModal()">End Lease</button>
                             <a href="{{ route('leases.edit', $lease) }}" class="btn sec" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center;">Edit MOA</a>
                         @endif
@@ -22,6 +29,29 @@
                     <a href="{{ route('leases.index') }}" class="btn sec" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center;">&larr; Back to Leases</a>
                 </div>
             </h2>
+
+            @if ($lease->status === 'Active' && !empty($delinquency['is_breached']))
+                <div class="alert alert-err" style="margin-bottom: 16px; border: 1px solid #fda4af; background: #fff1f2; color: #9f1239; padding: 14px; border-radius: 8px;">
+                    <div style="font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                        <span class="tag t-red" style="font-weight: 700; background: #e11d48; color: #fff;">
+                            [!] Breach: Deposit Exhausted (Eligible for Termination under MOA Clause 8)
+                        </span>
+                    </div>
+                    <div style="font-size: 13px; line-height: 1.5; margin-bottom: 10px;">
+                        Total unpaid arrears (@peso($delinquency['total_arrears'])) meet or exceed the total security deposit held (@peso($delinquency['total_deposit'])).
+                        Under <b>MOA Line 8</b>, the contract may be cancelled and the room repossessed immediately.
+                    </div>
+                    @can('manage-leases')
+                        <form method="POST" action="{{ route('leases.terminate-clause8', $lease) }}"
+                              onsubmit="return confirm('Terminate this lease under MOA Clause 8?\n\nThis will offset the security deposit against unpaid bills, mark the lease Cancelled, deactivate the tenant, and mark the room Vacant immediately.')">
+                            @csrf
+                            <button type="submit" class="btn danger" style="min-height: 44px; font-weight: 600; padding: 0 16px;">
+                                Terminate Lease (Clause 8)
+                            </button>
+                        </form>
+                    @endcan
+                </div>
+            @endif
 
             <dl class="facts">
                 <div><dt>Principal renter</dt><dd><b>{{ $lease->tenant->full_name }}</b> <span class="muted">&bull;</span> <a href="{{ route('tenants.show', $lease->tenant) }}" class="small-link">Master profile</a> <span class="muted">&bull;</span> <a href="{{ route('tenants.edit', $lease->tenant) }}" class="small-link">Edit profile</a></dd></div>

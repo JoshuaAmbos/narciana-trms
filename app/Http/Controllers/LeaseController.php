@@ -8,6 +8,7 @@ use App\Models\Inquiry;
 use App\Models\Lease;
 use App\Models\Room;
 use App\Models\Tenant;
+use App\Services\DelinquencyService;
 use App\Services\HouseholdService;
 use App\Services\LeaseService;
 use Illuminate\Http\RedirectResponse;
@@ -144,7 +145,7 @@ class LeaseController extends Controller
             ->with('warning', $this->depositWarning($lease));
     }
 
-    public function show(Lease $lease, HouseholdService $household, Request $request): View
+    public function show(Lease $lease, HouseholdService $household, DelinquencyService $delinquency, Request $request): View
     {
         $lease->load([
             'tenant',
@@ -159,6 +160,7 @@ class LeaseController extends Controller
         return view('leases.show', [
             'lease' => $lease,
             'household' => $household->summary($lease, $request->user()),
+            'delinquency' => $delinquency->arrearsForLease($lease),
             'canCancel' => Gate::allows('cancel', $lease),
             'maxOccupants' => min($lease->room->max_occupants, Room::MAX_OCCUPANTS),
         ]);
@@ -208,6 +210,20 @@ class LeaseController extends Controller
     public function cancelMoa(Lease $lease, Request $request): RedirectResponse
     {
         return $this->cancel($lease, $request);
+    }
+
+    public function terminateClause8(Request $request, Lease $lease, DelinquencyService $delinquency): RedirectResponse
+    {
+        Gate::authorize('manage-leases');
+
+        $validated = $request->validate([
+            'termination_notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $delinquency->terminateClause8($lease, $request->user(), $validated['termination_notes'] ?? null);
+
+        return redirect()->route('leases.show', $lease)
+            ->with('status', "Lease for Room {$lease->room->room_no} was terminated under MOA Clause 8. The security deposit was offset against unpaid obligations and the room is now Vacant.");
     }
 
     private function depositWarning(Lease $lease): ?string

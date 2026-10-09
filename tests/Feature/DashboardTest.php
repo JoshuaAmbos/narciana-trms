@@ -150,4 +150,70 @@ class DashboardTest extends TestCase
             ->assertSee('No bills due in the next 7 days and nothing overdue.')
             ->assertSee('No open concerns.');
     }
+
+    public function test_multi_tenant_dual_occupancy_display_on_dashboard(): void
+    {
+        $room = $this->makeRoom('204', 'Basic');
+        $lease = $this->makeLease($room, $this->manager, 'Juan Santos', 'Maria Santos');
+        $this->billOn($lease, '2026-07-20'); // due 25 Jul 2026
+
+        $this->travelTo(Carbon::parse('2026-07-22'));
+
+        $this->actingAs($this->manager)->get('/')
+            ->assertOk()
+            ->assertSee('Maria Santos & Juan Santos');
+    }
+
+    public function test_submeter_reading_needed_alert_for_aircon_room(): void
+    {
+        $room = $this->makeRoom('207', 'Aircon', ['is_metered' => true]);
+        $lease = $this->makeLease($room, $this->manager);
+
+        // Due 25 Jul 2026; on 18 Jul it is 7 days ahead and unbilled
+        $this->travelTo(Carbon::parse('2026-07-18'));
+        $d = app(DashboardService::class)->forStaff(today());
+
+        $this->assertSame(1, $d['counts']['readings_needed']);
+        $this->assertCount(1, $d['readingsNeeded']);
+
+        $this->actingAs($this->manager)->get('/')
+            ->assertOk()
+            ->assertSee('Meter reading needed')
+            ->assertSee('Sub-Meter Readings Needed')
+            ->assertSee('1 Meter Reading Needed');
+    }
+
+    public function test_room_turnover_and_vacating_alert(): void
+    {
+        $room = $this->makeRoom('208', 'Basic', [
+            'status' => 'Occupied',
+            'expected_vacant_date' => Carbon::parse('2026-08-15'),
+        ]);
+
+        $this->travelTo(Carbon::parse('2026-08-01'));
+        $d = app(DashboardService::class)->forStaff(today());
+
+        $this->assertSame(1, $d['counts']['vacating_rooms']);
+        $this->assertCount(1, $d['vacatingRooms']);
+
+        $this->actingAs($this->manager)->get('/')
+            ->assertOk()
+            ->assertSee('1 Room Turnover Alert')
+            ->assertSee('Vacating');
+    }
+
+    public function test_caretaker_dashboard_privacy_and_scoping(): void
+    {
+        $caretaker = User::factory()->role('Caretaker')->create();
+        $room = $this->makeRoom('204', 'Basic');
+        $lease = $this->makeLease($room, $this->manager, 'Secret Co-Tenant', 'Main Tenant');
+
+        $this->actingAs($caretaker)->get('/')
+            ->assertOk()
+            ->assertDontSee('Secret Co-Tenant')
+            ->assertDontSee('Aircon reading')
+            ->assertDontSee('Sub-Meter')
+            ->assertDontSee('Bills due')
+            ->assertDontSee('Due and overdue');
+    }
 }

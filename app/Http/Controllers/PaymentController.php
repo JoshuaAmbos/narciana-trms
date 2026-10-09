@@ -7,6 +7,7 @@ use App\Models\Bill;
 use App\Models\Payment;
 use App\Models\Setting;
 use App\Services\BillingService;
+use App\Services\DelinquencyService;
 use App\Services\PaymentService;
 use App\Services\PenaltyService;
 use Illuminate\Http\RedirectResponse;
@@ -19,7 +20,11 @@ use Illuminate\View\View;
 /** Payments (Owner/Manager only; see routes). */
 class PaymentController extends Controller
 {
-    public function __construct(private PaymentService $payments, private PenaltyService $penalties) {}
+    public function __construct(
+        private PaymentService $payments,
+        private PenaltyService $penalties,
+        private DelinquencyService $delinquency,
+    ) {}
 
     public function index(Request $request): View
     {
@@ -28,9 +33,17 @@ class PaymentController extends Controller
         $filter = $request->validate(['month' => ['nullable', 'date_format:Y-m']]);
         $month = isset($filter['month']) ? Carbon::createFromFormat('Y-m-d', $filter['month'].'-01') : today()->startOfMonth();
 
+        $breachedLeases = $this->delinquency->breachedLeases();
+        $breachedLeaseIds = $breachedLeases->pluck('lease.lease_id')->all();
+
         // Bills still to collect, oldest first, with what they would cost if paid today.
         $toCollect = Bill::with(['lease.room', 'lease.tenant'])->where('status', '!=', 'Paid')->orderBy('due_date')->get()
-            ->map(fn (Bill $b) => ['bill' => $b, 'today' => $this->penalties->forBill($b, today()), 'can_pay' => $this->payments->canPay($b)]);
+            ->map(fn (Bill $b) => [
+                'bill' => $b,
+                'today' => $this->penalties->forBill($b, today()),
+                'can_pay' => $this->payments->canPay($b),
+                'is_breached' => in_array($b->lease_id, $breachedLeaseIds, true),
+            ]);
 
         $collections = Payment::with(['bill.lease.room', 'bill.lease.tenant', 'user'])
             ->whereYear('payment_date', $month->year)->whereMonth('payment_date', $month->month)
@@ -40,6 +53,7 @@ class PaymentController extends Controller
 
         return view('payments.index', [
             'month' => $month,
+            'breachedLeases' => $breachedLeases,
             'toCollect' => $toCollect,
             'collections' => $collections,
             'totals' => [

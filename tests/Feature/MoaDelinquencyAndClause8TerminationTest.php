@@ -192,8 +192,9 @@ class MoaDelinquencyAndClause8TerminationTest extends TestCase
         // Breach warning activates on Dashboard
         $dashResponse = $this->actingAs($this->manager)->get(route('dashboard'));
         $dashResponse->assertOk();
-        $dashResponse->assertSee('[!] Breach: Deposit Exhausted (Eligible for Termination under MOA Clause 8)');
-        $dashResponse->assertSee('Terminate Lease (Clause 8)');
+        $dashResponse->assertSee('Deposit Exhausted');
+        $dashResponse->assertSee('Eligible for termination');
+        $dashResponse->assertDontSee('MOA Clause');
 
         // Breach warning activates on Payments Bills to Collect
         $payResponse = $this->actingAs($this->manager)->get(route('payments.index'));
@@ -311,8 +312,8 @@ class MoaDelinquencyAndClause8TerminationTest extends TestCase
         // Caretaker dashboard does not see breach queue or financial data
         $dashResponse = $this->actingAs($this->caretaker)->get(route('dashboard'));
         $dashResponse->assertOk();
-        $dashResponse->assertDontSee('[!] Breach: Deposit Exhausted');
-        $dashResponse->assertDontSee('Terminate Lease (Clause 8)');
+        $dashResponse->assertDontSee('Deposit Exhausted');
+        $dashResponse->assertDontSee('Eligible for termination');
 
         // Caretaker POST terminate-clause8 is rejected with 403 Forbidden
         $postResponse = $this->actingAs($this->caretaker)

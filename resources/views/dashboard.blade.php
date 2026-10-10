@@ -19,23 +19,17 @@
         @if ($staff)
             {{-- 1. Bills Due in Next 7 Days (Neutral) --}}
             <a href="{{ route('payments.index') }}" class="kpi-metric-card bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition text-inherit" aria-label="Bills due in next 7 days">
-                <div class="kpi-metric-top flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    <span>Due in Next 7 Days</span>
-                    <span class="kpi-icon-box p-1.5 bg-slate-100 text-slate-600 rounded-md">
-                        <x-icon name="calendar" size="16" />
-                    </span>
+                <div class="kpi-metric-top text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Due in Next 7 Days
                 </div>
                 <div class="kpi-metric-value text-2xl font-bold text-slate-900 leading-none">{{ $billsDueSoonCount }}</div>
                 <div class="kpi-metric-subtext text-xs text-slate-500 mt-2 font-medium">₱{{ number_format($billsDueSoonTotal, 2) }} pending collection</div>
             </a>
 
             {{-- 2. Overdue Accounts (Actionable / Semantic Alert) --}}
-            <a href="{{ route('payments.index') }}" class="kpi-metric-card {{ $overdueCount > 0 ? 'alert-rose border-rose-300 ring-1 ring-rose-200' : 'border-slate-200' }} bg-white p-4 rounded-lg border shadow-sm flex flex-col justify-between hover:border-rose-400 transition text-inherit" aria-label="Overdue accounts">
-                <div class="kpi-metric-top flex items-center justify-between text-xs font-semibold {{ $overdueCount > 0 ? 'text-rose-700' : 'text-slate-500' }} uppercase tracking-wider mb-2">
-                    <span>Overdue Accounts</span>
-                    <span class="kpi-icon-box p-1.5 {{ $overdueCount > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600' }} rounded-md">
-                        <x-icon name="alert-circle" size="16" />
-                    </span>
+            <a href="{{ route('payments.index') }}" class="kpi-metric-card bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition text-inherit" aria-label="Overdue accounts">
+                <div class="kpi-metric-top text-xs font-semibold {{ $overdueCount > 0 ? 'text-rose-700' : 'text-slate-500' }} uppercase tracking-wider mb-2">
+                    Overdue Accounts
                 </div>
                 <div class="kpi-metric-value text-2xl font-bold {{ $overdueCount > 0 ? 'text-rose-700' : 'text-slate-900' }} leading-none">{{ $overdueCount }}</div>
                 <div class="kpi-metric-subtext text-xs {{ $overdueCount > 0 ? 'text-rose-600' : 'text-slate-500' }} mt-2 font-medium">
@@ -45,11 +39,8 @@
 
             {{-- 3. Meter Readings Needed (Neutral) --}}
             <a href="{{ route('billing.index') }}" class="kpi-metric-card bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition text-inherit" aria-label="Meter readings needed">
-                <div class="kpi-metric-top flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    <span>Meter Readings Needed</span>
-                    <span class="kpi-icon-box p-1.5 bg-slate-100 text-slate-600 rounded-md">
-                        <x-icon name="zap" size="16" />
-                    </span>
+                <div class="kpi-metric-top text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Meter Readings Needed
                 </div>
                 <div class="kpi-metric-value text-2xl font-bold text-slate-900 leading-none">{{ $readingsNeededCount }}</div>
                 <div class="kpi-metric-subtext text-xs text-slate-500 mt-2 font-medium">
@@ -60,11 +51,8 @@
 
         {{-- 4. Open Concerns (Neutral) --}}
         <a href="{{ route('concerns.index') }}" class="kpi-metric-card bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition text-inherit" aria-label="Open concerns">
-            <div class="kpi-metric-top flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                <span>Open Concerns</span>
-                <span class="kpi-icon-box p-1.5 bg-slate-100 text-slate-600 rounded-md">
-                    <x-icon name="wrench" size="16" />
-                </span>
+            <div class="kpi-metric-top text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                Open Concerns
             </div>
             <div class="kpi-metric-value text-2xl font-bold text-slate-900 leading-none">{{ $openConcernsCount }}</div>
             <div class="kpi-metric-subtext text-xs text-slate-500 mt-2 font-medium">
@@ -78,11 +66,8 @@
 
         {{-- 5. Vacant Rooms (Neutral) --}}
         <a href="{{ route('rooms.index') }}" class="kpi-metric-card bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition text-inherit" aria-label="Vacant rooms">
-            <div class="kpi-metric-top flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                <span>Vacant Rooms</span>
-                <span class="kpi-icon-box p-1.5 bg-slate-100 text-slate-600 rounded-md">
-                    <x-icon name="door-open" size="16" />
-                </span>
+            <div class="kpi-metric-top text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                Vacant Rooms
             </div>
             <div class="kpi-metric-value text-2xl font-bold text-slate-900 leading-none">{{ $vacantRoomsCount }}</div>
             <div class="kpi-metric-subtext text-xs text-slate-500 mt-2 font-medium">Vacant rooms &middot; Available</div>
@@ -90,12 +75,9 @@
 
         {{-- 6. Deposit Refunds Awaiting Approval (Owner Only, Actionable / Semantic Alert) --}}
         @if ($isOwner)
-            <a href="{{ route('reports.settlements') }}" class="kpi-metric-card {{ $pendingRefundsCount > 0 ? 'alert-amber border-amber-300 ring-1 ring-amber-200' : 'border-slate-200' }} bg-white p-4 rounded-lg border shadow-sm flex flex-col justify-between hover:border-amber-400 transition text-inherit" aria-label="Deposit refunds awaiting approval">
-                <div class="kpi-metric-top flex items-center justify-between text-xs font-semibold {{ $pendingRefundsCount > 0 ? 'text-amber-800' : 'text-slate-500' }} uppercase tracking-wider mb-2">
-                    <span>Deposit Refunds</span>
-                    <span class="kpi-icon-box p-1.5 {{ $pendingRefundsCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600' }} rounded-md">
-                        <x-icon name="banknote" size="16" />
-                    </span>
+            <a href="{{ route('reports.settlements') }}" class="kpi-metric-card bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition text-inherit" aria-label="Deposit refunds awaiting approval">
+                <div class="kpi-metric-top text-xs font-semibold {{ $pendingRefundsCount > 0 ? 'text-amber-800' : 'text-slate-500' }} uppercase tracking-wider mb-2">
+                    Deposit Refunds
                 </div>
                 <div class="kpi-metric-value text-2xl font-bold {{ $pendingRefundsCount > 0 ? 'text-amber-800' : 'text-slate-900' }} leading-none">{{ $pendingRefundsCount }}</div>
                 <div class="kpi-metric-subtext text-xs {{ $pendingRefundsCount > 0 ? 'text-amber-700' : 'text-slate-500' }} mt-2 font-medium">
@@ -105,120 +87,274 @@
         @endif
     </div>
 
-    {{-- Part 3: Actionable Priority Queue (Immediate Action Required) --}}
+    {{-- Part 3: Immediate Action Required Panel (Matching System Design & Clickable Rows) --}}
     @if ($staff)
-        <div class="action-queue-section mb-8">
-            <div class="action-queue-header flex items-center justify-between mb-3">
-                <div class="action-queue-title-wrap flex items-center gap-2">
-                    <h2 class="action-queue-title text-sm font-bold uppercase tracking-wider text-slate-800">Immediate Action Required</h2>
-                    @if ($urgentActionsCount > 0)
-                        <span class="action-queue-badge px-2 py-0.5 text-xs font-bold bg-amber-100 text-amber-900 rounded-full">
-                            {{ $urgentActionsCount }}
-                        </span>
-                    @endif
-                </div>
-            </div>
+        <div class="panel mb-6">
+            <h2>
+                <span>Immediate Action Required</span>
+                @if ($urgentActionsCount > 0)
+                    <span class="tag t-amber">{{ $urgentActionsCount }}</span>
+                @endif
+            </h2>
 
-            @if ($urgentActionsCount > 0)
-                <div class="action-queue-card bg-white rounded-lg border border-slate-200 shadow-sm divide-y divide-slate-100">
-                    {{-- 0. MOA Clause 8 Breached Leases (Deposit Exhausted) --}}
+            @if ($urgentActionsCount === 0)
+                <p class="muted">All operations up to date. No pending delinquency, turnovers, or approvals.</p>
+            @else
+                {{-- Desktop / Landscape Tablet View --}}
+                <div class="table-wrap dashboard-table-view">
+                    <table class="fit">
+                        <thead>
+                            <tr>
+                                <th>Alert</th>
+                                <th>Room</th>
+                                <th>Tenant</th>
+                                <th>Details</th>
+                                <th class="r"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{-- 0. Breached Leases (Deposit Exhausted) --}}
+                            @foreach ($breachedLeases as $breach)
+                                <?php $bLease = $breach['lease']; ?>
+                                <tr class="clickable-row"
+                                    onclick="window.location='{{ route('leases.show', $bLease) }}'"
+                                    tabindex="0"
+                                    role="button"
+                                    aria-label="View lease details for Room {{ $bLease->room->room_no }}">
+                                    <td>
+                                        <span class="tag t-red">Deposit Exhausted</span>
+                                    </td>
+                                    <td><b>Room {{ $bLease->room->room_no }}</b></td>
+                                    <td>
+                                        <div class="occupant-display font-medium">{{ $bLease->occupantsDisplay() }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="font-medium text-slate-800">Eligible for termination</span>
+                                        <span class="sub text-xs text-rose-700 ml-1">
+                                            (Arrears: @peso($breach['total_arrears']) &ge; Deposit: @peso($breach['total_deposit']))
+                                        </span>
+                                    </td>
+                                    <td class="r">
+                                        <span class="sub text-xs text-muted">&rarr;</span>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            {{-- 1. Overdue Accounts Items --}}
+                            @foreach ($overdueBills as $bill)
+                                <tr class="clickable-row"
+                                    onclick="window.location='{{ route('billing.index') }}'"
+                                    tabindex="0"
+                                    role="button"
+                                    aria-label="Record payment for Room {{ $bill->lease->room->room_no }}">
+                                    <td>
+                                        <span class="tag t-red">Overdue</span>
+                                    </td>
+                                    <td><b>Room {{ $bill->lease->room->room_no }}</b></td>
+                                    <td>
+                                        <div class="occupant-display font-medium">{{ $bill->lease->occupantsDisplay() }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="text-rose-600 font-medium">@peso($bill->total_amount)</span>
+                                        <span class="sub text-xs text-muted ml-1">due on {{ \Carbon\Carbon::parse($bill->due_date)->format('j M Y') }}</span>
+                                    </td>
+                                    <td class="r">
+                                        <span class="sub text-xs text-muted">&rarr;</span>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            {{-- 2. Vacating Rooms Items --}}
+                            @foreach ($vacatingRooms as $room)
+                                @php
+                                    $vacateUrl = $room->activeLease ? route('leases.show', $room->activeLease) : route('rooms.index');
+                                @endphp
+                                <tr class="clickable-row"
+                                    onclick="window.location='{{ $vacateUrl }}'"
+                                    tabindex="0"
+                                    role="button"
+                                    aria-label="View turnover for Room {{ $room->room_no }}">
+                                    <td>
+                                        <span class="tag t-amber">Turnover</span>
+                                    </td>
+                                    <td><b>Room {{ $room->room_no }}</b></td>
+                                    <td>
+                                        <div class="occupant-display font-medium">
+                                            {{ $room->activeLease?->occupantsDisplay() ?? $room->activeLease?->tenant?->full_name ?? 'Tenant' }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="font-medium text-slate-800">{{ $vacatingRooms->count() }} Room Turnover Alert</span>
+                                        <span class="sub text-xs text-muted ml-1">&middot; Vacating on {{ \Carbon\Carbon::parse($room->expected_vacant_date)->format('j M Y') }}</span>
+                                    </td>
+                                    <td class="r">
+                                        <span class="sub text-xs text-muted">&rarr;</span>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            {{-- 3. Meter Readings Needed Items --}}
+                            @foreach ($readingsNeeded as $row)
+                                <?php $rLease = $row['lease']; $rDue = $row['due_date']; ?>
+                                <tr class="clickable-row"
+                                    onclick="window.location='{{ route('bills.create', ['lease' => $rLease->lease_id]) }}'"
+                                    tabindex="0"
+                                    role="button"
+                                    aria-label="Enter reading for Room {{ $rLease->room->room_no }}">
+                                    <td>
+                                        <span class="tag t-blue">Meter Reading</span>
+                                    </td>
+                                    <td><b>Room {{ $rLease->room->room_no }}</b></td>
+                                    <td>
+                                        <div class="occupant-display font-medium">{{ $rLease->occupantsDisplay() }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="font-medium text-slate-800">{{ $readingsNeeded->count() }} Meter Reading Needed</span>
+                                        <span class="sub text-xs text-muted ml-1">&middot; Cycle due {{ \Carbon\Carbon::parse($rDue)->format('j M Y') }}</span>
+                                    </td>
+                                    <td class="r">
+                                        <span class="sub text-xs text-muted">&rarr;</span>
+                                    </td>
+                                </tr>
+                            @endforeach
+
+                            {{-- 4. Pending Deposit Refund (Owner Only) --}}
+                            @if ($isOwner)
+                                @foreach ($pendingRefundLeases as $refundItem)
+                                    @php
+                                        $refLease = is_array($refundItem) ? ($refundItem['lease'] ?? null) : ($refundItem->lease ?? $refundItem);
+                                        $refRoomNo = is_array($refundItem) ? ($refundItem['room_no'] ?? $refLease?->room?->room_no) : ($refundItem->room->room_no ?? $refLease?->room?->room_no);
+                                        $refTenantName = is_array($refundItem) ? ($refundItem['tenant_name'] ?? $refLease?->tenant?->full_name) : ($refundItem->tenant->full_name ?? $refLease?->tenant?->full_name);
+                                        $refAmount = is_array($refundItem) ? ($refundItem['net_refund'] ?? 0) : ($refundItem->settlement->refund_amount ?? $refundItem->net_refund ?? 0);
+                                        $refundUrl = $refLease ? route('leases.show', $refLease) : route('reports.settlements');
+                                    @endphp
+                                    <tr class="clickable-row"
+                                        onclick="window.location='{{ $refundUrl }}'"
+                                        tabindex="0"
+                                        role="button"
+                                        aria-label="Approve refund for Room {{ $refRoomNo }}">
+                                        <td>
+                                            <span class="tag t-blue">Refund Sign-off</span>
+                                        </td>
+                                        <td><b>Room {{ $refRoomNo }}</b></td>
+                                        <td>
+                                            <div class="occupant-display font-medium">{{ $refTenantName }}</div>
+                                        </td>
+                                        <td>
+                                            <span class="font-medium text-slate-800">@peso($refAmount)</span>
+                                            <span class="sub text-xs text-muted ml-1">awaiting sign-off</span>
+                                        </td>
+                                        <td class="r">
+                                            <span class="sub text-xs text-muted">&rarr;</span>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            @endif
+                        </tbody>
+                    </table>
+                </div>
+
+                {{-- Portrait Tablet & Mobile Cards View --}}
+                <div class="dashboard-mobile-cards">
+                    {{-- 0. Breached Leases --}}
                     @foreach ($breachedLeases as $breach)
                         <?php $bLease = $breach['lease']; ?>
-                        <div class="action-queue-item p-3.5 sm:px-4 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition border-l-4 border-l-rose-600 bg-rose-50/40">
-                            <div class="action-queue-item-left flex items-start sm:items-center gap-3">
-                                <span class="action-tag rose inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-rose-600 text-white shrink-0">
-                                    [!] Breach: Deposit Exhausted (Eligible for Termination under MOA Clause 8)
-                                </span>
-                                <div class="action-details">
-                                    <span class="action-room text-sm font-bold text-slate-900">Room {{ $bLease->room->room_no }}</span>
-                                    <span class="action-tenant text-sm text-slate-600">&middot; {{ $bLease->occupantsDisplay() }}</span>
-                                    <span class="action-meta rose text-xs text-rose-700 font-semibold ml-1">
-                                        (Arrears: @peso($breach['total_arrears']) &ge; Deposit: @peso($breach['total_deposit']))
-                                    </span>
-                                </div>
+                        <div class="dashboard-touch-card clickable-row"
+                             onclick="window.location='{{ route('leases.show', $bLease) }}'"
+                             tabindex="0"
+                             role="button"
+                             aria-label="View lease details for Room {{ $bLease->room->room_no }}">
+                            <div class="touch-card-header">
+                                <span class="font-bold">Room {{ $bLease->room->room_no }}</span>
+                                <span class="tag t-red">Deposit Exhausted</span>
                             </div>
-                            <div class="flex items-center gap-2 shrink-0">
-                                @can('manage-leases')
-                                    <form method="POST" action="{{ route('leases.terminate-clause8', $bLease) }}"
-                                          onsubmit="return confirm('Terminate lease for Room {{ $bLease->room->room_no }} under MOA Clause 8?\n\nThis will offset the security deposit against unpaid bills, set the lease to Cancelled, deactivate the tenant, and vacate the room immediately.')">
-                                        @csrf
-                                        <button type="submit" class="action-btn min-h-[44px] sm:min-h-[36px] px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-md flex items-center justify-center shrink-0 shadow-sm transition">
-                                            Terminate Lease (Clause 8)
-                                        </button>
-                                    </form>
-                                @endcan
-                                <a href="{{ route('leases.show', $bLease) }}" class="action-btn white min-h-[44px] sm:min-h-[36px] px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md flex items-center justify-center shrink-0">
-                                    View MOA
-                                </a>
+                            <div class="touch-card-body">
+                                <div>
+                                    <div class="font-medium text-slate-800">{{ $bLease->occupantsDisplay() }}</div>
+                                    <div class="sub text-xs text-rose-700">Eligible for termination &middot; Arrears @peso($breach['total_arrears']) &ge; Deposit @peso($breach['total_deposit'])</div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="tag t-grey text-xs">View</span>
+                                </div>
                             </div>
                         </div>
                     @endforeach
 
-                    {{-- 1. Overdue Accounts Items --}}
+                    {{-- 1. Overdue Accounts --}}
                     @foreach ($overdueBills as $bill)
-                        <div class="action-queue-item p-3.5 sm:px-4 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition">
-                            <div class="action-queue-item-left flex items-start sm:items-center gap-3">
-                                <span class="action-tag rose inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-rose-100 text-rose-800 shrink-0">
-                                    Overdue
-                                </span>
-                                <div class="action-details">
-                                    <span class="action-room text-sm font-bold text-slate-900">Room {{ $bill->lease->room->room_no }}</span>
-                                    <span class="action-tenant text-sm text-slate-600">&middot; {{ $bill->lease->occupantsDisplay() }}</span>
-                                    <span class="action-meta rose text-xs text-rose-600 font-medium ml-1">
-                                        (₱{{ number_format($bill->total_amount, 2) }} due on {{ \Carbon\Carbon::parse($bill->due_date)->format('M d') }})
-                                    </span>
+                        <div class="dashboard-touch-card clickable-row"
+                             onclick="window.location='{{ route('billing.index') }}'"
+                             tabindex="0"
+                             role="button"
+                             aria-label="Record payment for Room {{ $bill->lease->room->room_no }}">
+                            <div class="touch-card-header">
+                                <span class="font-bold">Room {{ $bill->lease->room->room_no }}</span>
+                                <span class="tag t-red">Overdue</span>
+                            </div>
+                            <div class="touch-card-body">
+                                <div>
+                                    <div class="font-medium text-slate-800">{{ $bill->lease->occupantsDisplay() }}</div>
+                                    <div class="sub text-xs text-muted">Due on {{ \Carbon\Carbon::parse($bill->due_date)->format('j M Y') }}</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-bold text-rose-700">@peso($bill->total_amount)</div>
+                                    <span class="tag t-grey text-xs mt-1">Pay</span>
                                 </div>
                             </div>
-                            <a href="{{ route('billing.index') }}" class="action-btn dark min-h-[44px] sm:min-h-[36px] px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-semibold rounded-md flex items-center justify-center shrink-0">
-                                Record Payment
-                            </a>
                         </div>
                     @endforeach
 
-                    {{-- 2. Vacating Rooms Items --}}
+                    {{-- 2. Vacating Rooms --}}
                     @foreach ($vacatingRooms as $room)
-                        <div class="action-queue-item p-3.5 sm:px-4 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition">
-                            <div class="action-queue-item-left flex items-start sm:items-center gap-3">
-                                <span class="action-tag amber inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-amber-100 text-amber-800 shrink-0">
-                                    Turnover
-                                </span>
-                                <div class="action-details">
-                                    <span class="action-room text-sm font-bold text-slate-900">Room {{ $room->room_no }}</span>
-                                    <span class="action-tenant text-sm text-slate-600">&middot; {{ $room->activeLease?->occupantsDisplay() ?? $room->activeLease?->tenant?->full_name ?? 'Tenant' }}</span>
-                                    <span class="action-meta slate text-xs text-slate-500 font-medium ml-1">
-                                        ({{ $vacatingRooms->count() }} Room Turnover Alert &middot; Vacating on {{ \Carbon\Carbon::parse($room->expected_vacant_date)->format('M d, Y') }})
-                                    </span>
+                        @php
+                            $vacateUrl = $room->activeLease ? route('leases.show', $room->activeLease) : route('rooms.index');
+                        @endphp
+                        <div class="dashboard-touch-card clickable-row"
+                             onclick="window.location='{{ $vacateUrl }}'"
+                             tabindex="0"
+                             role="button"
+                             aria-label="View turnover for Room {{ $room->room_no }}">
+                            <div class="touch-card-header">
+                                <span class="font-bold">Room {{ $room->room_no }}</span>
+                                <span class="tag t-amber">Turnover</span>
+                            </div>
+                            <div class="touch-card-body">
+                                <div>
+                                    <div class="font-medium text-slate-800">{{ $room->activeLease?->occupantsDisplay() ?? $room->activeLease?->tenant?->full_name ?? 'Tenant' }}</div>
+                                    <div class="sub text-xs text-muted">Vacating on {{ \Carbon\Carbon::parse($room->expected_vacant_date)->format('j M Y') }}</div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="tag t-grey text-xs">View</span>
                                 </div>
                             </div>
-                            <a href="{{ $room->activeLease ? route('leases.show', $room->activeLease) : route('rooms.index') }}" class="action-btn white min-h-[44px] sm:min-h-[36px] px-3.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md flex items-center justify-center shrink-0">
-                                View Turnover
-                            </a>
                         </div>
                     @endforeach
 
-                    {{-- 3. Meter Readings Needed Items --}}
+                    {{-- 3. Meter Readings Needed --}}
                     @foreach ($readingsNeeded as $row)
                         <?php $rLease = $row['lease']; $rDue = $row['due_date']; ?>
-                        <div class="action-queue-item p-3.5 sm:px-4 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition">
-                            <div class="action-queue-item-left flex items-start sm:items-center gap-3">
-                                <span class="action-tag sky inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-sky-100 text-sky-800 shrink-0">
-                                    Meter Reading
-                                </span>
-                                <div class="action-details">
-                                    <span class="action-room text-sm font-bold text-slate-900">Room {{ $rLease->room->room_no }}</span>
-                                    <span class="action-tenant text-sm text-slate-600">&middot; {{ $rLease->occupantsDisplay() }}</span>
-                                    <span class="action-meta sky text-xs text-sky-700 font-medium ml-1">
-                                        ({{ $readingsNeeded->count() }} Meter Reading Needed &middot; Cycle due {{ \Carbon\Carbon::parse($rDue)->format('M d') }})
-                                    </span>
+                        <div class="dashboard-touch-card clickable-row"
+                             onclick="window.location='{{ route('bills.create', ['lease' => $rLease->lease_id]) }}'"
+                             tabindex="0"
+                             role="button"
+                             aria-label="Enter reading for Room {{ $rLease->room->room_no }}">
+                            <div class="touch-card-header">
+                                <span class="font-bold">Room {{ $rLease->room->room_no }}</span>
+                                <span class="tag t-blue">Meter Reading</span>
+                            </div>
+                            <div class="touch-card-body">
+                                <div>
+                                    <div class="font-medium text-slate-800">{{ $rLease->occupantsDisplay() }}</div>
+                                    <div class="sub text-xs text-muted">Cycle due {{ \Carbon\Carbon::parse($rDue)->format('j M Y') }}</div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="tag t-grey text-xs">Enter</span>
                                 </div>
                             </div>
-                            <a href="{{ route('bills.create', ['lease' => $rLease->lease_id]) }}" class="action-btn sky min-h-[44px] sm:min-h-[36px] px-3.5 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-md flex items-center justify-center shrink-0">
-                                Enter Reading
-                            </a>
                         </div>
                     @endforeach
 
-                    {{-- 4. Pending Deposit Refund (Owner Only) --}}
+                    {{-- 4. Pending Deposit Refunds --}}
                     @if ($isOwner)
                         @foreach ($pendingRefundLeases as $refundItem)
                             @php
@@ -226,36 +362,30 @@
                                 $refRoomNo = is_array($refundItem) ? ($refundItem['room_no'] ?? $refLease?->room?->room_no) : ($refundItem->room->room_no ?? $refLease?->room?->room_no);
                                 $refTenantName = is_array($refundItem) ? ($refundItem['tenant_name'] ?? $refLease?->tenant?->full_name) : ($refundItem->tenant->full_name ?? $refLease?->tenant?->full_name);
                                 $refAmount = is_array($refundItem) ? ($refundItem['net_refund'] ?? 0) : ($refundItem->settlement->refund_amount ?? $refundItem->net_refund ?? 0);
+                                $refundUrl = $refLease ? route('leases.show', $refLease) : route('reports.settlements');
                             @endphp
-                            <div class="action-queue-item p-3.5 sm:px-4 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition">
-                                <div class="action-queue-item-left flex items-start sm:items-center gap-3">
-                                    <span class="action-tag blue inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-blue-100 text-blue-800 shrink-0">
-                                        Refund Sign-off
-                                    </span>
-                                    <div class="action-details">
-                                        <span class="action-room text-sm font-bold text-slate-900">Room {{ $refRoomNo }}</span>
-                                        <span class="action-tenant text-sm text-slate-600">&middot; {{ $refTenantName }}</span>
-                                        <span class="action-meta blue text-xs text-blue-700 font-medium ml-1">
-                                            (₱{{ number_format($refAmount, 2) }} awaiting sign-off)
-                                        </span>
+                            <div class="dashboard-touch-card clickable-row"
+                                 onclick="window.location='{{ $refundUrl }}'"
+                                 tabindex="0"
+                                 role="button"
+                                 aria-label="Approve refund for Room {{ $refRoomNo }}">
+                                <div class="touch-card-header">
+                                    <span class="font-bold">Room {{ $refRoomNo }}</span>
+                                    <span class="tag t-blue">Refund Sign-off</span>
+                                </div>
+                                <div class="touch-card-body">
+                                    <div>
+                                        <div class="font-medium text-slate-800">{{ $refTenantName }}</div>
+                                        <div class="sub text-xs text-muted">Awaiting sign-off</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-bold text-slate-900">@peso($refAmount)</div>
+                                        <span class="tag t-grey text-xs mt-1">Review</span>
                                     </div>
                                 </div>
-                                @if ($refLease)
-                                    <a href="{{ route('leases.show', $refLease) }}" class="action-btn blue min-h-[44px] sm:min-h-[36px] px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-md flex items-center justify-center shrink-0">
-                                        Approve Refund
-                                    </a>
-                                @else
-                                    <a href="{{ route('reports.settlements') }}" class="action-btn blue min-h-[44px] sm:min-h-[36px] px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-md flex items-center justify-center shrink-0">
-                                        Approve Refund
-                                    </a>
-                                @endif
                             </div>
                         @endforeach
                     @endif
-                </div>
-            @else
-                <div class="action-queue-empty p-4 bg-white rounded-lg border border-slate-200 text-center text-xs text-slate-500">
-                    All operations up to date. No pending delinquency, turnovers, or approvals.
                 </div>
             @endif
         </div>
@@ -742,32 +872,12 @@
 }
 
 .kpi-metric-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     font-size: 11.5px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: #64748b;
     margin-bottom: 8px;
-}
-
-.kpi-icon-box {
-    padding: 6px;
-    background: #f1f5f9;
-    color: #475569;
-    border-radius: 6px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    flex-shrink: 0;
-}
-.kpi-icon-box svg {
-    display: block;
-    width: 16px;
-    height: 16px;
 }
 
 .kpi-metric-value {
@@ -783,235 +893,6 @@
     margin-top: 8px;
     font-weight: 500;
     line-height: 1.35;
-}
-
-/* Semantic Alert Card Styling */
-.kpi-metric-card.alert-rose {
-    border-color: #fda4af !important;
-    box-shadow: 0 0 0 1px #fecdd3, 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-.kpi-metric-card.alert-rose:hover {
-    border-color: #fb7185 !important;
-}
-.kpi-metric-card.alert-rose .kpi-metric-top {
-    color: #be123c;
-}
-.kpi-metric-card.alert-rose .kpi-icon-box {
-    background: #ffe4e6;
-    color: #be123c;
-}
-.kpi-metric-card.alert-rose .kpi-metric-value {
-    color: #be123c;
-}
-.kpi-metric-card.alert-rose .kpi-metric-subtext {
-    color: #e11d48;
-}
-
-.kpi-metric-card.alert-amber {
-    border-color: #fcd34d !important;
-    box-shadow: 0 0 0 1px #fde68a, 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-.kpi-metric-card.alert-amber:hover {
-    border-color: #fbbf24 !important;
-}
-.kpi-metric-card.alert-amber .kpi-metric-top {
-    color: #92400e;
-}
-.kpi-metric-card.alert-amber .kpi-icon-box {
-    background: #fef3c7;
-    color: #92400e;
-}
-.kpi-metric-card.alert-amber .kpi-metric-value {
-    color: #92400e;
-}
-.kpi-metric-card.alert-amber .kpi-metric-subtext {
-    color: #b45309;
-}
-
-/* Action Required Queue Section */
-.action-queue-section {
-    margin-bottom: 24px;
-}
-.action-queue-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-}
-.action-queue-title-wrap {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.action-queue-title {
-    font-size: 13px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #1e293b;
-    margin: 0;
-}
-.action-queue-badge {
-    padding: 2px 8px;
-    font-size: 11px;
-    font-weight: 700;
-    background: #fef3c7;
-    color: #78350f;
-    border-radius: 9999px;
-}
-
-.action-queue-card {
-    background: #ffffff;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    overflow: hidden;
-}
-
-.action-queue-item {
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    border-bottom: 1px solid #f1f5f9;
-    transition: background-color 0.12s ease;
-}
-.action-queue-item:last-child {
-    border-bottom: none;
-}
-.action-queue-item:hover {
-    background: #f8fafc;
-}
-
-@media (max-width: 640px) {
-    .action-queue-item {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-    }
-}
-
-.action-queue-item-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
-    min-width: 0;
-}
-@media (max-width: 640px) {
-    .action-queue-item-left {
-        align-items: flex-start;
-    }
-}
-
-.action-tag {
-    display: inline-flex;
-    align-items: center;
-    padding: 3px 8px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    flex-shrink: 0;
-    line-height: 1.25;
-}
-.action-tag.rose { background: #ffe4e6; color: #9f1239; }
-.action-tag.amber { background: #fef3c7; color: #92400e; }
-.action-tag.sky { background: #e0f2fe; color: #0369a1; }
-.action-tag.blue { background: #dbeafe; color: #1e40af; }
-
-.action-details {
-    font-size: 13.5px;
-    line-height: 1.4;
-}
-.action-room {
-    font-weight: 700;
-    color: #0f172a;
-}
-.action-tenant {
-    color: #475569;
-}
-.action-meta {
-    font-size: 12px;
-    font-weight: 500;
-    margin-left: 4px;
-}
-.action-meta.rose { color: #e11d48; }
-.action-meta.slate { color: #64748b; }
-.action-meta.sky { color: #0284c7; }
-.action-meta.blue { color: #2563eb; }
-
-/* Buttons in queue */
-.action-btn {
-    min-height: 44px;
-    padding: 8px 16px;
-    font-size: 12.5px;
-    font-weight: 600;
-    border-radius: 6px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    flex-shrink: 0;
-    cursor: pointer;
-    box-sizing: border-box;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
-}
-@media (min-width: 640px) {
-    .action-btn {
-        min-height: 36px;
-        padding: 6px 14px;
-    }
-}
-
-.action-btn.dark {
-    background: #0f172a;
-    color: #ffffff;
-    border: 1px solid #0f172a;
-}
-.action-btn.dark:hover {
-    background: #000000;
-    border-color: #000000;
-}
-
-.action-btn.white {
-    background: #ffffff;
-    color: #334155;
-    border: 1px solid #cbd5e1;
-}
-.action-btn.white:hover {
-    background: #f8fafc;
-    border-color: #94a3b8;
-}
-
-.action-btn.sky {
-    background: #0284c7;
-    color: #ffffff;
-    border: 1px solid #0284c7;
-}
-.action-btn.sky:hover {
-    background: #0369a1;
-    border-color: #0369a1;
-}
-
-.action-btn.blue {
-    background: #2563eb;
-    color: #ffffff;
-    border: 1px solid #2563eb;
-}
-.action-btn.blue:hover {
-    background: #1d4ed8;
-    border-color: #1d4ed8;
-}
-
-.action-queue-empty {
-    padding: 16px 20px;
-    background: #ffffff;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    text-align: center;
-    font-size: 13px;
-    color: #64748b;
 }
 
 /* Sub-meter notice box */

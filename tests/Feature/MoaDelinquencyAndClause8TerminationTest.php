@@ -204,7 +204,11 @@ class MoaDelinquencyAndClause8TerminationTest extends TestCase
         // Breach warning activates on Lease show page
         $leaseResponse = $this->actingAs($this->manager)->get(route('leases.show', $lease));
         $leaseResponse->assertOk();
-        $leaseResponse->assertSee('[!] Breach: Deposit Exhausted (Eligible for Termination under MOA Clause 8)');
+        $leaseResponse->assertSee('Deposit Exhausted');
+        $leaseResponse->assertSee('Eligible for Termination');
+        $leaseResponse->assertSee('Terminate Lease');
+        $leaseResponse->assertDontSee('onclick="openEndLeaseModal()">End Lease</button>', false);
+        $leaseResponse->assertDontSee('MOA Clause');
     }
 
     public function test_atomic_termination_under_clause_8(): void

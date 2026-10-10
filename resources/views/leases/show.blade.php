@@ -17,12 +17,13 @@
                         @if ($lease->status === 'Active')
                             @if (!empty($delinquency['is_breached']))
                                 <form method="POST" action="{{ route('leases.terminate-clause8', $lease) }}" style="display: inline;"
-                                      onsubmit="return confirm('Terminate this lease under MOA Clause 8?\n\nThis will offset the security deposit against unpaid bills, mark the lease Cancelled, deactivate the tenant, and mark the room Vacant immediately.')">
+                                      onsubmit="return confirm('Terminate this lease?\n\nTotal unpaid arrears meet or exceed the security deposit. This will offset the security deposit against unpaid bills, mark the lease Cancelled, deactivate the tenant, and mark the room Vacant immediately.')">
                                     @csrf
-                                    <button type="submit" class="btn danger" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 16px; font-weight: 600;">Terminate Lease (Clause 8)</button>
+                                    <button type="submit" class="btn danger" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 16px; font-weight: 600;">Terminate Lease</button>
                                 </form>
+                            @else
+                                <button type="button" class="btn danger" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 16px; font-weight: 600;" onclick="openEndLeaseModal()">End Lease</button>
                             @endif
-                            <button type="button" class="btn danger" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 16px; font-weight: 600;" onclick="openEndLeaseModal()">End Lease</button>
                             <a href="{{ route('leases.edit', $lease) }}" class="btn sec" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center;">Edit MOA</a>
                         @endif
                     @endcan
@@ -34,19 +35,19 @@
                 <div class="alert alert-err" style="margin-bottom: 16px; border: 1px solid #fda4af; background: #fff1f2; color: #9f1239; padding: 14px; border-radius: 8px;">
                     <div style="font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
                         <span class="tag t-red" style="font-weight: 700; background: #e11d48; color: #fff;">
-                            [!] Breach: Deposit Exhausted (Eligible for Termination under MOA Clause 8)
+                            Deposit Exhausted (Eligible for Termination)
                         </span>
                     </div>
                     <div style="font-size: 13px; line-height: 1.5; margin-bottom: 10px;">
                         Total unpaid arrears (@peso($delinquency['total_arrears'])) meet or exceed the total security deposit held (@peso($delinquency['total_deposit'])).
-                        Under <b>MOA Line 8</b>, the contract may be cancelled and the room repossessed immediately.
+                        The security deposit has been consumed, and the contract may be cancelled and the room repossessed immediately.
                     </div>
                     @can('manage-leases')
                         <form method="POST" action="{{ route('leases.terminate-clause8', $lease) }}"
-                              onsubmit="return confirm('Terminate this lease under MOA Clause 8?\n\nThis will offset the security deposit against unpaid bills, mark the lease Cancelled, deactivate the tenant, and mark the room Vacant immediately.')">
+                              onsubmit="return confirm('Terminate this lease?\n\nTotal unpaid arrears meet or exceed the security deposit. This will offset the security deposit against unpaid bills, mark the lease Cancelled, deactivate the tenant, and mark the room Vacant immediately.')">
                             @csrf
                             <button type="submit" class="btn danger" style="min-height: 44px; font-weight: 600; padding: 0 16px;">
-                                Terminate Lease (Clause 8)
+                                Terminate Lease
                             </button>
                         </form>
                     @endcan

@@ -32,7 +32,7 @@
 
     {{-- Section 1: To bill --}}
     <div class="panel">
-        <h2>To Bill <span class="muted">(Due Within {{ \App\Services\BillingService::DAYS_AHEAD }} Days or Overdue)</span></h2>
+        <h2>Ready To Generate <span class="muted">(Due Within {{ \App\Services\BillingService::DAYS_AHEAD }} Days or Overdue)</span></h2>
         @if ($toBill->isEmpty())
             <p class="muted">Nothing to bill right now.</p>
         @else
@@ -92,7 +92,8 @@
         @endif
     </div>
 
-    {{-- Section 2: Bills due in month --}}
+    {{-- Section 2: Bills due in month --}} 
+    {{-- TODO: Implement better month picker --}}
     <div class="panel">
         <h2>
             Bills Due in {{ $month->format('F Y') }}
@@ -105,7 +106,6 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                 </a>
                 <a href="{{ route('meter-readings.index') }}" class="btn sec">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                     Meter Readings
                 </a>
             </span>

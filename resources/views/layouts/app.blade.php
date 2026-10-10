@@ -91,6 +91,7 @@
     </aside>
     <div class="scrim" onclick="document.body.classList.remove('nav-open')"></div>
 
+    {{-- TODO: Move My Password and Logout Button into sidebar --}}
     <div class="main">
         <header class="top">
             <div class="top-left">

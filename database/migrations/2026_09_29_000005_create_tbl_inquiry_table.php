@@ -22,6 +22,7 @@ return new class extends Migration
             $table->unsignedInteger('room_id')->nullable();
             $table->unsignedInteger('user_id');
             $table->string('remarks', 255)->nullable();
+            $table->timestamps();
 
             $table->foreign('room_id')->references('room_id')->on('tbl_room')->restrictOnDelete();
             $table->foreign('user_id')->references('user_id')->on('tbl_user')->restrictOnDelete();

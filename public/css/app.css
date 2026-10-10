@@ -235,8 +235,12 @@ form.inline { display: inline; margin: 0; }
 
 .body { padding: 18px 20px 32px; flex: 1; }
 
-/* ---------- Building blocks ---------- */
 .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; width: 100%; margin-bottom: 16px; }
+.cards.has-1 { grid-template-columns: minmax(0, 1fr); }
+.cards.has-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cards.has-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cards.has-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.cards.has-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
 .card .n { font-size: 28px; font-weight: 700; }
 .card .l { font-size: 13px; color: var(--muted); margin-top: 2px; }
@@ -368,7 +372,7 @@ td.actions .btn { margin-left: 4px; }
 
 /* ---------- Smaller tablets (portrait, up to 1023px) & phones: sidebar becomes a slide-in off-canvas menu (☰) ---------- */
 @media (max-width: 1023px) {
-    .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .cards, .cards.has-3, .cards.has-4, .cards.has-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .grid3 { grid-template-columns: minmax(0, 1fr); }
 
     .menu-btn { display: inline-flex !important; }
@@ -603,7 +607,7 @@ body.side-collapsed .side {
 }
 
 @media (max-width: 540px) {
-    .cards { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+    .cards, .cards.has-2, .cards.has-3, .cards.has-4, .cards.has-5 { grid-template-columns: minmax(0, 1fr); gap: 10px; }
     .card .n { font-size: 22px; }
 }
 
@@ -663,7 +667,7 @@ body.side-collapsed .side {
     .room-cards { display: block !important; }
 }
 
-/* Leases & Inquiries layout transitions:
+/* Leases, Inquiries & Tenants layout transitions:
    Tablet Landscape (1024px+) & Desktop: Full table view.
    Tablet Portrait (< 1024px) & Mobile: Stacked card view. */
 @media (max-width: 1023px) {
@@ -671,12 +675,16 @@ body.side-collapsed .side {
     .inquiry-cards { display: block !important; }
     .leases-table-wrap { display: none !important; }
     .lease-cards { display: block !important; }
+    .tenants-table-wrap { display: none !important; }
+    .tenant-cards { display: block !important; }
 }
 @media (min-width: 1024px) {
     .inquiries-table-wrap { display: block !important; }
     .inquiry-cards { display: none !important; }
     .leases-table-wrap { display: block !important; }
     .lease-cards { display: none !important; }
+    .tenants-table-wrap { display: block !important; }
+    .tenant-cards { display: none !important; }
 }
 
 .inquiries-table-wrap {
@@ -959,6 +967,45 @@ body.side-collapsed .side {
     justify-content: center;
     text-align: center;
     padding: 8px 14px;
+}
+
+.tenants-table-wrap { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tenant-cards { display: none; }
+.tenant-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+.tenant-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.tenant-card-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.25;
+}
+.tenant-card-specs {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 10px;
+}
+.tenant-card-body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+    font-size: 13.5px;
 }
 
 .filters-scrollable {
@@ -2258,25 +2305,32 @@ svg.w-4 {
     letter-spacing: 0.04em;
 }
 
-/* ---------- Clickable Leases Rows & Detail Modal ---------- */
+/* ---------- Clickable Leases & Tenants Rows & Detail Modal ---------- */
 .lease-row,
-.lease-card-clickable {
+.lease-card-clickable,
+.tenant-row,
+.tenant-card-clickable {
     cursor: pointer;
     transition: background-color 0.15s ease;
 }
-.lease-row:hover {
+.lease-row:hover,
+.tenant-row:hover {
     background-color: #f1f5fa;
 }
 .lease-row:focus-visible,
-.lease-card-clickable:focus-visible {
+.lease-card-clickable:focus-visible,
+.tenant-row:focus-visible,
+.tenant-card-clickable:focus-visible {
     outline: 2px solid var(--navy-2);
     outline-offset: -2px;
 }
-.lease-card-clickable:hover {
+.lease-card-clickable:hover,
+.tenant-card-clickable:hover {
     border-color: var(--navy-2);
     box-shadow: 0 2px 8px rgba(15, 28, 46, 0.08);
 }
-.lease-modal-actions {
+.lease-modal-actions,
+.tenant-modal-actions {
     border-top: 1px solid var(--border);
     padding-top: 14px;
     margin-top: 14px;

@@ -8,6 +8,7 @@ class UpdateTenantRequest extends StoreTenantRequest
     {
         return array_merge(parent::rules(), [
             'status' => ['nullable', 'in:Active,Inactive,Blacklisted'],
+            'return_to' => ['nullable', 'string'],
         ]);
     }
 }

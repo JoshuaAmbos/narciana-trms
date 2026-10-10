@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Tenant master identity profile.
@@ -14,9 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Tenant extends Model
 {
-    use SoftDeletes;
-
-    public const STATUSES = ['Active', 'Inactive', 'Blacklisted', 'Archived'];
+    public const STATUSES = ['Active', 'Inactive', 'Blacklisted'];
 
     public const ACTIVE_STATUSES = ['Active', 'Inactive', 'Blacklisted'];
 
@@ -51,7 +48,6 @@ class Tenant extends Model
         'provincial_address',
         'occupation',
         'status',
-        'deleted_at',
         'created_at',
         'updated_at',
     ];
@@ -59,7 +55,6 @@ class Tenant extends Model
     protected function casts(): array
     {
         return [
-            'deleted_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
@@ -137,11 +132,6 @@ class Tenant extends Model
     public function scopeBlacklisted(Builder $query): Builder
     {
         return $query->where('status', 'Blacklisted');
-    }
-
-    public function scopeArchived(Builder $query): Builder
-    {
-        return $query->onlyTrashed()->orWhere('status', 'Archived');
     }
 
     public static function idTypeConfigs(): array

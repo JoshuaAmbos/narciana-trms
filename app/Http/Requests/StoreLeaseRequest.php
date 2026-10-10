@@ -82,13 +82,12 @@ class StoreLeaseRequest extends LeaseRequest
 
         return $rules + [
             'tenant_mode' => ['required', Rule::in(['new', 'existing'])],
-            // Returning tenant: must not already have an active lease, and must not be blacklisted or archived.
+            // Returning tenant: must not already have an active lease, and must not be blacklisted.
             'tenant_id' => [
                 'nullable',
                 'required_if:tenant_mode,existing',
                 Rule::exists('tbl_tenant', 'tenant_id')
-                    ->whereNull('deleted_at')
-                    ->whereNotIn('status', ['Blacklisted', 'Archived']),
+                    ->whereNotIn('status', ['Blacklisted']),
                 Rule::unique('tbl_lease', 'tenant_id')->where('status', 'Active'),
             ],
             'first_name' => ['nullable', 'string', 'max:100'],
@@ -300,7 +299,7 @@ class StoreLeaseRequest extends LeaseRequest
         return parent::messages() + [
             'move_in_reading.required' => 'The baseline move-in meter reading is required for air-conditioned rooms per Aircon MOA Clause 6.',
             'room_id.exists' => 'Choose a Vacant room. A new MOA can only be made for a Vacant room.',
-            'tenant_id.exists' => 'The selected returning tenant is not eligible for a lease (not found, blacklisted, or archived).',
+            'tenant_id.exists' => 'The selected returning tenant is not eligible for a lease (not found or blacklisted).',
             'tenant_id.unique' => 'This tenant already has an active lease.',
             'contact_no.regex' => 'The contact number must be a valid Philippine mobile number (e.g., 09XXXXXXXXX or +639XXXXXXXXX).',
             'other_id_type.required_if' => 'Please specify the ID type when "Other" is selected.',

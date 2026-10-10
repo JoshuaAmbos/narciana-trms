@@ -4,7 +4,8 @@
 
 @section('content')
     {{-- Metric Summary Cards --}}
-    <div class="cards">
+    @php($leaseCardCount = 3 + ($counts['Cancelled'] > 0 ? 1 : 0))
+    <div class="cards has-{{ $leaseCardCount }}">
         <div class="card">
             <div class="n green">{{ $counts['Active'] }}</div>
             <div class="l">Active Leases (Occupied)</div>

@@ -97,9 +97,8 @@ class LeaseController extends Controller
             ]);
         }
 
-        // Tenants eligible to lease (no active lease and strictly neither Blacklisted nor Archived).
-        $eligibleTenants = Tenant::whereNotIn('status', ['Blacklisted', 'Archived'])
-            ->whereNull('deleted_at')
+        // Tenants eligible to lease (no active lease and strictly not Blacklisted).
+        $eligibleTenants = Tenant::whereNotIn('status', ['Blacklisted'])
             ->whereDoesntHave('leases', fn ($q) => $q->where('status', 'Active'))
             ->orderBy('full_name')->get();
 

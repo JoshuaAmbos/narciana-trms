@@ -69,8 +69,6 @@ Route::middleware(['auth', 'active'])->group(function () {
     // ---------- Owner and Manager ----------
     Route::middleware('role:Owner,Manager')->group(function () {
         Route::resource('tenants', TenantController::class)->only(['create', 'store', 'show', 'edit', 'update']);
-        Route::patch('/tenants/{tenant}/archive', [TenantController::class, 'archive'])->name('tenants.archive');
-        Route::patch('/tenants/{tenant}/restore', [TenantController::class, 'restore'])->withTrashed()->name('tenants.restore');
         Route::resource('leases.occupants', OccupantController::class)->only(['store']);
         Route::patch('/occupants/{occupant}/remove', [OccupantController::class, 'remove'])->name('occupants.remove');
 

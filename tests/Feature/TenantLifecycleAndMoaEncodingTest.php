@@ -104,8 +104,13 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
     // 2. Tenant Lifecycle, Archiving & Directory
     // ==========================================
 
-    public function test_tenant_archiving_and_restoration(): void
+    public function test_tenant_soft_delete_omitted_and_status_relies_on_lifecycle(): void
     {
+        $this->assertFalse(in_array(\Illuminate\Database\Eloquent\SoftDeletes::class, class_uses(Tenant::class)));
+        $this->assertFalse(\Illuminate\Support\Facades\Schema::hasColumn('tbl_tenant', 'deleted_at'));
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('tenants.archive'));
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('tenants.restore'));
+
         $tenant = Tenant::create([
             'first_name' => 'Juan',
             'last_name' => 'Luna',
@@ -113,59 +118,46 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
             'contact_no' => '09171234567',
             'valid_id_type' => "Driver's License",
             'valid_id_no' => 'N01-23-456789',
-            'status' => 'Inactive',
+            'status' => 'Active',
         ]);
 
-        // Archive
         $this->actingAs($this->manager)
-            ->patch(route('tenants.archive', $tenant))
+            ->put(route('tenants.update', $tenant), [
+                'first_name' => 'Juan',
+                'last_name' => 'Luna',
+                'contact_no' => '09171234567',
+                'valid_id_type' => "Driver's License",
+                'valid_id_no' => 'N01-23-456789',
+                'provincial_address' => 'Badoc, Ilocos Norte',
+                'occupation' => 'Painter',
+            ])
             ->assertRedirect(route('tenants.index'))
-            ->assertSessionHas('status');
+            ->assertSessionHas('status', 'Tenant profile was updated.');
 
-        $tenant->refresh();
-        $this->assertSame('Archived', $tenant->status);
-        $this->assertNotNull($tenant->deleted_at);
-
-        // Active listing should not display archived tenant
-        session()->forget('status');
         $this->actingAs($this->manager)
-            ->get(route('tenants.index'))
-            ->assertDontSee('Juan Luna');
-
-        // Show archived filter displays the archived tenant
-        $this->actingAs($this->manager)
-            ->get(route('tenants.index', ['archived' => 1]))
+            ->get(route('tenants.edit', $tenant))
             ->assertOk()
-            ->assertSee('Juan Luna')
-            ->assertSee('Restore');
-
-        // Restore
-        $this->actingAs($this->manager)
-            ->patch(route('tenants.restore', $tenant))
-            ->assertRedirect(route('tenants.index', ['archived' => 1]))
-            ->assertSessionHas('status');
-
-        $tenant->refresh();
-        $this->assertSame('Inactive', $tenant->status);
-        $this->assertNull($tenant->deleted_at);
+            ->assertSee(route('tenants.index'));
     }
 
-    public function test_archiving_tenant_with_active_lease_is_prevented(): void
+    public function test_tenant_table_has_clickable_rows_and_modal_actions(): void
     {
         $room = $this->makeRoom('102');
         $lease = $this->makeLease($room, $this->manager, null, 'Active Tenant');
         $tenant = $lease->tenant;
 
-        $this->actingAs($this->manager)
-            ->patch(route('tenants.archive', $tenant))
-            ->assertSessionHas('error');
+        $res = $this->actingAs($this->manager)
+            ->get(route('tenants.index'));
 
-        $tenant->refresh();
-        $this->assertSame('Active', $tenant->status);
-        $this->assertNull($tenant->deleted_at);
+        $res->assertOk()
+            ->assertSee('tenant-row')
+            ->assertSee('openTenantModal('.$tenant->tenant_id.')', false)
+            ->assertSee('tenant-detail-modal-'.$tenant->tenant_id, false)
+            ->assertSee(route('tenants.edit', $tenant))
+            ->assertDontSee('Show Archived');
     }
 
-    public function test_blacklisted_and_archived_tenants_are_excluded_from_moa_selection(): void
+    public function test_blacklisted_tenants_are_excluded_from_moa_selection(): void
     {
         $blacklisted = Tenant::create([
             'first_name' => 'Bad',
@@ -177,49 +169,18 @@ class TenantLifecycleAndMoaEncodingTest extends TestCase
             'status' => 'Blacklisted',
         ]);
 
-        $archived = Tenant::create([
-            'first_name' => 'Old',
-            'last_name' => 'Renter',
-            'full_name' => 'Old Renter',
-            'contact_no' => '09170002222',
-            'valid_id_type' => 'Passport',
-            'valid_id_no' => 'P7654321',
-            'status' => 'Archived',
-        ]);
-
         $room = $this->makeRoom('103');
 
         // Verify they are not in the create view dropdown
         $this->actingAs($this->manager)
             ->get('/leases/create')
-            ->assertDontSee('Bad Renter')
-            ->assertDontSee('Old Renter');
+            ->assertDontSee('Bad Renter');
 
         // Verify submitting returning tenant with blacklisted is rejected
         $this->actingAs($this->manager)
             ->post('/leases', [
                 'tenant_mode' => 'existing',
                 'tenant_id' => $blacklisted->tenant_id,
-                'room_id' => $room->room_id,
-                'moa_date' => '2026-06-24',
-                'move_in_date' => '2026-06-25',
-                'due_day' => 25,
-                'monthly_rent' => '3500.00',
-                'min_stay_months' => 4,
-                'advance_amount' => '3500.00',
-                'deposit_maintenance' => '1000.00',
-                'deposit_damage' => '1500.00',
-                'deposit_bills' => '700.00',
-                'deposit_keys' => '300.00',
-                'mode' => 'Cash',
-            ])
-            ->assertSessionHasErrors('tenant_id');
-
-        // Verify submitting returning tenant with archived is rejected
-        $this->actingAs($this->manager)
-            ->post('/leases', [
-                'tenant_mode' => 'existing',
-                'tenant_id' => $archived->tenant_id,
                 'room_id' => $room->room_id,
                 'moa_date' => '2026-06-24',
                 'move_in_date' => '2026-06-25',

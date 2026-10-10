@@ -63,9 +63,9 @@ class LeaseService
 
             if (isset($tenant['tenant_id'])) {
                 $tenantModel = Tenant::findOrFail($tenant['tenant_id']);
-                if (in_array($tenantModel->status, ['Blacklisted', 'Archived'], true) || $tenantModel->trashed()) {
+                if ($tenantModel->status === 'Blacklisted') {
                     throw ValidationException::withMessages([
-                        'tenant_id' => 'The selected returning tenant is not eligible for a lease (blacklisted or archived).',
+                        'tenant_id' => 'The selected returning tenant is not eligible for a lease (blacklisted).',
                     ]);
                 }
             } else {

@@ -248,7 +248,7 @@ class LeaseService
     {
         return DB::transaction(function () use ($lease, $name, $dateAdded) {
             $lease = Lease::whereKey($lease->lease_id)->lockForUpdate()->firstOrFail();
-            $max = min($lease->room->max_occupants, Room::MAX_OCCUPANTS);
+            $max = min($lease->room->max_occupants, Room::maxCapacity());
             $staying = $lease->activeOccupants()->count();
 
             if ($lease->status !== 'Active') {

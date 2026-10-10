@@ -32,17 +32,19 @@ class RoomRequest extends FormRequest
                 Rule::unique('tbl_room', 'room_no')->ignore($room?->room_id, 'room_id')],
             'room_type' => ['required', Rule::in(Room::TYPES)],
             'is_metered' => ['boolean'],
-            'max_occupants' => ['required', 'integer', 'between:1,'.Room::MAX_OCCUPANTS],
+            'max_occupants' => ['sometimes', 'integer', 'between:1,'.\App\Models\Room::maxCapacity()],
             'monthly_rent' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:99999999.99'],
         ];
     }
 
     public function messages(): array
     {
+        $max = \App\Models\Room::maxCapacity();
+
         return [
             'room_no.unique' => 'This room number already exists.',
             'room_no.regex' => 'Use only letters, numbers, spaces or dashes.',
-            'max_occupants.between' => 'A room can have 1 or 2 occupants at most.',
+            'max_occupants.between' => "A room can have 1 or {$max} occupants at most.",
             'monthly_rent.decimal' => 'Use at most 2 decimal places (centavos).',
             'monthly_rent.min' => 'The monthly rent must be more than ₱0.00.',
         ];

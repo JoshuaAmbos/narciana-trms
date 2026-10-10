@@ -31,6 +31,13 @@
                     <div class="hint">Baseline rent for new Aircon rooms (default ₱3,600.00).</div>
                     @error('standard_aircon_rent') <div class="err">{{ $message }}</div> @enderror
                 </div>
+                <div class="f @error('default_room_capacity') has-err @enderror">
+                    <label for="default_room_capacity">Default room capacity ceiling</label>
+                    <input id="default_room_capacity" name="default_room_capacity" type="number" step="1" min="1" max="10" inputmode="numeric"
+                           value="{{ old('default_room_capacity', $setting->default_room_capacity ?? 2) }}">
+                    <div class="hint">Global ceiling for room occupants (default 2). Newly added rooms will default to this capacity.</div>
+                    @error('default_room_capacity') <div class="err">{{ $message }}</div> @enderror
+                </div>
             </div>
 
             <h3 class="sub-head">Monthly charges</h3>

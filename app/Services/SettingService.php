@@ -19,6 +19,7 @@ class SettingService
         'appliance_fee' => ['Appliance fee (per appliance, basic rooms)', 'peso'],
         'standard_basic_rent' => ['Standard Basic room rate', 'peso'],
         'standard_aircon_rent' => ['Standard Aircon room rate', 'peso'],
+        'default_room_capacity' => ['Default room capacity', 'occupants'],
         'kwh_rate' => ['Electricity rate (per kWh)', 'peso'],
         'grace_days' => ['Grace period', 'days'],
         'penalty_basis' => ['Penalty basis', 'text'],
@@ -61,6 +62,7 @@ class SettingService
             'peso' => '₱'.number_format((float) $value, 2),
             'percent' => number_format((float) $value, 2).'%',
             'days' => (int) $value.' '.((int) $value === 1 ? 'day' : 'days'),
+            'occupants' => (int) $value.' '.((int) $value === 1 ? 'occupant' : 'occupants'),
             default => (string) $value,
         };
     }

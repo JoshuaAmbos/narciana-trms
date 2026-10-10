@@ -15,6 +15,7 @@ trait RentalFixtures
     {
         return Setting::create(array_merge([
             'water_rate' => 200, 'appliance_fee' => 200, 'standard_basic_rent' => 3000, 'standard_aircon_rent' => 3600,
+            'default_room_capacity' => 2,
             'kwh_rate' => 15, 'grace_days' => 3,
             'penalty_basis' => 'Per day of rent', 'penalty_rate' => 1, 'refund_days' => 7, 'updated_by' => $owner->user_id,
         ], $overrides));

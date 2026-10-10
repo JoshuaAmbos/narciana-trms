@@ -141,7 +141,7 @@ class RoomController extends Controller
                 'room_type' => 'Basic',
                 'monthly_rent' => $setting->standard_basic_rent,
                 'is_metered' => false,
-                'max_occupants' => Room::MAX_OCCUPANTS,
+                'max_occupants' => $setting->default_room_capacity ?? Room::MAX_OCCUPANTS,
                 'is_rentable' => true,
             ]),
             'types' => Room::TYPES,
@@ -152,7 +152,11 @@ class RoomController extends Controller
     public function store(StoreRoomRequest $request): RedirectResponse
     {
         $room = DB::transaction(function () use ($request) {
-            $room = Room::create($request->validated() + [
+            $data = $request->validated();
+            if (! isset($data['max_occupants'])) {
+                $data['max_occupants'] = Setting::current()->default_room_capacity ?? 2;
+            }
+            $room = Room::create($data + [
                 'status' => 'Vacant',
                 'expected_vacant_date' => null,
             ]);

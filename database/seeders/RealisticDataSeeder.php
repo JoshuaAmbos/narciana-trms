@@ -123,6 +123,7 @@ class RealisticDataSeeder extends Seeder
                 'appliance_fee' => 200.00,
                 'standard_basic_rent' => 3000.00,
                 'standard_aircon_rent' => 3600.00,
+                'default_room_capacity' => 2,
                 'kwh_rate' => 12.00,
                 'grace_days' => 3,
                 'penalty_basis' => 'Per day of rent',

@@ -497,4 +497,56 @@ class RoomsTest extends TestCase
         $createResponse = $this->actingAs($this->owner)->get(route('rooms.create'))->assertOk();
         $createResponse->assertSee('standalone_room_no_feedback', false);
     }
+
+    public function test_create_room_modal_and_form_omit_manual_max_occupants_field(): void
+    {
+        $room = $this->room(['room_no' => '305']);
+
+        // Index page has create modal WITHOUT create_max_occupants input, but edit modal HAS edit_max_occupants
+        $indexResponse = $this->actingAs($this->owner)->get(route('rooms.index'))->assertOk();
+        $indexResponse->assertDontSee('id="create_max_occupants"', false);
+        $indexResponse->assertSee('id="edit_max_occupants"', false);
+
+        // Standalone create page does NOT have max_occupants select/input
+        $createResponse = $this->actingAs($this->owner)->get(route('rooms.create'))->assertOk();
+        $createResponse->assertDontSee('id="max_occupants"', false);
+        $createResponse->assertDontSee('name="max_occupants"', false);
+
+        // Standalone edit page DOES have max_occupants select
+        $editResponse = $this->actingAs($this->owner)->get(route('rooms.edit', $room))->assertOk();
+        $editResponse->assertSee('id="max_occupants"', false);
+        $editResponse->assertSee('name="max_occupants"', false);
+    }
+
+    public function test_creating_a_room_omits_manual_max_occupants_and_defaults_to_settings_capacity(): void
+    {
+        // 1. Post without max_occupants - defaults to 2
+        $this->actingAs($this->owner)->post('/rooms', [
+            'room_no' => '501',
+            'room_type' => 'Basic',
+            'is_metered' => '0',
+            'monthly_rent' => '3000.00',
+        ])->assertRedirect('/rooms')->assertSessionHas('status', 'Room 501 was added.');
+
+        $room1 = Room::where('room_no', '501')->firstOrFail();
+        $this->assertSame(2, $room1->max_occupants);
+
+        // 2. Change global ceiling default_room_capacity to 3 in settings
+        $setting = \App\Models\Setting::first();
+        if ($setting) {
+            $setting->update(['default_room_capacity' => 3]);
+        } else {
+            \App\Models\Setting::create(['default_room_capacity' => 3, 'updated_by' => $this->owner->user_id] + \App\Models\Setting::DEFAULTS);
+        }
+
+        $this->actingAs($this->owner)->post('/rooms', [
+            'room_no' => '502',
+            'room_type' => 'Aircon',
+            'is_metered' => '1',
+            'monthly_rent' => '3600.00',
+        ])->assertRedirect('/rooms')->assertSessionHas('status', 'Room 502 was added.');
+
+        $room2 = Room::where('room_no', '502')->firstOrFail();
+        $this->assertSame(3, $room2->max_occupants);
+    }
 }

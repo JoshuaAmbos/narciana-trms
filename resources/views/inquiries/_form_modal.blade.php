@@ -1,7 +1,7 @@
 {{-- Intake modal form: staff capture general prospect preferences without pre-assigning a room. --}}
 <div id="log-inquiry-modal" class="modal-backdrop" @if(!$errors->any()) hidden @endif>
     <div class="modal-box">
-        <h2>
+        <h2 style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
             <span>Log an inquiry</span>
             <button type="button" class="modal-close-btn" onclick="closeLogInquiryModal()">&times;</button>
         </h2>

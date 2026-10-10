@@ -153,4 +153,26 @@ class SettingsTest extends TestCase
         $this->assertSame('400.00', $augAircon->electricity_amount);
         $this->assertSame('4150.00', $augAircon->total_amount);
     }
+
+    public function test_owner_updates_default_room_capacity_ceiling_and_change_is_audited(): void
+    {
+        $this->actingAs($this->owner)
+            ->put(route('settings.update'), $this->form(['default_room_capacity' => 3]))
+            ->assertRedirect(route('settings.index'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(3, Setting::current()->default_room_capacity);
+
+        $log = AuditLog::where('action', 'Settings changed')->sole();
+        $this->assertSame('Default room capacity: 2 occupants → 3 occupants', $log->details);
+    }
+
+    public function test_settings_module_is_accessible_strictly_to_owner(): void
+    {
+        foreach (['Manager', 'Caretaker'] as $role) {
+            $user = User::factory()->role($role)->create();
+            $this->actingAs($user)->get(route('settings.index'))->assertForbidden();
+            $this->actingAs($user)->put(route('settings.update'), $this->form())->assertForbidden();
+        }
+    }
 }

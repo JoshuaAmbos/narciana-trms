@@ -343,24 +343,14 @@
                         <div class="hint">Ticked automatically for Aircon rooms and unticked for Basic rooms; change it if this room is different.</div>
                     </div>
 
-                    <div class="row" style="margin-top: 10px;">
-                        <div class="f @error('max_occupants') has-err @enderror">
-                            <label for="create_max_occupants">Maximum Occupants</label>
-                            <select id="create_max_occupants" name="max_occupants" required>
-                                @foreach ([1, 2] as $n)
-                                    <option value="{{ $n }}" @selected((int) old('max_occupants', 2) === $n)>{{ $n }} {{ Str::plural('Occupant', $n) }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="f @error('monthly_rent') has-err @enderror">
-                            <label for="create_monthly_rent">Monthly Rent (₱)</label>
-                            <input id="create_monthly_rent" name="monthly_rent" type="number" min="0.01" step="0.01" inputmode="decimal" required
-                                   value="{{ old('is_modal_create') ? old('monthly_rent') : number_format((float) ($setting->standard_basic_rent ?? 3000), 2, '.', '') }}">
-                            <div class="hint">Applies to new MOAs. Existing tenants retain their contracted rate.</div>
-                            @if (old('is_modal_create'))
-                                @error('monthly_rent') <div class="err">{{ $message }}</div> @enderror
-                            @endif
-                        </div>
+                    <div class="f @error('monthly_rent') has-err @enderror" style="margin-top: 10px;">
+                        <label for="create_monthly_rent">Monthly Rent (₱)</label>
+                        <input id="create_monthly_rent" name="monthly_rent" type="number" min="0.01" step="0.01" inputmode="decimal" required
+                               value="{{ old('is_modal_create') ? old('monthly_rent') : number_format((float) ($setting->standard_basic_rent ?? 3000), 2, '.', '') }}">
+                        <div class="hint">Applies to new MOAs. Existing tenants retain their contracted rate.</div>
+                        @if (old('is_modal_create'))
+                            @error('monthly_rent') <div class="err">{{ $message }}</div> @enderror
+                        @endif
                     </div>
 
                     <div class="f check @error('is_rentable') has-err @enderror" style="margin-top: 10px;">
@@ -443,7 +433,7 @@
                         <div class="f @error('max_occupants') has-err @enderror">
                             <label for="edit_max_occupants">Maximum Occupants</label>
                             <select id="edit_max_occupants" name="max_occupants" required>
-                                @foreach ([1, 2] as $n)
+                                @foreach (range(1, (int) ($setting->default_room_capacity ?? 2)) as $n)
                                     <option value="{{ $n }}">{{ $n }} {{ Str::plural('Occupant', $n) }}</option>
                                 @endforeach
                             </select>

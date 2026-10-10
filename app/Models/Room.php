@@ -13,8 +13,14 @@ class Room extends Model
 
     public const STATUSES = ['Vacant', 'Occupied'];
 
-    /** Business rule: at most 2 occupants per room. */
+    /** Business rule: at most 2 occupants per room (or global ceiling from settings). */
     public const MAX_OCCUPANTS = 2;
+
+    /** Global ceiling setting from tbl_setting, defaulting to 2. */
+    public static function maxCapacity(): int
+    {
+        return (int) (Setting::current()->default_room_capacity ?? self::MAX_OCCUPANTS);
+    }
 
     protected $table = 'tbl_room';
 

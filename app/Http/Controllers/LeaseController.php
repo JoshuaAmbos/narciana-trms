@@ -161,7 +161,7 @@ class LeaseController extends Controller
             'household' => $household->summary($lease, $request->user()),
             'delinquency' => $delinquency->arrearsForLease($lease),
             'canCancel' => Gate::allows('cancel', $lease),
-            'maxOccupants' => min($lease->room->max_occupants, Room::MAX_OCCUPANTS),
+            'maxOccupants' => min($lease->room->max_occupants, Room::maxCapacity()),
         ]);
     }
 

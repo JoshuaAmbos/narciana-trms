@@ -30,15 +30,17 @@
 </div>
 
 <div class="row">
-    <div class="f @error('max_occupants') has-err @enderror">
-        <label for="max_occupants">Maximum occupants</label>
-        <select id="max_occupants" name="max_occupants" required>
-            @foreach ([1, 2] as $n)
-                <option value="{{ $n }}" @selected((int) old('max_occupants', $room->max_occupants) === $n)>{{ $n }}</option>
-            @endforeach
-        </select>
-        @error('max_occupants') <div class="err">{{ $message }}</div> @enderror
-    </div>
+    @if ($room->exists)
+        <div class="f @error('max_occupants') has-err @enderror">
+            <label for="max_occupants">Maximum occupants</label>
+            <select id="max_occupants" name="max_occupants" required>
+                @foreach (range(1, max((int) ($setting->default_room_capacity ?? 2), (int) $room->max_occupants)) as $n)
+                    <option value="{{ $n }}" @selected((int) old('max_occupants', $room->max_occupants) === $n)>{{ $n }}</option>
+                @endforeach
+            </select>
+            @error('max_occupants') <div class="err">{{ $message }}</div> @enderror
+        </div>
+    @endif
     <div class="f @error('monthly_rent') has-err @enderror">
         <label for="monthly_rent">Monthly rent (₱)</label>
         <input id="monthly_rent" name="monthly_rent" type="number" min="0.01" step="0.01" inputmode="decimal" required

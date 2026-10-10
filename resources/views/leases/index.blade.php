@@ -135,7 +135,7 @@
                             </td>
                             <td class="money">@peso($lease->monthly_rent)</td>
                             <td>
-                                <b>{{ $lease->active_occupants_count }}</b> <span class="muted">/ {{ min($lease->room->max_occupants, \App\Models\Room::MAX_OCCUPANTS) }}</span>
+                                <b>{{ $lease->active_occupants_count }}</b> <span class="muted">/ {{ min($lease->room->max_occupants, \App\Models\Room::maxCapacity()) }}</span>
                             </td>
                             <td class="nowrap">
                                 <x-lease-status :lease="$lease" />
@@ -159,7 +159,7 @@
                             <x-lease-status :lease="$lease" />
                         </div>
                         <div class="lease-card-specs">
-                            MOA-{{ str_pad($lease->lease_id, 4, '0', STR_PAD_LEFT) }} · {{ $lease->room->room_type }} · {{ $lease->active_occupants_count }} / {{ min($lease->room->max_occupants, \App\Models\Room::MAX_OCCUPANTS) }} {{ Str::plural('occupant', $lease->active_occupants_count) }}
+                            MOA-{{ str_pad($lease->lease_id, 4, '0', STR_PAD_LEFT) }} · {{ $lease->room->room_type }} · {{ $lease->active_occupants_count }} / {{ min($lease->room->max_occupants, \App\Models\Room::maxCapacity()) }} {{ Str::plural('occupant', $lease->active_occupants_count) }}
                         </div>
                         <div class="lease-card-body">
                             <div>
@@ -246,7 +246,7 @@
                             </div>
                             <div>
                                 <dt>Active Occupants</dt>
-                                <dd><b>{{ $lease->active_occupants_count }}</b> / {{ min($lease->room->max_occupants, \App\Models\Room::MAX_OCCUPANTS) }} occupants</dd>
+                                <dd><b>{{ $lease->active_occupants_count }}</b> / {{ min($lease->room->max_occupants, \App\Models\Room::maxCapacity()) }} occupants</dd>
                             </div>
                             <div>
                                 <dt>Contractual Minimum Stay</dt>

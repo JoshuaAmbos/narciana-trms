@@ -84,7 +84,7 @@
             @endif
         @else
             {{-- Tablet Landscape (~1024px-1280px) & Desktop View --}}
-            <div class="table-wrap inquiries-table-wrap hidden lg:block">
+            <div class="table-wrap inquiries-table-wrap">
                 <table class="inquiries-table">
                     <thead>
                         <tr>
@@ -125,7 +125,7 @@
             </div>
 
             {{-- Tablet Portrait (~712px-800px) & Mobile Stacked Cards View --}}
-            <div class="inquiry-cards block lg:hidden pb-24">
+            <div class="inquiry-cards pb-24">
                 @foreach ($inquiries as $inquiry)
                     <div class="inquiry-card inquiry-card-clickable"
                          tabindex="0"

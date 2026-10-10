@@ -661,20 +661,22 @@ body.side-collapsed .side {
 @media (max-width: 768px) {
     .rooms-table-wrap { display: none !important; }
     .room-cards { display: block !important; }
-    .leases-table-wrap { display: none !important; }
-    .lease-cards { display: block !important; }
 }
 
-/* Inquiries layout transitions:
+/* Leases & Inquiries layout transitions:
    Tablet Landscape (1024px+) & Desktop: Full table view.
    Tablet Portrait (< 1024px) & Mobile: Stacked card view. */
 @media (max-width: 1023px) {
     .inquiries-table-wrap { display: none !important; }
     .inquiry-cards { display: block !important; }
+    .leases-table-wrap { display: none !important; }
+    .lease-cards { display: block !important; }
 }
 @media (min-width: 1024px) {
     .inquiries-table-wrap { display: block !important; }
     .inquiry-cards { display: none !important; }
+    .leases-table-wrap { display: block !important; }
+    .lease-cards { display: none !important; }
 }
 
 .inquiries-table-wrap {
@@ -845,6 +847,7 @@ body.side-collapsed .side {
 /* Responsive visibility utilities matching Tailwind semantics */
 .hidden { display: none !important; }
 @media (min-width: 1024px) {
+    .lg\:block { display: block !important; }
     .lg\:inline-flex { display: inline-flex !important; }
     .lg\:hidden { display: none !important; }
 }

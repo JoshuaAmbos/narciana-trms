@@ -30,7 +30,7 @@ class BillController extends Controller
             'status' => ['nullable', 'in:All,Unpaid,Paid,Overdue'],
             'search' => ['nullable', 'string', 'max:50'],
         ]);
-        $month = isset($filter['month']) ? Carbon::createFromFormat('Y-m-d', $filter['month'].'-01') : today()->startOfMonth();
+        $month = isset($filter['month']) ? Carbon::createFromFormat('Y-m-d', $filter['month'].'-01')->startOfMonth() : today()->startOfMonth();
         $settings = Setting::current();
 
         // Leases whose next bill can be generated now (7 days before the due date, or overdue to generate).
@@ -39,7 +39,7 @@ class BillController extends Controller
             ->map(function (Lease $l) use ($settings, $concerns) {
                 $dueDate = $this->billing->nextDueDate($l);
                 [$start, $end] = $this->billing->periodFor($l->move_in_date, $l->due_day, $dueDate);
-                $isMetered = (bool) $l->room->is_metered;
+                $isMetered = (bool) ($l->room?->is_metered ?? false);
                 $lastReading = $isMetered ? $this->billing->lastReading($l->room_id) : null;
                 $occupants = $this->billing->occupantCount($l, $start, $end);
                 $appliances = $isMetered ? 0 : $this->billing->applianceCount($l, $start, $end);
@@ -59,11 +59,13 @@ class BillController extends Controller
                     'chargeable_concerns' => $chargeable,
                 ];
             })
-            ->sortBy(fn ($row) => $row['due_date']->toDateString().$row['lease']->room->room_no)
+            ->sortBy(fn ($row) => $row['due_date']->toDateString().($row['lease']->room?->room_no ?? ''))
             ->values();
 
         $billsQuery = Bill::with(['lease.room', 'lease.tenant', 'meterReading', 'concerns', 'payments.user', 'user'])
-            ->whereYear('due_date', $month->year)->whereMonth('due_date', $month->month);
+            ->where('is_initial', false)
+            ->whereYear('due_date', $month->year)
+            ->whereMonth('due_date', $month->month);
 
         $allBills = (clone $billsQuery)->get();
 
@@ -84,7 +86,6 @@ class BillController extends Controller
         $bills = $billsQuery->orderBy('due_date')->get();
 
         foreach ($bills as $bill) {
-            $bill->statement_data = $this->billing->statementForBill($bill);
             $bill->due_today = $bill->status === 'Paid' ? null : $penalties->forBill($bill, today());
             $bill->can_pay = $payments->canPay($bill);
         }
@@ -97,7 +98,7 @@ class BillController extends Controller
             'total_count' => $allBills->count(),
             'paid_amount' => (float) $allBills->where('status', 'Paid')->sum(fn ($b) => (float) $b->total_amount),
             'paid_count' => $allBills->where('status', 'Paid')->count(),
-            'unpaid_amount' => (float) $allBills->where('status', 'Unpaid')->sum(fn ($b) => (float) $b->total_amount),
+            'unpaid_amount' => (float) $allBills->whereIn('status', ['Unpaid', 'Overdue'])->sum(fn ($b) => (float) $b->total_amount),
             'unpaid_count' => $allBills->where('status', 'Unpaid')->count(),
             'overdue_amount' => (float) $allBills->where('status', 'Overdue')->sum(fn ($b) => (float) $b->total_amount),
             'overdue_count' => $allBills->where('status', 'Overdue')->count(),
@@ -120,7 +121,7 @@ class BillController extends Controller
                 'tenant' => $l->tenant->full_name,
                 'due_date' => $row['due_date']->toDateString(),
                 'due_date_fmt' => $row['due_date']->format('j M Y'),
-                'period_fmt' => $row['period_start']->format('j M') . ' – ' . $row['period_end']->format('j M Y'),
+                'period_fmt' => $row['period_start']->format('j M').' – '.$row['period_end']->format('j M Y'),
                 'rent' => (float) $row['rent_amount'],
                 'occupants' => (int) $row['occupants'],
                 'water' => (float) $row['water_amount'],
@@ -143,17 +144,21 @@ class BillController extends Controller
         foreach ($bills as $b) {
             $r = $b->meterReading;
             $firstPayment = $b->payments->first();
+            $rentPeriodEnd = $b->lease
+                ? $this->billing->dueDateIn($b->lease->due_day, $b->due_date->copy()->startOfMonth()->addMonthNoOverflow())->subDay()
+                : $b->due_date->copy()->addMonth()->subDay();
+
             $billsMap[$b->bill_id] = [
                 'bill_id' => $b->bill_id,
                 'lease_id' => $b->lease_id,
-                'room_no' => $b->lease->room->room_no,
-                'room_type' => $b->lease->room->room_type,
-                'is_metered' => (bool) $b->lease->room->is_metered,
-                'tenant' => $b->lease->tenant->full_name,
+                'room_no' => $b->lease?->room?->room_no ?? '',
+                'room_type' => $b->lease?->room?->room_type ?? '',
+                'is_metered' => (bool) ($b->lease?->room?->is_metered ?? false),
+                'tenant' => $b->lease?->tenant?->full_name ?? '',
                 'due_date_fmt' => $b->due_date->format('j M Y'),
                 'due_date' => $b->due_date->toDateString(),
-                'period_fmt' => $b->period_start->format('j M') . ' – ' . $b->due_date->copy()->subDay()->format('j M Y'),
-                'rent_period_fmt' => $b->due_date->format('j M') . ' – ' . $b->due_date->copy()->startOfMonth()->addMonthNoOverflow()->day(min($b->lease->due_day, $b->due_date->copy()->startOfMonth()->addMonthNoOverflow()->daysInMonth))->subDay()->format('j M Y'),
+                'period_fmt' => $b->period_start->format('j M').' – '.$b->due_date->copy()->subDay()->format('j M Y'),
+                'rent_period_fmt' => $b->due_date->format('j M').' – '.$rentPeriodEnd->format('j M Y'),
                 'status' => $b->status,
                 'rent' => (float) $b->rent_amount,
                 'water' => (float) $b->water_amount,
@@ -211,7 +216,15 @@ class BillController extends Controller
     /** Generate form + statement preview. For a metered room the reading is entered, then "Show statement". */
     public function create(Request $request, ConcernService $concerns): View|RedirectResponse
     {
-        $lease = Lease::with(['room', 'tenant'])->findOrFail($request->integer('lease'));
+        $leaseId = $request->integer('lease');
+        if (! $leaseId) {
+            return redirect()->route('bills.index')->withErrors(['lease' => 'Please select a lease to generate a bill.']);
+        }
+
+        $lease = Lease::with(['room', 'tenant'])->find($leaseId);
+        if (! $lease) {
+            return redirect()->route('bills.index')->withErrors(['lease' => 'The selected lease could not be found.']);
+        }
 
         if (! $this->billing->canGenerateNow($lease)) {
             return redirect()->route('bills.index')->withErrors(['lease' => "Room {$lease->room->room_no} has no bill to generate right now."]);
@@ -231,7 +244,11 @@ class BillController extends Controller
         $errors = null;
         if ($metered && $request->has('current_reading')) {
             $validator = Validator::make($input, BillRequest::readingRules(), BillRequest::readingMessages());
-            $validator->fails() ? $errors = $validator->errors() : $reading = $validator->validated();
+            if ($validator->fails()) {
+                $errors = $validator->errors();
+            } else {
+                $reading = $validator->validated();
+            }
         }
 
         // Chargeable concerns: offered as checkboxes, never ticked automatically (decision 15).

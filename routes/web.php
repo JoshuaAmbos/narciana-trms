@@ -64,6 +64,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::match(['post', 'patch'], 'leases/{lease}/end', [LeaseController::class, 'endLease'])->name('leases.end');
         Route::match(['post', 'patch'], 'leases/{lease}/cancel', [LeaseController::class, 'cancelMoa'])->name('leases.cancel');
         Route::post('leases/{lease}/terminate-clause8', [LeaseController::class, 'terminateClause8'])->name('leases.terminate-clause8');
+        Route::post('leases/{lease}/terminate-breach', [LeaseController::class, 'terminateClause8'])->name('leases.terminate-breach');
     });
 
     // ---------- Owner and Manager ----------

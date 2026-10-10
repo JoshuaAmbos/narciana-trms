@@ -2,14 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\AuditLog;
 use App\Models\Bill;
 use App\Models\Lease;
 use App\Models\Room;
 use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Services\BillingService;
 use App\Services\DelinquencyService;
 use App\Services\PenaltyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -148,23 +146,24 @@ class MoaDelinquencyAndClause8TerminationTest extends TestCase
         $lease = $this->makeLease($room, $this->manager, tenantName: 'Boundary Tenant');
         $this->assertSame(3500.00, $lease->depositTotal());
 
-        // Create a bill with total 3,000 (less than 3,500 deposit)
+        // Create an overdue bill with total 3,000 (less than 3,500 deposit)
+        // Due 2026-09-26: on 2026-10-01, 2 days late -> penalty = 2 * 28 = 56. Total = 3,056 < 3,500 deposit.
         $bill1 = Bill::create([
             'lease_id' => $lease->lease_id,
-            'period_start' => '2026-09-01',
-            'due_date' => '2026-10-01',
+            'period_start' => '2026-08-26',
+            'due_date' => '2026-09-26',
             'rent_amount' => 2800.00,
             'water_amount' => 200.00,
             'total_amount' => 3000.00,
             'penalty_amount' => 0.00,
-            'status' => 'Unpaid',
+            'status' => 'Overdue',
             'user_id' => $this->manager->user_id,
         ]);
 
         $delinquency = app(DelinquencyService::class);
         $this->travelTo(Carbon::parse('2026-10-01'));
 
-        // Case 1: Arrears (3,000) < Deposit (3,500)
+        // Case 1: Arrears (3,056) < Deposit (3,500)
         $this->assertFalse($delinquency->canTerminateClause8($lease));
 
         // Attempting to terminate under Clause 8 must be rejected
@@ -173,16 +172,16 @@ class MoaDelinquencyAndClause8TerminationTest extends TestCase
         $response->assertSessionHasErrors('lease');
         $this->assertSame('Active', $lease->fresh()->status);
 
-        // Case 2: Accrue second bill such that Arrears >= Deposit
+        // Case 2: Accrue second overdue bill such that Arrears >= Deposit
         $bill2 = Bill::create([
             'lease_id' => $lease->lease_id,
-            'period_start' => '2026-10-01',
-            'due_date' => '2026-11-01',
+            'period_start' => '2026-08-26',
+            'due_date' => '2026-09-26',
             'rent_amount' => 1000.00,
             'water_amount' => 0.00,
             'total_amount' => 1000.00,
             'penalty_amount' => 0.00,
-            'status' => 'Unpaid',
+            'status' => 'Overdue',
             'user_id' => $this->manager->user_id,
         ]);
 
@@ -199,7 +198,8 @@ class MoaDelinquencyAndClause8TerminationTest extends TestCase
         // Breach warning activates on Payments Bills to Collect
         $payResponse = $this->actingAs($this->manager)->get(route('payments.index'));
         $payResponse->assertOk();
-        $payResponse->assertSee('[!] Breach: Deposit Exhausted (Eligible for Termination under MOA Clause 8)');
+        $payResponse->assertSee('Deposit Exhausted');
+        $payResponse->assertDontSee('MOA Clause');
 
         // Breach warning activates on Lease show page
         $leaseResponse = $this->actingAs($this->manager)->get(route('leases.show', $lease));
@@ -209,6 +209,42 @@ class MoaDelinquencyAndClause8TerminationTest extends TestCase
         $leaseResponse->assertSee('Terminate Lease');
         $leaseResponse->assertDontSee('onclick="openEndLeaseModal()">End Lease</button>', false);
         $leaseResponse->assertDontSee('MOA Clause');
+    }
+
+    public function test_unpaid_bills_due_in_future_or_in_grace_do_not_trigger_deposit_breach(): void
+    {
+        $room = $this->makeRoom('106', 'Basic', ['monthly_rent' => 3000]);
+        $lease = $this->makeLease($room, $this->manager, tenantName: 'Punctual Tenant');
+        $this->assertSame(3500.00, $lease->depositTotal());
+
+        // Bill of 4000 due in 5 days (would exceed deposit if prematurely counted)
+        $this->travelTo(Carbon::parse('2026-10-10'));
+        $futureBill = Bill::create([
+            'lease_id' => $lease->lease_id,
+            'period_start' => '2026-10-01',
+            'due_date' => '2026-10-15',
+            'rent_amount' => 4000.00,
+            'total_amount' => 4000.00,
+            'penalty_amount' => 0.00,
+            'status' => 'Unpaid',
+            'user_id' => $this->manager->user_id,
+        ]);
+
+        $delinquency = app(DelinquencyService::class);
+        // Due in 5 days -> NOT breached
+        $this->assertFalse($delinquency->canTerminateClause8($lease));
+
+        // Due today -> NOT breached
+        $this->travelTo(Carbon::parse('2026-10-15'));
+        $this->assertFalse($delinquency->canTerminateClause8($lease));
+
+        // Day 2 of grace (due + 2 days) -> NOT breached
+        $this->travelTo(Carbon::parse('2026-10-17'));
+        $this->assertFalse($delinquency->canTerminateClause8($lease));
+
+        // Past grace period (due + 4 days, grace is 3) -> BREACHED!
+        $this->travelTo(Carbon::parse('2026-10-19'));
+        $this->assertTrue($delinquency->canTerminateClause8($lease));
     }
 
     public function test_atomic_termination_under_clause_8(): void

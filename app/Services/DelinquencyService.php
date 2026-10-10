@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Bill;
 use App\Models\Lease;
 use App\Models\Room;
+use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -51,6 +52,7 @@ class DelinquencyService
     public function arrearsForLease(Lease $lease, ?Carbon $today = null): array
     {
         $today = ($today ?? today())->copy()->startOfDay();
+        $graceDays = (int) (Setting::current()->grace_days ?? 3);
 
         $unpaidBills = Bill::where('lease_id', $lease->lease_id)
             ->where('status', '!=', 'Paid')
@@ -62,6 +64,16 @@ class DelinquencyService
         $billsList = collect();
 
         foreach ($unpaidBills as $bill) {
+            $cutoff = $bill->due_date->copy()->startOfDay()->addDays($graceDays);
+            $isMatured = ($bill->status === 'Overdue') || $today->greaterThan($cutoff);
+
+            // A bill can ONLY contribute to a breach if its status is officially 'Overdue',
+            // OR if today() > due_date + grace_days (default 3 days).
+            // Exclude any bill where status === 'Unpaid' and the current date is still on or before due_date + grace_days.
+            if (! $isMatured) {
+                continue;
+            }
+
             $penaltyInfo = $this->penalties->forBill($bill, $today);
             $billBase = round((float) $bill->total_amount - (float) $bill->penalty_amount, 2);
             $baseArrears += $billBase;
@@ -154,7 +166,7 @@ class DelinquencyService
         if (! $this->canTerminateClause8($lease, $today)) {
             $arrears = $this->arrearsForLease($lease, $today);
             throw ValidationException::withMessages([
-                'lease' => "Tenant arrears (₱" . number_format($arrears['total_arrears'], 2) . ") have not exhausted their security deposit (₱" . number_format($arrears['total_deposit'], 2) . "). Termination under MOA Clause 8 is not permitted.",
+                'lease' => 'Tenant arrears (₱'.number_format($arrears['total_arrears'], 2).') have not exhausted their security deposit (₱'.number_format($arrears['total_deposit'], 2).'). Termination under MOA Clause 8 is not permitted.',
             ]);
         }
 
@@ -184,7 +196,7 @@ class DelinquencyService
                     'tbl_bill',
                     $b->bill_id,
                     $by->user_id,
-                    "Bill #{$b->bill_id} settled from security deposit under MOA Clause 8 termination. Total amount: ₱" . number_format((float) $b->total_amount, 2)
+                    "Bill #{$b->bill_id} settled from security deposit under MOA Clause 8 termination. Total amount: ₱".number_format((float) $b->total_amount, 2)
                 );
             }
 
@@ -207,10 +219,10 @@ class DelinquencyService
 
             // Log lease termination, room repossession, and tenant deactivation
             $depositTotal = $lease->depositTotal();
-            $details = "Contract cancelled under MOA Clause 8 (Security deposit exhausted). Total arrears: ₱"
-                . number_format($totalOffset, 2) . " offset against deposit: ₱"
-                . number_format($depositTotal, 2)
-                . ($notes ? " | Notes: {$notes}" : '');
+            $details = 'Contract cancelled under MOA Clause 8 (Security deposit exhausted). Total arrears: ₱'
+                .number_format($totalOffset, 2).' offset against deposit: ₱'
+                .number_format($depositTotal, 2)
+                .($notes ? " | Notes: {$notes}" : '');
 
             AuditLog::record('Lease terminated under MOA Clause 8', 'tbl_lease', $lease->lease_id, $by->user_id, $details);
             AuditLog::record('Room repossessed under Clause 8', 'tbl_room', $room->room_id, $by->user_id, "Room {$room->room_no} repossessed immediately following Clause 8 lease termination.");

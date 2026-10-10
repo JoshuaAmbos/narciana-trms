@@ -51,9 +51,28 @@ class PaymentController extends Controller
 
         $sum = fn ($items) => round($items->sum(fn (Payment $p) => (float) $p->amount), 2);
 
+        $breachedLeasesMap = $breachedLeases->mapWithKeys(function ($breach) {
+            $l = $breach['lease'];
+            $deficit = max(0, (float) $breach['total_arrears'] - (float) $breach['total_deposit']);
+
+            return [$l->lease_id => [
+                'lease_id' => $l->lease_id,
+                'room_no' => $l->room->room_no,
+                'tenant_name' => $l->tenant->full_name,
+                'unpaid_bills_sum' => (float) $breach['base_arrears'],
+                'penalties_sum' => (float) $breach['penalty_arrears'],
+                'total_arrears' => (float) $breach['total_arrears'],
+                'security_deposit' => (float) $breach['total_deposit'],
+                'net_deficit' => (float) $deficit,
+                'lease_url' => route('leases.show', $l),
+                'terminate_url' => route('leases.terminate-breach', $l),
+            ]];
+        })->all();
+
         return view('payments.index', [
             'month' => $month,
             'breachedLeases' => $breachedLeases,
+            'breachedLeasesMap' => $breachedLeasesMap,
             'toCollect' => $toCollect,
             'collections' => $collections,
             'totals' => [

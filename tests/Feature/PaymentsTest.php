@@ -291,4 +291,73 @@ class PaymentsTest extends TestCase
         $this->actingAs($caretaker)->get(route('payments.show', Payment::first()))->assertForbidden();
         $this->actingAs($caretaker)->delete(route('payments.destroy', Payment::first()))->assertForbidden();
     }
+
+    public function test_delinquency_breach_ui_and_modal_refactor(): void
+    {
+        $room = $this->makeRoom('208');
+        $lease = $this->makeLease($room, $this->manager, null, 'Rodolfo Garcia');
+
+        // Total deposit = 3500.00
+        // Create 2 overdue bills totaling 4000.00 (> deposit)
+        Bill::create([
+            'lease_id' => $lease->lease_id,
+            'period_start' => '2026-05-01',
+            'due_date' => '2026-06-01',
+            'rent_amount' => 2000.00,
+            'total_amount' => 2000.00,
+            'penalty_amount' => 0.00,
+            'status' => 'Overdue',
+            'user_id' => $this->manager->user_id,
+        ]);
+        Bill::create([
+            'lease_id' => $lease->lease_id,
+            'period_start' => '2026-06-01',
+            'due_date' => '2026-07-01',
+            'rent_amount' => 2000.00,
+            'total_amount' => 2000.00,
+            'penalty_amount' => 0.00,
+            'status' => 'Overdue',
+            'user_id' => $this->manager->user_id,
+        ]);
+
+        $this->travelTo(Carbon::parse('2026-07-15'));
+
+        $response = $this->actingAs($this->manager)->get(route('payments.index'));
+        $response->assertOk();
+
+        // 1. Clean operational terminology
+        $response->assertSee('Deposit Exhausted');
+        $response->assertSee('1 Requires Attention');
+        $response->assertSee('Room 208');
+        $response->assertSee('Rodolfo Garcia');
+        $response->assertSee('Exhausted');
+        $response->assertDontSee('MOA Clause');
+        $response->assertDontSee('MOA Clauses');
+        $response->assertDontSee('Clause 8');
+
+        // 2. Detail Modal presence and operational breakdown
+        $response->assertSee('id="breachDetailModal"', false);
+        $response->assertSee('Deposit Buffer Exhausted');
+        $response->assertSee('Financial Breakdown');
+        $response->assertSee('Unpaid Rent &amp; Utilities:', false);
+        $response->assertSee('Total Outstanding Arrears:');
+        $response->assertSee('Held Security Deposit:');
+        $response->assertSee('Net Deficit:');
+        $response->assertSee("This tenant's unpaid obligations have completely consumed their security deposit buffer. Continued non-payment leaves the account with zero security coverage.", false);
+        $response->assertSee('Cancel / Close');
+        $response->assertSee('View Lease Details');
+        $response->assertSee('End Tenancy &amp; Vacate Room', false);
+
+        // 3. Compact status presentation in the bills table without duplicate verbose banners
+        $response->assertDontSee('[!] Breach: Deposit Exhausted (Eligible for Termination under MOA Clause 8)');
+
+        // 4. Terminate via POST /leases/{lease}/terminate-breach route
+        $terminateResponse = $this->actingAs($this->owner)
+            ->post(route('leases.terminate-breach', $lease), [
+                'termination_notes' => 'Terminated due to deposit buffer exhaustion.',
+            ]);
+        $terminateResponse->assertRedirect(route('leases.show', $lease));
+        $this->assertSame('Cancelled', $lease->fresh()->status);
+        $this->assertSame('Vacant', $room->fresh()->status);
+    }
 }

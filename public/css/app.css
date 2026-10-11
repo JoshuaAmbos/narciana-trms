@@ -59,9 +59,7 @@ body.preload-nav * {
     display: flex;
     flex-direction: column;
     transition: width 280ms cubic-bezier(0.4, 0, 0.2, 1), 
-                transform 280ms cubic-bezier(0.4, 0, 0.2, 1), 
-                opacity 200ms ease, 
-                visibility 280ms ease;
+                transform 280ms cubic-bezier(0.4, 0, 0.2, 1);
     will-change: width, transform;
 }
 
@@ -395,32 +393,48 @@ td.actions .btn { margin-left: 4px; }
 @media (max-width: 1023px) {
     .cards, .cards.has-3, .cards.has-4, .cards.has-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .grid3 { grid-template-columns: minmax(0, 1fr); }
-
-    .menu-btn { display: inline-flex !important; }
-    .rail-toggle-btn { display: inline-flex !important; }
-    .side-footer { display: block !important; }
-
-    .side {
-        position: fixed;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 260px !important;
-        z-index: 50;
-        transform: translateX(-100%);
-        transition: width 280ms cubic-bezier(0.4, 0, 0.2, 1), 
-                    transform 280ms cubic-bezier(0.4, 0, 0.2, 1), 
-                    opacity 200ms ease, 
-                    visibility 280ms ease;
-        will-change: width, transform;
-        box-shadow: 4px 0 18px rgba(0, 0, 0, .25);
-    }
-    body.nav-open .side { transform: none; }
-    .scrim { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, .35); z-index: 45; }
-    body.nav-open .scrim { display: block; }
     .top { padding: 0 14px; }
     .top h1 { flex: 1; }
     .who .when { display: none; }
+
+    /* Phones (< 768px): slide-in off-canvas menu (☰) */
+    @media (max-width: 767px) {
+        .menu-btn { display: inline-flex !important; }
+        .rail-toggle-btn { display: none !important; }
+        .side-footer { display: none !important; }
+
+        .side {
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            width: 260px !important;
+            z-index: 50 !important;
+            transform: translateX(-100%) !important;
+            box-shadow: 4px 0 18px rgba(0, 0, 0, .25) !important;
+        }
+        body.nav-open .side { transform: none !important; }
+        .scrim { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, .35); z-index: 45; }
+        body.nav-open .scrim { display: block; }
+    }
+
+    /* Tablet Portrait (768px – 1023px): Docked sticky sidebar */
+    @media (min-width: 768px) {
+        .side {
+            position: sticky !important;
+            top: 0 !important;
+            left: auto !important;
+            bottom: auto !important;
+            height: 100vh !important;
+            width: var(--side-w, 260px);
+            transform: none !important;
+            box-shadow: none !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            z-index: 40 !important;
+        }
+        .scrim { display: none !important; }
+    }
 
     /* Expanded form of the sidebar in portrait mode (docked side-by-side like in landscape mode) */
     body.side-expanded .side {
@@ -594,9 +608,7 @@ td.actions .btn { margin-left: 4px; }
 /* Smooth sliding animation for sidebar and layout transitions */
 .side {
     transition: width 280ms cubic-bezier(0.4, 0, 0.2, 1), 
-                transform 280ms cubic-bezier(0.4, 0, 0.2, 1), 
-                opacity 200ms ease, 
-                visibility 280ms ease;
+                transform 280ms cubic-bezier(0.4, 0, 0.2, 1);
     will-change: width, transform;
 }
 .main {
@@ -1016,47 +1028,6 @@ body.side-rail .side .nav a[data-tooltip]:focus-visible::after {
     .lg\:hidden { display: none !important; }
 }
 
-/* Floating Action Button (FAB) */
-.inquiry-fab,
-.room-fab {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    z-index: 40;
-    width: 56px;
-    height: 56px;
-    min-width: 44px;
-    min-height: 44px;
-    border-radius: 50%;
-    background: var(--navy);
-    color: #fff;
-    border: none;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 30px;
-    font-weight: 600;
-    line-height: 1;
-    cursor: pointer;
-    text-decoration: none;
-    transition: transform 0.15s ease, background-color 0.15s ease;
-}
-.inquiry-fab:hover, .inquiry-fab:focus-visible,
-.room-fab:hover, .room-fab:focus-visible {
-    background: var(--navy-2);
-    transform: scale(1.06);
-}
-.inquiry-fab:active,
-.room-fab:active {
-    transform: scale(0.94);
-}
-@media (min-width: 1024px) {
-    .inquiry-fab,
-    .room-fab {
-        display: none !important;
-    }
-}
 
 /* Guardrail disabled button styling (pointer-events: auto ensures tooltips work on hover) */
 .btn.disabled,
@@ -2460,34 +2431,6 @@ svg.w-4 {
     gap: 6px;
 }
 
-/* Floating Action Button (FAB) */
-.concern-fab {
-    display: none;
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 56px;
-    height: 56px;
-    min-width: 56px;
-    min-height: 56px;
-    border-radius: 50%;
-    background: var(--navy-2);
-    color: #fff;
-    border: none;
-    box-shadow: 0 4px 14px rgba(15, 28, 46, 0.35);
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 90;
-    transition: transform .15s ease, background-color .15s ease;
-}
-.concern-fab:hover, .concern-fab:focus-visible {
-    transform: scale(1.06);
-    background: var(--navy);
-}
-.concern-fab:active {
-    transform: scale(0.96);
-}
 
 /* Detail Modal Styling */
 .detail-description-box {
@@ -2546,9 +2489,7 @@ svg.w-4 {
     .concern-cards {
         display: flex !important;
     }
-    .concern-fab {
-        display: flex !important;
-    }
+
     .top-add-btn {
         display: none !important;
     }
@@ -3183,12 +3124,57 @@ svg.w-4 {
 }
 
 /* ==============================================================
-   UNIVERSAL RESPONSIVE FILTER & REAL-TIME SEARCH BAR SYSTEM
+   1. TABLET PORTRAIT SLIM RAIL SUPPORT
    ============================================================== */
+@media (min-width: 768px) {
+    .rail-toggle-btn { 
+        display: inline-flex !important; 
+    }
+    .side-footer { 
+        display: block !important; 
+    }
+    .menu-btn { 
+        display: none !important; 
+    }
 
-/* Base container for all module filter bars */
+    body.side-rail .side {
+        width: 64px !important;
+        padding: 10px 0 !important;
+        overflow-x: hidden !important;
+    }
+    body.side-rail .brand {
+        padding: 0 0 10px 0 !important;
+        justify-content: center !important;
+    }
+    body.side-rail .brand img {
+        width: 36px !important;
+        height: 36px !important;
+    }
+    body.side-rail .brand .brand-text,
+    body.side-rail .nav-heading,
+    body.side-rail .nav-label,
+    body.side-rail .side-toggle-label {
+        opacity: 0 !important;
+        max-width: 0 !important;
+        display: none !important;
+    }
+    body.side-rail .nav a {
+        font-size: 0 !important;
+        padding: 12px 0 !important;
+        justify-content: center !important;
+        gap: 0 !important;
+        min-height: 48px !important;
+        position: relative !important;
+    }
+}
+
+/* ==============================================================
+   2. CONTAINER-AWARE FILTER & SEARCH CONTROLS
+   ============================================================== */
 .filter-bar,
 .billing-filter-bar,
+.collections-controls-wrap,
+.to-collect-controls-wrap,
 .tenant-filter-bar,
 .concern-filter-bar,
 .room-filter-bar,
@@ -3200,9 +3186,10 @@ svg.w-4 {
     border: 1px solid var(--border, #d6dee8);
     border-radius: 8px;
     box-sizing: border-box;
+    container-type: inline-size;
 }
 
-/* Base / Portrait (< 768px): Option B (Stacked) */
+/* Option B (Stacked): Default for phones & narrow panels (< 720px) */
 .controls-wrap,
 .billing-controls-wrap,
 .collections-controls-wrap,
@@ -3219,7 +3206,6 @@ svg.w-4 {
     box-sizing: border-box;
 }
 
-/* Search input container */
 .search-box,
 .billing-search-box,
 .collections-search-box,
@@ -3235,17 +3221,6 @@ svg.w-4 {
     box-sizing: border-box;
 }
 
-.search-input-wrap,
-.tenant-search-input-wrap,
-.concern-search-input-wrap {
-    position: relative;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    box-sizing: border-box;
-}
-
-/* Embedded search SVG icon */
 .search-box .search-icon,
 .billing-search-box .search-icon,
 .collections-search-box .search-icon,
@@ -3253,9 +3228,7 @@ svg.w-4 {
 .tenant-search-box .search-icon,
 .concern-search-box .search-icon,
 .room-search-box .search-icon,
-.inquiry-search-box .search-icon,
-.tenant-search-input-wrap .search-icon,
-.concern-search-input-wrap .search-icon {
+.inquiry-search-box .search-icon {
     position: absolute;
     left: 12px;
     top: 50%;
@@ -3266,21 +3239,13 @@ svg.w-4 {
     height: 16px;
 }
 
-/* Universal Search Input: Forces 100% width and prevents browser clamping */
-.search-input,
-.billing-search-input,
-.collections-search-input,
-.to-collect-search-input,
-.tenant-search-input,
-.concern-search-input,
-.room-search-input,
-.inquiry-search-input {
+.search-input {
     width: 100% !important;
     min-width: 0 !important;
     box-sizing: border-box !important;
     min-height: var(--tap, 44px) !important;
     height: var(--tap, 44px);
-    padding: 8px 36px 8px 36px !important; /* Left space for icon, right space for clear button */
+    padding: 8px 36px 8px 36px !important;
     font-size: 14px;
     border: 1px solid var(--border, #d6dee8);
     border-radius: 6px;
@@ -3290,27 +3255,15 @@ svg.w-4 {
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.search-input:focus,
-.billing-search-input:focus,
-.collections-search-input:focus,
-.to-collect-search-input:focus,
-.tenant-search-input:focus,
-.concern-search-input:focus,
-.room-search-input:focus,
-.inquiry-search-input:focus {
+.search-input:focus {
     border-color: var(--navy-2, #2f5d91);
     box-shadow: 0 0 0 2px rgba(47, 93, 145, 0.15);
 }
 
-/* Embedded clear button (×) */
 .search-clear-btn,
 .billing-search-clear-btn,
 .collections-search-clear-btn,
-.to-collect-search-clear-btn,
-.tenant-search-clear-btn,
-.concern-search-clear-btn,
-.room-search-clear-btn,
-.inquiry-search-clear-btn {
+.to-collect-search-clear-btn {
     position: absolute;
     right: 8px;
     top: 50%;
@@ -3327,18 +3280,7 @@ svg.w-4 {
     justify-content: center;
 }
 
-.search-clear-btn:hover,
-.billing-search-clear-btn:hover,
-.collections-search-clear-btn:hover,
-.to-collect-search-clear-btn:hover,
-.tenant-search-clear-btn:hover,
-.concern-search-clear-btn:hover,
-.room-search-clear-btn:hover,
-.inquiry-search-clear-btn:hover {
-    color: var(--text, #1f2d3d);
-}
-
-/* Filter chips container */
+/* Stacked mode: Left-aligned chips prevent stair-step wrapping */
 .chips-wrap,
 .billing-chips-wrap,
 .collections-chips-wrap,
@@ -3349,9 +3291,28 @@ svg.w-4 {
 .inquiry-chips-wrap {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     flex-wrap: wrap;
     gap: 8px;
     width: 100%;
+}
+
+.chips-wrap .chip,
+.billing-chips-wrap .chip,
+.collections-chips-wrap .chip,
+.to-collect-chips-wrap .chip,
+.tenant-chips-wrap .chip,
+.concern-chips-wrap .chip,
+.room-chips-wrap .chip,
+.inquiry-chips-wrap .chip {
+    min-height: 38px;
+    padding: 6px 12px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    text-decoration: none;
 }
 
 .tenant-chips-subgroup {
@@ -3381,23 +3342,6 @@ svg.w-4 {
     margin-right: 2px;
 }
 
-/* Chip touch footprint */
-.chips-wrap .chip,
-.tenant-chips-wrap .chip,
-.concern-chips-wrap .chip,
-.room-chips-wrap .chip,
-.inquiry-chips-wrap .chip,
-.billing-chips-wrap .chip,
-.collections-chips-wrap .chip,
-.to-collect-chips-wrap .chip {
-    min-height: 38px;
-    padding: 6px 14px;
-    font-size: 13px;
-    cursor: pointer;
-    box-sizing: border-box;
-}
-
-/* Reset button styling */
 .reset-filter-btn {
     min-height: 38px;
     padding: 6px 12px;
@@ -3411,8 +3355,8 @@ svg.w-4 {
     margin-left: 4px;
 }
 
-/* Tablet Landscape (>= 768px) & Desktop: Option A (Inline Side-by-Side) */
-@media (min-width: 768px) {
+/* Option A (Side-by-Side): Activates only when container has >= 720px */
+@container (min-width: 720px) {
     .controls-wrap,
     .billing-controls-wrap,
     .collections-controls-wrap,
@@ -3435,8 +3379,8 @@ svg.w-4 {
     .concern-search-box,
     .room-search-box,
     .inquiry-search-box {
-        flex: 1;
-        min-width: 0;
+        flex: 1 1 auto;
+        min-width: 220px;
         max-width: 440px;
     }
 
@@ -3449,8 +3393,89 @@ svg.w-4 {
     .room-chips-wrap,
     .inquiry-chips-wrap {
         width: auto;
-        flex: 1;
+        flex: 1 1 auto;
         justify-content: flex-end;
+    }
+}
+
+/* ==============================================================
+   3. SCALED FLOATING ACTION BUTTON (FAB)
+   ============================================================== */
+.concern-fab,
+.inquiry-fab,
+.room-fab {
+    position: fixed;
+    z-index: 90;
+    border-radius: 50%;
+    background: var(--navy-2, #2f5d91);
+    color: #fff;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+    
+    /* Phone baseline */
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
+    bottom: 20px;
+    right: 20px;
+    box-shadow: 0 4px 14px rgba(15, 28, 46, 0.3);
+}
+
+.concern-fab svg,
+.inquiry-fab svg,
+.room-fab svg {
+    width: 24px;
+    height: 24px;
+    display: block;
+}
+
+.concern-fab:hover,
+.inquiry-fab:hover,
+.room-fab:hover {
+    background: var(--navy, #1f3a5f);
+    transform: scale(1.05);
+}
+
+.concern-fab:active,
+.inquiry-fab:active,
+.room-fab:active {
+    transform: scale(0.95);
+}
+
+/* Tablet Portrait Viewport scaling (768px – 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .concern-fab,
+    .inquiry-fab,
+    .room-fab {
+        width: 64px;
+        height: 64px;
+        min-width: 64px;
+        min-height: 64px;
+        bottom: 28px;
+        right: 28px;
+        box-shadow: 0 6px 20px rgba(15, 28, 46, 0.35);
+    }
+
+    .concern-fab svg,
+    .inquiry-fab svg,
+    .room-fab svg {
+        width: 28px;
+        height: 28px;
+    }
+}
+
+/* Desktop & Landscape (>= 1024px): Header button handles actions */
+@media (min-width: 1024px) {
+    .concern-fab,
+    .inquiry-fab,
+    .room-fab {
+        display: none !important;
     }
 }
 

@@ -6,24 +6,27 @@ function toggleSidebarWidth() {
 
     var width = window.innerWidth;
     var isLandscapeTablet = width >= 1024 && width <= 1280;
-    var isPortrait = width < 1024;
 
     var current = 'default';
     if (document.body.classList.contains('side-expanded')) current = 'expanded';
     else if (document.body.classList.contains('side-rail')) current = 'rail';
     else if (document.body.classList.contains('side-collapsed')) current = 'collapsed';
-    else current = (isLandscapeTablet || isPortrait) ? 'rail' : 'expanded';
+    else current = isLandscapeTablet ? 'rail' : 'expanded';
 
     document.body.classList.remove('side-rail', 'side-expanded', 'side-collapsed');
     document.documentElement.classList.remove('side-rail', 'side-expanded', 'side-collapsed');
 
     var next;
-    if (current === 'rail') {
-        next = 'expanded';
-    } else if (current === 'expanded') {
-        next = 'collapsed';
+    if (width < 768) {
+        next = (current === 'expanded') ? 'collapsed' : 'expanded';
     } else {
-        next = isPortrait ? 'expanded' : 'rail';
+        if (current === 'expanded') {
+            next = 'rail';
+        } else if (current === 'rail') {
+            next = 'collapsed';
+        } else {
+            next = 'expanded';
+        }
     }
     document.body.classList.add('side-' + next);
     document.documentElement.classList.add('side-' + next);

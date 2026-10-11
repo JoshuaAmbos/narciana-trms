@@ -48,7 +48,7 @@
 
                     <button type="button" 
                             id="collections-search-clear" 
-                            class="collections-search-clear-btn"
+                            class="search-clear-btn collections-search-clear-btn"
                             title="Clear search"
                             style="display: none;">
                         &times;
@@ -122,7 +122,7 @@
 
                     <button type="button" 
                             id="to-collect-search-clear" 
-                            class="to-collect-search-clear-btn"
+                            class="search-clear-btn to-collect-search-clear-btn"
                             title="Clear search"
                             style="display: none;">
                         &times;

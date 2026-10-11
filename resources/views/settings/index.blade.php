@@ -18,14 +18,14 @@
             <h3 class="sub-head">Standard room baseline rates</h3>
             <div class="row">
                 <div class="f @error('standard_basic_rent') has-err @enderror">
-                    <label for="standard_basic_rent">Standard Basic room monthly rate (₱)</label>
+                    <label for="standard_basic_rent">Standard Basic room monthly rate</label>
                     <input id="standard_basic_rent" name="standard_basic_rent" type="number" step="0.01" min="0" inputmode="decimal"
                            value="{{ old('standard_basic_rent', $setting->standard_basic_rent) }}">
                     <div class="hint">Baseline rent for new Basic rooms (default ₱3,000.00).</div>
                     @error('standard_basic_rent') <div class="err">{{ $message }}</div> @enderror
                 </div>
                 <div class="f @error('standard_aircon_rent') has-err @enderror">
-                    <label for="standard_aircon_rent">Standard Aircon room monthly rate (₱)</label>
+                    <label for="standard_aircon_rent">Standard Aircon room monthly rate</label>
                     <input id="standard_aircon_rent" name="standard_aircon_rent" type="number" step="0.01" min="0" inputmode="decimal"
                            value="{{ old('standard_aircon_rent', $setting->standard_aircon_rent) }}">
                     <div class="hint">Baseline rent for new Aircon rooms (default ₱3,600.00).</div>
@@ -42,9 +42,9 @@
 
             <h3 class="sub-head">Monthly charges</h3>
             <div class="row">
-                @foreach (['water_rate' => ['Water rate per occupant (₱)', 'Per occupant per month.'],
-                           'kwh_rate' => ['Electricity rate per kWh (₱)', 'Aircon (metered) rooms.'],
-                           'appliance_fee' => ['Appliance fee (₱)', 'Per extra appliance per month, basic rooms.']] as $field => [$label, $hint])
+                @foreach (['water_rate' => ['Water rate per occupant', 'Per occupant per month.'],
+                           'kwh_rate' => ['Electricity rate per kWh', 'Aircon (metered) rooms.'],
+                           'appliance_fee' => ['Appliance fee', 'Per extra appliance per month, basic rooms.']] as $field => [$label, $hint])
                     <div class="f @error($field) has-err @enderror">
                         <label for="{{ $field }}">{{ $label }}</label>
                         <input id="{{ $field }}" name="{{ $field }}" type="number" step="0.01" min="0" inputmode="decimal"
@@ -93,7 +93,7 @@
                 </div>
             </div>
 
-            <div class="form-actions">
+            <div class="form-actions" style="display: flex; justify-content: flex-end;">
                 <button type="submit" class="btn">Save settings</button>
             </div>
         </form>
@@ -101,14 +101,5 @@
             Last changed by {{ $setting->updatedBy?->full_name ?? '—' }}{{ $setting->updatedBy ? ' ('.$setting->updatedBy->role.')' : '' }}.
             Every change is recorded in the <a href="{{ route('audit-log.index', ['action' => 'Settings changed']) }}">audit log</a>.
         </p>
-    </div>
-
-    <div class="panel form-panel">
-        <h2>Fixed rules <span class="muted">set by the MOA and the system, not changed here</span></h2>
-        <dl class="facts">
-            @foreach ($fixedRules as [$label, $value])
-                <div><dt>{{ $label }}</dt><dd>{{ $value }}</dd></div>
-            @endforeach
-        </dl>
     </div>
 @endsection

@@ -228,7 +228,7 @@
 
     {{-- Floating Action Button (FAB) for Mobile / Portrait Views --}}
     <button type="button" class="concern-fab" onclick="openCreateConcernModal()" aria-label="Log New Concern" title="Log New Concern">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="12" y2="19"></line>
         </svg>

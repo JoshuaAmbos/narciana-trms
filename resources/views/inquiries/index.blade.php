@@ -243,9 +243,12 @@
     </div>
 
     {{-- Floating Action Button (FAB) for Portrait and Mobile viewports --}}
-    <button type="button" class="inquiry-fab fixed bottom-6 right-6 z-40 lg:hidden flex items-center justify-center"
+    <button type="button" class="inquiry-fab"
             onclick="openLogInquiryModal()" aria-label="Log inquiry" title="Log inquiry">
-        +
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="12" y2="19"></line>
+        </svg>
     </button>
 
     {{-- Intake Modal: Log an inquiry (room pre-assignment removed) --}}

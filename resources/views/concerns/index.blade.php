@@ -46,30 +46,27 @@
             <div class="concern-controls-wrap">
                 {{-- Search Input (Option B: Top on Portrait; Option A: Left on Landscape) --}}
                 <div class="concern-search-box">
-                    <div class="concern-search-input-wrap">
-                        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                        </svg>
-                        <input type="text" 
-                            id="concernSearchInput" 
-                            name="search" 
-                            class="search-input concern-search-input"
-                            placeholder="Search room, tenant, category, or keyword..."
-                            value="{{ $search }}" 
-                            autocomplete="off" 
-                            oninput="filterConcernsRealtime(this.value)">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" 
+                        id="concernSearchInput" 
+                        name="search" 
+                        class="search-input" 
+                        placeholder="Search room, tenant, category, or keyword..."
+                        value="{{ $search }}" 
+                        autocomplete="off" 
+                        oninput="filterConcernsRealtime(this.value)">
 
-                        {{-- Instant Real-Time Clear Button --}}
-                        <button type="button" 
-                                id="concern-search-clear" 
-                                class="concern-search-clear-btn"
-                                title="Clear search"
-                                onclick="document.getElementById('concernSearchInput').value=''; filterConcernsRealtime(''); this.style.display='none';"
-                                style="display: {{ $search ? 'inline-flex' : 'none' }};">
-                            &times;
-                        </button>
-                    </div>
+                    {{-- Instant Real-Time Clear Button --}}
+                    <button type="button" 
+                            id="concern-search-clear" 
+                            class="search-clear-btn" 
+                            title="Clear search"
+                            onclick="document.getElementById('concernSearchInput').value=''; filterConcernsRealtime(''); this.style.display='none';"
+                            style="display: {{ $search ? 'inline-flex' : 'none' }};">
+                        &times;
+                    </button>
                 </div>
 
                 {{-- Status Filter Chips (Option B: Bottom on Portrait; Option A: Right on Landscape) --}}
@@ -77,15 +74,18 @@
                     <span class="status-label">Status:</span>
                     <div class="concern-chips-wrap">
                         @foreach (['open' => 'Not resolved', 'Open' => 'Open', 'In progress' => 'In progress', 'Resolved' => 'Resolved', 'all' => 'All'] as $key => $label)
-                            <a href="{{ route('concerns.index', array_filter(['status' => $key, 'room' => $room?->room_id, 'search' => $search ?: null])) }}"
+                            <a href="{{ route('concerns.index', array_filter(['status' => $key, 'room' => $room?->room_id])) }}"
                             class="chip concern-chip {{ $status === $key && !$mine ? 'on' : '' }}">
                                 {{ $label }} ({{ $counts[$key] ?? 0 }})
                             </a>
                         @endforeach
-                        <a href="{{ route('concerns.index', array_filter(['status' => $status, 'room' => $room?->room_id, 'mine' => $mine ? null : 1, 'search' => $search ?: null])) }}"
+                        <a href="{{ route('concerns.index', array_filter(['status' => $status, 'room' => $room?->room_id, 'mine' => $mine ? null : 1])) }}"
                         class="chip concern-chip {{ $mine ? 'on' : '' }}">
                             Assigned to me ({{ $counts['mine'] ?? 0 }})
                         </a>
+                        @if ($search !== '' || ($status && $status !== ($room ? 'all' : 'open')) || $mine)
+                            <a href="{{ route('concerns.index', array_filter(['room' => $room?->room_id])) }}" class="btn sec reset-filter-btn" title="Reset all filters">Reset</a>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -766,24 +766,20 @@
 
         function filterConcernsRealtime(query) {
             const q = (query || '').toLowerCase().trim();
+            const clearBtn = document.getElementById('concern-search-clear');
+            if (clearBtn) {
+                clearBtn.style.display = q ? 'inline-flex' : 'none';
+            }
             const rows = document.querySelectorAll('#concernsTableBody .concern-row');
             rows.forEach(row => {
                 const text = row.getAttribute('data-search') || '';
-                if (!q || text.indexOf(q) !== -1) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
+                row.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
             });
 
             const cards = document.querySelectorAll('#concernCardsContainer .concern-card');
             cards.forEach(card => {
                 const text = card.getAttribute('data-search') || '';
-                if (!q || text.indexOf(q) !== -1) {
-                    card.style.display = 'flex';
-                } else {
-                    card.style.display = 'none';
-                }
+                card.style.display = (!q || text.indexOf(q) !== -1) ? 'flex' : 'none';
             });
         }
 

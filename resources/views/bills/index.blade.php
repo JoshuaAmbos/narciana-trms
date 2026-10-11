@@ -32,7 +32,7 @@
 
     {{-- Section 1: To bill --}}
     <div class="panel">
-        <h2>Ready To Generate <span class="muted">(Due Within {{ \App\Services\BillingService::DAYS_AHEAD }} Days or Overdue)</span></h2>
+        <h2>To Bill <span class="muted">(Due Within {{ \App\Services\BillingService::DAYS_AHEAD }} Days or Overdue)</span></h2>
         @if ($toBill->isEmpty())
             <p class="muted">Nothing to bill right now.</p>
         @else
@@ -112,51 +112,28 @@
         </h2>
 
         {{-- Filter & Search Bar --}}
-        <form method="GET" action="{{ route('bills.index') }}" class="billing-filter-bar">
-            <input type="hidden" name="month" value="{{ $month->format('Y-m') }}">
-
+        <div class="billing-filter-bar no-print">
             <div class="billing-controls-wrap">
-                {{-- Search Input (Full width on Portrait, Expands on Landscape) --}}
                 <div class="billing-search-box">
-                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
-                    <input type="text" 
-                        id="billing-search-input"
-                        name="search" 
-                        class="search-input" 
-                        placeholder="Search room or tenant..." 
-                        value="{{ $searchQuery ?? request('search') }}" 
-                        autocomplete="off">
-
-                    <button type="button" 
-                            id="billing-search-clear" 
-                            class="billing-search-clear-btn"
-                            title="Clear search"
-                            style="display: {{ ($searchQuery ?? request('search')) ? 'block' : 'none' }};">
-                        &times;
-                    </button>
+                    <input type="text" id="billing-search-input" class="search-input" placeholder="Search room or tenant..." value="{{ $searchQuery ?? request('search') }}" autocomplete="off">
+                    <button type="button" id="billing-search-clear" class="search-clear-btn" style="display: {{ ($searchQuery ?? request('search')) ? 'inline-flex' : 'none' }};">&times;</button>
                 </div>
 
-                {{-- Status Filter Chips --}}
                 <div class="billing-chips-wrap">
                     <span class="status-label">Status:</span>
                     @foreach (['All', 'Unpaid', 'Overdue', 'Paid'] as $st)
-                        <a href="{{ route('bills.index', ['month' => $month->format('Y-m'), 'status' => $st, 'search' => $searchQuery]) }}"
-                        class="chip {{ $statusFilter === $st ? 'on' : '' }}">
-                            {{ $st }}
-                        </a>
+                        <a href="{{ route('bills.index', ['month' => $month->format('Y-m'), 'status' => $st]) }}"
+                           class="chip {{ $statusFilter === $st ? 'on' : '' }}">{{ $st }}</a>
                     @endforeach
-
-                    @if (($searchQuery ?? request('search')) !== '' || ($statusFilter ?? 'All') !== 'All')
-                        <a href="{{ route('bills.index', ['month' => $month->format('Y-m')]) }}" class="btn sec" style="min-height: 38px; padding: 4px 12px; font-size: 13px;">
-                            Reset
-                        </a>
+                    @if (($statusFilter ?? 'All') !== 'All')
+                        <a href="{{ route('bills.index', ['month' => $month->format('Y-m')]) }}" class="btn sec reset-filter-btn">Reset</a>
                     @endif
                 </div>
             </div>
-        </form>
+        </div>
 
         @if ($bills->isEmpty())
             <p class="muted">No bills due in {{ $month->format('F Y') }} {{ $searchQuery ? "matching '{$searchQuery}'" : '' }}.</p>
@@ -182,7 +159,7 @@
                                 $reading = $bill->meterReading;
                                 $kwhUsed = $reading ? max(0, (float) $reading->current_reading - (float) $reading->previous_reading) : 0;
                             @endphp
-                            <tr class="bill-row" onclick="handleBillRowClick(event, {{ $bill->bill_id }})" data-bill-id="{{ $bill->bill_id }}" tabindex="0" role="button">
+                            <tr class="bill-row" onclick="handleBillRowClick(event, {{ $bill->bill_id }})" data-bill-id="{{ $bill->bill_id }}" data-search="{{ strtolower($bill->lease->room->room_no . ' ' . $bill->lease->tenant->full_name) }}" tabindex="0" role="button">
                                 <td class="nowrap">
                                     {{ $bill->due_date->format('j M') }}
                                     @if ($bill->status === 'Overdue' || ($bill->status === 'Unpaid' && $bill->due_date->lt(today())))
@@ -240,7 +217,7 @@
                         $reading = $bill->meterReading;
                         $kwhUsed = $reading ? max(0, (float) $reading->current_reading - (float) $reading->previous_reading) : 0;
                     @endphp
-                    <div class="bill-card" data-bill-id="{{ $bill->bill_id }}">
+                    <div class="bill-card" data-bill-id="{{ $bill->bill_id }}" data-search="{{ strtolower($bill->lease->room->room_no . ' ' . $bill->lease->tenant->full_name) }}">
                         <div class="bill-card-head" onclick="openStatementModal({{ $bill->bill_id }})" role="button" tabindex="0">
                             <div class="bill-card-title">
                                 <span class="bill-card-room">Room {{ $bill->lease->room->room_no }}</span>
@@ -1036,6 +1013,8 @@
 
         // Auto-open statement modal if requested in URL (e.g. redirected from store)
         document.addEventListener('DOMContentLoaded', function() {
+            initRealtimeSearch('billing-search-input', 'billing-search-clear', '.bill-row, .bill-card');
+
             const params = new URLSearchParams(window.location.search);
             const statementId = params.get('statement');
             if (statementId && window.billsData[statementId]) {

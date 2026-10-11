@@ -57,36 +57,29 @@
         </div>
 
         {{-- Search & Filters Bar --}}
-        <form method="GET" action="{{ route('tenants.index') }}" class="tenant-filter-bar no-print">
-            <input type="hidden" name="status" value="{{ $status }}">
-            <input type="hidden" name="tenancy" value="{{ $tenancyFilter }}">
-
+        <div class="tenant-filter-bar no-print">
             <div class="tenant-controls-wrap">
                 {{-- Search Input (Option B: Top on Portrait; Option A: Left on Landscape) --}}
                 <div class="tenant-search-box">
-                    <div class="tenant-search-input-wrap">
-                        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                        </svg>
-                        <input type="text" 
-                            id="tenant-search-input"
-                            name="search" 
-                            class="search-input" 
-                            placeholder="Search name, phone, ID, room..." 
-                            value="{{ $search }}" 
-                            autocomplete="off">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" 
+                        id="tenant-search-input" 
+                        name="search" 
+                        class="search-input" 
+                        placeholder="Search name, phone, ID, room..." 
+                        value="{{ $search }}" 
+                        autocomplete="off">
 
-                        {{-- Instant Real-Time Clear Button --}}
-                        <button type="button" 
-                                id="tenant-search-clear" 
-                                class="tenant-search-clear-btn"
-                                title="Clear search"
-                                onclick="document.getElementById('tenant-search-input').value=''; this.style.display='none'; this.form.submit();"
-                                style="display: {{ $search ? 'inline-flex' : 'none' }};">
-                            &times;
-                        </button>
-                    </div>
+                    {{-- Instant Real-Time Clear Button --}}
+                    <button type="button" 
+                            id="tenant-search-clear" 
+                            class="search-clear-btn" 
+                            title="Clear search"
+                            style="display: {{ $search ? 'inline-flex' : 'none' }};">
+                        &times;
+                    </button>
                 </div>
 
                 {{-- Filter Chips (Option B: Bottom on Portrait; Option A: Right on Landscape) --}}
@@ -96,7 +89,7 @@
                         <span class="status-label">Status:</span>
                         <div class="tenant-chips-wrap">
                             @foreach ($statuses as $st)
-                                <a href="{{ route('tenants.index', ['status' => $st, 'search' => $search, 'tenancy' => $tenancyFilter]) }}"
+                                <a href="{{ route('tenants.index', ['status' => $st, 'tenancy' => $tenancyFilter]) }}"
                                 class="chip {{ $status === $st ? 'on' : '' }}">
                                     {{ $st }}
                                 </a>
@@ -109,16 +102,20 @@
                         <span class="status-label">Tenancy:</span>
                         <div class="tenant-chips-wrap">
                             @foreach (['all' => 'All', 'active' => 'Currently Renting', 'past' => 'No Active Lease'] as $key => $lbl)
-                                <a href="{{ route('tenants.index', ['status' => $status, 'search' => $search, 'tenancy' => $key]) }}"
+                                <a href="{{ route('tenants.index', ['status' => $status, 'tenancy' => $key]) }}"
                                 class="chip {{ $tenancyFilter === $key ? 'on' : '' }}">
                                     {{ $lbl }}
                                 </a>
                             @endforeach
                         </div>
                     </div>
+
+                    @if ($search !== '' || $status !== 'All' || $tenancyFilter !== 'all')
+                        <a href="{{ route('tenants.index') }}" class="btn sec reset-filter-btn" title="Reset all filters">Reset</a>
+                    @endif
                 </div>
             </div>
-        </form>
+        </div>
 
         @if ($tenants->isEmpty())
             <p class="muted">No tenants found matching the filter criteria.
@@ -142,6 +139,7 @@
                     @foreach ($tenants as $tenant)
                         @php($active = $tenant->activeLease)
                         <tr class="tenant-row"
+                            data-search="{{ strtolower($tenant->full_name . ' ' . $tenant->contact_no . ' ' . ($active ? $active->room->room_no : '') . ' ' . $tenant->valid_id_type . ' ' . $tenant->masked_id_number . ' ' . $tenant->status) }}"
                             tabindex="0"
                             role="button"
                             aria-label="View details and actions for {{ $tenant->full_name }}"
@@ -189,6 +187,7 @@
                 @foreach ($tenants as $tenant)
                     @php($active = $tenant->activeLease)
                     <div class="tenant-card tenant-card-clickable"
+                         data-search="{{ strtolower($tenant->full_name . ' ' . $tenant->contact_no . ' ' . ($active ? $active->room->room_no : '') . ' ' . $tenant->valid_id_type . ' ' . $tenant->masked_id_number . ' ' . $tenant->status) }}"
                          tabindex="0"
                          role="button"
                          aria-label="View details and actions for {{ $tenant->full_name }}"
@@ -321,6 +320,10 @@
             if (e.target.classList.contains('modal-backdrop')) {
                 e.target.setAttribute('hidden', '');
             }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initRealtimeSearch('tenant-search-input', 'tenant-search-clear', '.tenant-row, .tenant-card');
         });
     </script>
 @endsection

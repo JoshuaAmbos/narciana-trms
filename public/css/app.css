@@ -1753,32 +1753,7 @@ td.audit-details { min-width: 220px; font-size: 13.5px; overflow-wrap: anywhere;
     color: #475569;
 }
 
-/* Filter & Search Bar */
-.billing-filter-bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px 14px;
-    margin-bottom: 14px;
-    padding: 10px 14px;
-    background: var(--head-bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-}
-.billing-filter-group {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-}
-.billing-filter-bar .search-input {
-    padding: 8px 12px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 13.5px;
-    min-width: 180px;
-}
+
 
 @media print {
     body.statement-modal-open .app > *:not(#statementModal) {
@@ -3207,305 +3182,35 @@ svg.w-4 {
     color: #64748b;
 }
 
-/* ---------- Responsive Search & Filter Bar Controls ---------- */
-.billing-controls-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
-}
+/* ==============================================================
+   UNIVERSAL RESPONSIVE FILTER & REAL-TIME SEARCH BAR SYSTEM
+   ============================================================== */
 
-.billing-search-box {
-    position: relative;
-    width: 100%;
-    display: flex;
-    align-items: center;
-}
-
-.billing-search-box .search-icon {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--muted);
-    pointer-events: none;
-}
-
-.billing-search-box .search-input {
-    width: 100% !important;
-    padding: 8px 36px 8px 36px;
-}ox-sizing: border-box;
-
-.billing-search-box .search-input:focus {
-    outline: 2px solid var(--navy-2);
-    outline-offset: 0;
-}
-
-.billing-search-clear-btn {
-    position: absolute;
-    right: 10px;
-    background: transparent;
-    border: none;
-    font-size: 18px;
-    line-height: 1;
-    color: var(--muted);
-    cursor: pointer;
-    padding: 6px;
-}
-
-.billing-chips-wrap {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    width: 100%;
-}
-
-.billing-chips-wrap .status-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--muted);
-    margin-right: 2px;
-}
-
-/* Tablet Landscape (~768px+) & Desktop: Side-by-side */
-@media (min-width: 768px) {
-    .billing-controls-wrap {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-    }
-
-    .billing-search-box {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .billing-chips-wrap {
-        width: auto;
-        flex-shrink: 0;
-        justify-content: flex-end;
-    }
-}
-
-/* ---------- Collections Search & Filter Controls ---------- */
-.collections-controls-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-    width: 100%;
-    margin: 14px 0;
-    box-sizing: border-box;
-}
-
-.collections-search-box {
-    position: relative;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    box-sizing: border-box;
-}
-
-.collections-search-box .search-icon {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--muted);
-    pointer-events: none;
-}
-
-.collections-search-box .search-input {
-    width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-    min-height: var(--tap, 44px);
-    height: var(--tap, 44px);
-    padding: 8px 36px 8px 36px; /* 36px left padding prevents text from overlapping the search icon */
-    font-size: 14px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: #ffffff;
-    color: var(--text);
-}
-
-.collections-search-box .search-input:focus {
-    outline: 2px solid var(--navy-2);
-    outline-offset: 0;
-}
-
-.collections-search-clear-btn {
-    position: absolute;
-    right: 10px;
-    background: transparent;
-    border: none;
-    font-size: 18px;
-    line-height: 1;
-    color: var(--muted);
-    cursor: pointer;
-    padding: 6px;
-}
-
-.collections-chips-wrap {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    gap: 8px;
-    width: 100%;
-}
-
-.collections-chips-wrap .mode-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--muted);
-    margin-right: 2px;
-}
-
-.collections-chips-wrap .chip {
-    min-height: 38px;
-    padding: 6px 14px;
-    cursor: pointer;
-}
-
-/* Tablet Landscape (~768px+) & Desktop: Side-by-Side */
-@media (min-width: 768px) {
-    .collections-controls-wrap {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-    }
-
-    .collections-search-box {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .collections-chips-wrap {
-        width: auto;
-        flex-shrink: 0;
-        justify-content: flex-end;
-    }
-}
-
-/* ---------- Bills to Collect Search & Filter Controls ---------- */
-.to-collect-controls-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-    width: 100%;
-    margin: 14px 0 16px;
-    box-sizing: border-box;
-}
-
-.to-collect-search-box {
-    position: relative;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    box-sizing: border-box;
-}
-
-.to-collect-search-box .search-icon {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--muted);
-    pointer-events: none;
-}
-
-.to-collect-search-box .search-input {
-    width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-    min-height: var(--tap, 44px);
-    height: var(--tap, 44px);
-    padding: 8px 36px 8px 36px; /* 36px on both left and right for icon and clear button */
-    font-size: 14px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: #ffffff;
-    color: var(--text);
-}
-
-.to-collect-search-box .search-input:focus {
-    outline: 2px solid var(--navy-2);
-    outline-offset: 0;
-}
-
-.to-collect-search-clear-btn {
-    position: absolute;
-    right: 10px;
-    background: transparent;
-    border: none;
-    font-size: 18px;
-    line-height: 1;
-    color: var(--muted);
-    cursor: pointer;
-    padding: 6px;
-}
-
-.to-collect-chips-wrap {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    gap: 8px;
-    width: 100%;
-}
-
-.to-collect-chips-wrap .status-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--muted);
-    margin-right: 2px;
-}
-
-.to-collect-chips-wrap .chip {
-    min-height: 38px;
-    padding: 6px 14px;
-    cursor: pointer;
-}
-
-/* Tablet Landscape (~768px+) & Desktop: Side-by-Side (Option A) */
-@media (min-width: 768px) {
-    .to-collect-controls-wrap {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-    }
-
-    .to-collect-search-box {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .to-collect-chips-wrap {
-        width: auto;
-        flex-shrink: 0;
-        justify-content: flex-end;
-    }
-}
-
-/* ---------- Concerns Module: Responsive Search & Filter Bar ---------- */
-.concern-filter-bar {
+/* Base container for all module filter bars */
+.filter-bar,
+.billing-filter-bar,
+.tenant-filter-bar,
+.concern-filter-bar,
+.room-filter-bar,
+.inquiry-filter-bar {
     width: 100%;
     margin-bottom: 16px;
     padding: 12px 14px;
-    background: var(--head-bg);
-    border: 1px solid var(--border);
+    background: var(--head-bg, #f4f7fb);
+    border: 1px solid var(--border, #d6dee8);
     border-radius: 8px;
     box-sizing: border-box;
 }
 
-/* Base / Tablet Portrait (< 768px): Stacked Layout (Option B) */
-.concern-controls-wrap {
+/* Base / Portrait (< 768px): Option B (Stacked) */
+.controls-wrap,
+.billing-controls-wrap,
+.collections-controls-wrap,
+.to-collect-controls-wrap,
+.tenant-controls-wrap,
+.concern-controls-wrap,
+.room-controls-wrap,
+.inquiry-controls-wrap {
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -3514,59 +3219,107 @@ svg.w-4 {
     box-sizing: border-box;
 }
 
-.concern-search-box {
+/* Search input container */
+.search-box,
+.billing-search-box,
+.collections-search-box,
+.to-collect-search-box,
+.tenant-search-box,
+.concern-search-box,
+.room-search-box,
+.inquiry-search-box {
+    position: relative;
+    width: 100%;
     display: flex;
     align-items: center;
-    gap: 8px;
-    width: 100%;
     box-sizing: border-box;
 }
 
+.search-input-wrap,
+.tenant-search-input-wrap,
 .concern-search-input-wrap {
     position: relative;
-    flex: 1;
-    min-width: 0;
+    width: 100%;
     display: flex;
     align-items: center;
+    box-sizing: border-box;
 }
 
+/* Embedded search SVG icon */
+.search-box .search-icon,
+.billing-search-box .search-icon,
+.collections-search-box .search-icon,
+.to-collect-search-box .search-icon,
+.tenant-search-box .search-icon,
+.concern-search-box .search-icon,
+.room-search-box .search-icon,
+.inquiry-search-box .search-icon,
+.tenant-search-input-wrap .search-icon,
 .concern-search-input-wrap .search-icon {
     position: absolute;
     left: 12px;
-    color: var(--muted);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted, #51647a);
     pointer-events: none;
+    width: 16px;
+    height: 16px;
 }
 
-.concern-search-input-wrap .concern-search-input,
-.concern-search-input {
+/* Universal Search Input: Forces 100% width and prevents browser clamping */
+.search-input,
+.billing-search-input,
+.collections-search-input,
+.to-collect-search-input,
+.tenant-search-input,
+.concern-search-input,
+.room-search-input,
+.inquiry-search-input {
     width: 100% !important;
     min-width: 0 !important;
     box-sizing: border-box !important;
-    min-height: var(--tap, 44px);
+    min-height: var(--tap, 44px) !important;
     height: var(--tap, 44px);
-    padding: 8px 36px 8px 36px;
+    padding: 8px 36px 8px 36px !important; /* Left space for icon, right space for clear button */
     font-size: 14px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border, #d6dee8);
     border-radius: 6px;
     background: #ffffff;
-    color: var(--text);
+    color: var(--text, #1f2d3d);
     outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.concern-search-input-wrap .concern-search-input:focus,
-.concern-search-input:focus {
-    border-color: var(--navy-2);
-    box-shadow: 0 0 0 2px rgba(15, 42, 74, 0.15);
+.search-input:focus,
+.billing-search-input:focus,
+.collections-search-input:focus,
+.to-collect-search-input:focus,
+.tenant-search-input:focus,
+.concern-search-input:focus,
+.room-search-input:focus,
+.inquiry-search-input:focus {
+    border-color: var(--navy-2, #2f5d91);
+    box-shadow: 0 0 0 2px rgba(47, 93, 145, 0.15);
 }
 
-.concern-search-clear-btn {
+/* Embedded clear button (×) */
+.search-clear-btn,
+.billing-search-clear-btn,
+.collections-search-clear-btn,
+.to-collect-search-clear-btn,
+.tenant-search-clear-btn,
+.concern-search-clear-btn,
+.room-search-clear-btn,
+.inquiry-search-clear-btn {
     position: absolute;
     right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
     background: transparent;
     border: none;
     font-size: 20px;
     line-height: 1;
-    color: var(--muted);
+    color: var(--muted, #51647a);
     cursor: pointer;
     padding: 6px;
     display: inline-flex;
@@ -3574,67 +3327,129 @@ svg.w-4 {
     justify-content: center;
 }
 
-.concern-search-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
+.search-clear-btn:hover,
+.billing-search-clear-btn:hover,
+.collections-search-clear-btn:hover,
+.to-collect-search-clear-btn:hover,
+.tenant-search-clear-btn:hover,
+.concern-search-clear-btn:hover,
+.room-search-clear-btn:hover,
+.inquiry-search-clear-btn:hover {
+    color: var(--text, #1f2d3d);
 }
 
-.concern-search-actions .btn {
-    min-height: var(--tap, 44px);
-    height: var(--tap, 44px);
-    padding: 0 14px;
-    font-size: 13px;
-    font-weight: 600;
-    box-sizing: border-box;
-}
-
-.concern-chips-box {
+/* Filter chips container */
+.chips-wrap,
+.billing-chips-wrap,
+.collections-chips-wrap,
+.to-collect-chips-wrap,
+.tenant-chips-container,
+.concern-chips-box,
+.room-chips-wrap,
+.inquiry-chips-wrap {
     display: flex;
     align-items: center;
-    gap: 8px;
     flex-wrap: wrap;
+    gap: 8px;
     width: 100%;
 }
 
-.concern-chips-box .status-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--muted);
-    margin-right: 2px;
+.tenant-chips-subgroup {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 
+.tenant-chips-wrap,
 .concern-chips-wrap {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
     gap: 6px;
+    flex-wrap: wrap;
 }
 
-.concern-chips-wrap .chip {
+.chips-wrap .status-label,
+.chips-wrap .mode-label,
+.tenant-chips-subgroup .status-label,
+.concern-chips-box .status-label,
+.room-filter-label,
+.inquiry-filter-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted, #51647a);
+    margin-right: 2px;
+}
+
+/* Chip touch footprint */
+.chips-wrap .chip,
+.tenant-chips-wrap .chip,
+.concern-chips-wrap .chip,
+.room-chips-wrap .chip,
+.inquiry-chips-wrap .chip,
+.billing-chips-wrap .chip,
+.collections-chips-wrap .chip,
+.to-collect-chips-wrap .chip {
     min-height: 38px;
     padding: 6px 14px;
+    font-size: 13px;
     cursor: pointer;
+    box-sizing: border-box;
 }
 
-/* Tablet Landscape (>= 768px) & Desktop: Side-by-Side (Option A) */
+/* Reset button styling */
+.reset-filter-btn {
+    min-height: 38px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    text-decoration: none;
+    box-sizing: border-box;
+    margin-left: 4px;
+}
+
+/* Tablet Landscape (>= 768px) & Desktop: Option A (Inline Side-by-Side) */
 @media (min-width: 768px) {
-    .concern-controls-wrap {
+    .controls-wrap,
+    .billing-controls-wrap,
+    .collections-controls-wrap,
+    .to-collect-controls-wrap,
+    .tenant-controls-wrap,
+    .concern-controls-wrap,
+    .room-controls-wrap,
+    .inquiry-controls-wrap {
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
         gap: 16px;
     }
 
-    .concern-search-box {
+    .search-box,
+    .billing-search-box,
+    .collections-search-box,
+    .to-collect-search-box,
+    .tenant-search-box,
+    .concern-search-box,
+    .room-search-box,
+    .inquiry-search-box {
         flex: 1;
         min-width: 0;
+        max-width: 440px;
     }
 
-    .concern-chips-box {
+    .chips-wrap,
+    .billing-chips-wrap,
+    .collections-chips-wrap,
+    .to-collect-chips-wrap,
+    .tenant-chips-container,
+    .concern-chips-box,
+    .room-chips-wrap,
+    .inquiry-chips-wrap {
         width: auto;
-        flex-shrink: 0;
+        flex: 1;
         justify-content: flex-end;
     }
 }

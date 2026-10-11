@@ -25,8 +25,15 @@ class RealisticDataSeederTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        \Carbon\Carbon::setTestNow('2026-10-09');
         // Seed staff accounts & baseline settings
         $this->seed();
+    }
+
+    protected function tearDown(): void
+    {
+        \Carbon\Carbon::setTestNow();
+        parent::tearDown();
     }
 
     public function test_seeder_executes_cleanly_and_preserves_users(): void

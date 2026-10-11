@@ -50,3 +50,59 @@ function toggleSidebarWidth() {
     });
 })();
 
+/**
+ * Generic Real-Time Client-Side Filter
+ * @param {string} inputId - ID of the text input
+ * @param {string} clearBtnId - ID of the clear (×) button
+ * @param {string} itemSelector - CSS selector for target rows/cards
+ * @param {string} [emptyMsgId] - Optional ID for empty state placeholder
+ */
+function initRealtimeSearch(inputId, clearBtnId, itemSelector, emptyMsgId = null) {
+    const input = document.getElementById(inputId);
+    const clearBtn = document.getElementById(clearBtnId);
+    if (!input) return;
+
+    function executeFilter() {
+        const query = (input.value || '').toLowerCase().trim();
+        const items = document.querySelectorAll(itemSelector);
+        let matchCount = 0;
+
+        items.forEach(el => {
+            const searchData = (el.getAttribute('data-search') || el.textContent || '').toLowerCase();
+            const matches = !query || searchData.includes(query);
+            el.style.display = matches ? '' : 'none';
+            if (matches) matchCount++;
+        });
+
+        if (clearBtn) {
+            clearBtn.style.display = query ? 'inline-flex' : 'none';
+        }
+
+        if (emptyMsgId) {
+            const emptyEl = document.getElementById(emptyMsgId);
+            if (emptyEl) emptyEl.style.display = matchCount === 0 ? 'block' : 'none';
+        }
+    }
+
+    input.addEventListener('input', executeFilter);
+
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+        }
+    });
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            input.value = '';
+            executeFilter();
+            input.focus();
+        });
+    }
+
+    // Run initial filter if loaded with pre-filled query
+    if (input.value) {
+        executeFilter();
+    }
+}
+

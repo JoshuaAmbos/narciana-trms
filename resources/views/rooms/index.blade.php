@@ -16,70 +16,55 @@
         </div>
 
         {{-- Search & Filters Bar --}}
-        <form method="GET" action="{{ route('rooms.index') }}" class="room-filter-bar" id="room-filter-form">
-            <input type="hidden" name="status" value="{{ $status }}">
-            <input type="hidden" name="type" value="{{ $type }}">
-
-            {{-- Filter Groups (Status and Type Pills) --}}
-            <div class="room-filter-groups">
-                {{-- Status Filter --}}
-                <div class="room-filter-group">
-                    <span class="room-filter-label" style="font-weight: 600;">Status:</span>
-                    <div class="room-chips-wrap">
-                        @foreach ($statuses as $st)
-                            <a href="{{ route('rooms.index', array_filter(['status' => $st, 'type' => $type !== 'All' ? $type : null, 'search' => $search !== '' ? $search : null])) }}"
-                               class="chip {{ $status === $st ? 'on' : '' }}">
-                                {{ $st === 'Disabled' ? 'Out / Disabled' : $st }}
-                                @if (isset($statusCounts[$st]))
-                                    <span class="chip-count">({{ $statusCounts[$st] }})</span>
-                                @endif
-                            </a>
-                        @endforeach
-                    </div>
-                </div>
-
-                {{-- Room Type Filter --}}
-                <div class="room-filter-group">
-                    <span class="room-filter-label" style="font-weight: 600;">Type:</span>
-                    <div class="room-chips-wrap">
-                        @foreach ($types as $tp)
-                            <a href="{{ route('rooms.index', array_filter(['type' => $tp, 'status' => $status !== 'All' ? $status : null, 'search' => $search !== '' ? $search : null])) }}"
-                               class="chip {{ $type === $tp ? 'on' : '' }}">{{ $tp }}</a>
-                        @endforeach
-                    </div>
-                </div>
-            </div>
-
-            {{-- Search Bar (Dedicated row below the filters) --}}
-            <div class="room-search-form">
-                <div class="room-search-input-wrap">
-                    <x-icon name="search" size="16" class="search-icon" />
+        <div class="room-filter-bar no-print">
+            <div class="room-controls-wrap">
+                <div class="room-search-box">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
                     <input type="text"
                            id="room-search-input"
                            name="search"
-                           class="room-search-input"
+                           class="search-input"
                            placeholder="Search room no..."
                            value="{{ $search }}"
                            autocomplete="off"
                            aria-label="Search room number">
-                    @if ($search !== '')
-                        <a href="{{ route('rooms.index', array_filter(['status' => $status !== 'All' ? $status : null, 'type' => $type !== 'All' ? $type : null])) }}"
-                           class="room-search-clear-btn"
-                           id="room-search-clear"
-                           title="Clear search"
-                           aria-label="Clear room search">
-                            &times;
-                        </a>
-                    @endif
+                    <button type="button"
+                            id="room-search-clear"
+                            class="search-clear-btn"
+                            title="Clear search"
+                            style="display: {{ $search !== '' ? 'inline-flex' : 'none' }};">
+                        &times;
+                    </button>
                 </div>
-                <div class="room-search-actions">
-                    <button type="submit" class="btn sec room-search-submit-btn" style="min-height: 44px;">Search</button>
+
+                <div class="room-chips-wrap">
+                    <span class="room-filter-label" style="font-weight: 600;">Status:</span>
+                    @foreach ($statuses as $st)
+                        <a href="{{ route('rooms.index', array_filter(['status' => $st, 'type' => $type !== 'All' ? $type : null])) }}"
+                           class="chip {{ $status === $st ? 'on' : '' }}">
+                            {{ $st === 'Disabled' ? 'Out / Disabled' : $st }}
+                            @if (isset($statusCounts[$st]))
+                                <span class="chip-count">({{ $statusCounts[$st] }})</span>
+                            @endif
+                        </a>
+                    @endforeach
+                    
+                    <div>
+                        <span class="room-filter-label" style="font-weight: 600; margin-left: 6px;">Type:</span>
+                        @foreach ($types as $tp)
+                            <a href="{{ route('rooms.index', array_filter(['type' => $tp, 'status' => $status !== 'All' ? $status : null])) }}"
+                            class="chip {{ $type === $tp ? 'on' : '' }}">{{ $tp }}</a>
+                        @endforeach
+                    </div>
+
                     @if ($search !== '' || $status !== 'All' || $type !== 'All')
-                        <a href="{{ route('rooms.index') }}" class="btn sec room-reset-btn" style="min-height: 44px;" title="Reset all filters">Clear</a>
+                        <a href="{{ route('rooms.index') }}" class="btn sec reset-filter-btn" title="Reset all filters">Reset</a>
                     @endif
                 </div>
             </div>
-        </form>
+        </div>
 
         @if ($rooms->isEmpty())
             @if ($search !== '' || $status !== 'All' || $type !== 'All')
@@ -106,6 +91,7 @@
                     <tbody>
                         @foreach ($rooms as $room)
                             <tr class="room-row-clickable"
+                                data-search="{{ strtolower('room ' . $room->room_no . ' ' . $room->room_type . ' ' . ($room->is_metered ? 'metered own meter' : 'no meter unmetered') . ' ' . $room->status . ' ' . ($room->disabled_reason ?? '')) }}"
                                 onclick="openRoomModal({{ $room->room_id }})"
                                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRoomModal({{ $room->room_id }});}"
                                 tabindex="0"
@@ -138,6 +124,7 @@
             <div class="room-cards">
                 @foreach ($rooms as $room)
                     <div class="room-card room-card-clickable"
+                         data-search="{{ strtolower('room ' . $room->room_no . ' ' . $room->room_type . ' ' . ($room->is_metered ? 'metered own meter' : 'no meter unmetered') . ' ' . $room->status . ' ' . ($room->disabled_reason ?? '')) }}"
                          onclick="openRoomModal({{ $room->room_id }})"
                          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRoomModal({{ $room->room_id }});}"
                          tabindex="0"
@@ -864,13 +851,7 @@
 
         // Auto-reopen modal if validation errors exist
         document.addEventListener('DOMContentLoaded', function () {
-            const searchInput = document.getElementById('room-search-input');
-            const clearBtn = document.getElementById('room-search-clear');
-            if (searchInput && clearBtn) {
-                searchInput.addEventListener('input', function () {
-                    clearBtn.style.display = this.value.length > 0 ? 'inline-flex' : 'none';
-                });
-            }
+            initRealtimeSearch('room-search-input', 'room-search-clear', '.room-row-clickable, .room-card');
 
             @if ($errors->any())
                 @if (old('is_modal_edit'))

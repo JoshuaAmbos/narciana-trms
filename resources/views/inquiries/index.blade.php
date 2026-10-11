@@ -17,61 +17,47 @@
         </div>
 
         {{-- Search & Filters Bar --}}
-        <form method="GET" action="{{ route('inquiries.index') }}" class="inquiry-filter-bar" id="inquiry-filter-form">
-            @if ($status)
-                <input type="hidden" name="status" value="{{ $status }}">
-            @endif
-
-            {{-- Row 1: Status Filter Pills (Full width, single clean horizontal row) --}}
-            <div class="inquiry-filter-chips-row">
-                <span class="inquiry-filter-label">Show:</span>
-                <div class="inquiry-chips-wrap filters-scrollable">
-                    <a href="{{ route('inquiries.index', array_filter(['search' => $search !== '' ? $search : null])) }}"
-                       class="chip {{ $status ? '' : 'on' }}">
-                        All <span class="chip-count">({{ $counts['All'] }})</span>
-                    </a>
-                    @foreach ($statuses as $s)
-                        <a href="{{ route('inquiries.index', array_filter(['status' => $s, 'search' => $search !== '' ? $search : null])) }}"
-                           class="chip {{ $status === $s ? 'on' : '' }}">
-                            {{ $s }} <span class="chip-count">({{ $counts[$s] ?? 0 }})</span>
-                        </a>
-                    @endforeach
-                </div>
-            </div>
-
-            {{-- Row 2: Search Bar (Dedicated row with spacious input and touch buttons) --}}
-            <div class="inquiry-filter-search-row">
-                <div class="inquiry-search-input-wrap">
-                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        <div class="inquiry-filter-bar no-print">
+            <div class="inquiry-controls-wrap">
+                <div class="inquiry-search-box">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
                     <input type="text"
                            id="inquiry-search-input"
                            name="search"
-                           class="inquiry-search-input"
+                           class="search-input"
                            placeholder="Search prospect, phone, remarks..."
                            value="{{ $search }}"
                            autocomplete="off"
                            aria-label="Search inquiries">
-                    @if ($search !== '')
-                        <a href="{{ route('inquiries.index', array_filter(['status' => $status])) }}"
-                           class="inquiry-search-clear-btn"
-                           id="inquiry-search-clear"
-                           title="Clear search"
-                           aria-label="Clear inquiry search">
-                            &times;
-                        </a>
-                    @endif
+                    <button type="button"
+                            id="inquiry-search-clear"
+                            class="search-clear-btn"
+                            title="Clear search"
+                            style="display: {{ $search !== '' ? 'inline-flex' : 'none' }};">
+                        &times;
+                    </button>
                 </div>
-                <div class="inquiry-search-actions">
-                    <button type="submit" class="btn sec inquiry-search-submit-btn">Search</button>
+
+                <div class="inquiry-chips-wrap">
+                    <span class="status-label">Show:</span>
+                    <a href="{{ route('inquiries.index') }}"
+                       class="chip {{ $status ? '' : 'on' }}">
+                        All <span class="chip-count">({{ $counts['All'] }})</span>
+                    </a>
+                    @foreach ($statuses as $s)
+                        <a href="{{ route('inquiries.index', ['status' => $s]) }}"
+                           class="chip {{ $status === $s ? 'on' : '' }}">
+                            {{ $s }} <span class="chip-count">({{ $counts[$s] ?? 0 }})</span>
+                        </a>
+                    @endforeach
                     @if ($search !== '' || $status)
-                        <a href="{{ route('inquiries.index') }}" class="btn sec inquiry-reset-btn" title="Reset all filters">Reset</a>
+                        <a href="{{ route('inquiries.index') }}" class="btn sec reset-filter-btn" title="Reset all filters">Reset</a>
                     @endif
                 </div>
             </div>
-        </form>
+        </div>
 
         @if ($inquiries->isEmpty())
             @if ($search !== '')
@@ -100,6 +86,7 @@
                     <tbody>
                         @foreach ($inquiries as $inquiry)
                             <tr class="inquiry-row"
+                                data-search="{{ strtolower($inquiry->prospect_name . ' ' . $inquiry->contact_no . ' ' . $inquiry->channel . ' ' . $inquiry->preferred_type . ' ' . $inquiry->status . ' ' . ($inquiry->remarks ?? '') . ' ' . $inquiry->user->role) }}"
                                 tabindex="0"
                                 role="button"
                                 aria-label="View details and actions for {{ $inquiry->prospect_name }}"
@@ -128,6 +115,7 @@
             <div class="inquiry-cards pb-24">
                 @foreach ($inquiries as $inquiry)
                     <div class="inquiry-card inquiry-card-clickable"
+                         data-search="{{ strtolower($inquiry->prospect_name . ' ' . $inquiry->contact_no . ' ' . $inquiry->channel . ' ' . $inquiry->preferred_type . ' ' . $inquiry->status . ' ' . ($inquiry->remarks ?? '') . ' ' . $inquiry->user->role) }}"
                          tabindex="0"
                          role="button"
                          aria-label="View details and actions for {{ $inquiry->prospect_name }}"
@@ -419,13 +407,7 @@
             }
         });
         document.addEventListener('DOMContentLoaded', function () {
-            const searchInput = document.getElementById('inquiry-search-input');
-            const clearBtn = document.getElementById('inquiry-search-clear');
-            if (searchInput && clearBtn) {
-                searchInput.addEventListener('input', function () {
-                    clearBtn.style.display = this.value.length > 0 ? 'inline-flex' : 'none';
-                });
-            }
+            initRealtimeSearch('inquiry-search-input', 'inquiry-search-clear', '.inquiry-row, .inquiry-card');
         });
     </script>
 @endsection

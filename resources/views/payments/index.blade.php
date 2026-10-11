@@ -71,7 +71,7 @@
                     </thead>
                     <tbody>
                         @foreach ($collections as $p)
-                            <tr class="collection-row" data-mode="{{ $p->mode }}">
+                            <tr class="collection-row" data-mode="{{ $p->mode }}" data-search="{{ strtolower($p->bill->lease->room->room_no . ' ' . $p->bill->lease->tenant->full_name . ' ' . $p->ack_no . ' ' . $p->mode . ' ' . ($p->gcash_ref_no ?? '') . ' ' . $p->user->role) }}">
                                 <td class="nowrap">{{ $p->payment_date->format('j M') }}</td>
                                 <td><a href="{{ route('payments.show', $p) }}">{{ $p->ack_no }}</a></td>
                                 <td><b>{{ $p->bill->lease->room->room_no }}</b></td>
@@ -141,7 +141,7 @@
 
         {{-- Deposit Exhausted Alert Section --}}
         @if ($breachedLeases->isNotEmpty())
-            <div id="breach-panel-container" class="breach-panel" style="margin-bottom: 16px; border: 1px solid #fda4af; background: #fff1f2; border-radius: 8px; overflow: hidden;">
+            <div id="breach-panel-container" class="breach-panel" style="margin-bottom: 16px; margin-top: 16px; border: 1px solid #fda4af; background: #fff1f2; border-radius: 8px; overflow: hidden;">
                 <div style="background: #ffe4e6; padding: 10px 16px; font-weight: 700; font-size: 13px; color: #9f1239; display: flex; align-items: center; justify-content: space-between;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span>Deposit Exhausted</span>
@@ -158,6 +158,7 @@
                              onclick="openBreachModal({{ $bLease->lease_id }})"
                              data-modal-target="breach-modal"
                              data-lease-id="{{ $bLease->lease_id }}"
+                             data-search="{{ strtolower($bLease->room->room_no . ' ' . $bLease->tenant->full_name . ' breach deposit buffer exhausted') }}"
                              role="button"
                              tabindex="0">
                             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex: 1;">
@@ -199,6 +200,7 @@
                                                                 @foreach ([$isOverdue ? 'Overdue' : ($inGrace ? 'Grace' : 'Upcoming')] as $statusType)
                                                                     <tr class="to-collect-row" 
                                                                         data-status="{{ $statusType }}" 
+                                                                        data-search="{{ strtolower($b->lease->room->room_no . ' ' . $b->lease->tenant->full_name . ' ' . $statusType) }}"
                                                                         @if (!empty($row['is_breached'])) style="background: #fff5f5;" @endif>
                                                                         <td class="nowrap">{{ $dueDate->format('j M Y') }}</td>
                                                                         <td><b>{{ $b->lease->room->room_no }}</b></td>
@@ -300,6 +302,7 @@
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0; flex-wrap: wrap;">
+                    <button type="button" class="btn sec" onclick="closeBreachModal()" style="min-height: 44px; padding: 0 16px;">Cancel / Close</button>
                     <a id="bdm_lease_link" href="#" class="btn sec" style="min-height: 44px; display: inline-flex; align-items: center; padding: 0 16px;">View Lease Details</a>
                     @can('manage-leases')
                         <form id="bdm_terminate_form" method="POST" action="" onsubmit="return confirm('End tenancy and vacate Room ' + document.getElementById('bdm_room').textContent + '?\n\nThis will offset the security deposit against unpaid obligations, cancel the lease, and vacate the room.')">
@@ -431,7 +434,7 @@
                         const categoryVal = config.getCategory ? config.getCategory(item) : 'All';
                         const matchesCategory = (activeCategory === 'All') || (categoryVal === activeCategory);
 
-                        const text = item.textContent.toLowerCase();
+                        const text = (item.getAttribute('data-search') || item.textContent || '').toLowerCase();
                         const matchesText = (activeQuery === '') || text.includes(activeQuery);
 
                         return matchesCategory && matchesText;
@@ -493,7 +496,7 @@
                             currentPage = 1;
                             updateView();
                             if (config.clearBtn) {
-                                config.clearBtn.style.display = activeQuery ? 'block' : 'none';
+                                config.clearBtn.style.display = activeQuery ? 'inline-flex' : 'none';
                             }
                         }, 120);
                     });

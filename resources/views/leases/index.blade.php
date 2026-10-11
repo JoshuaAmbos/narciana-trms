@@ -43,14 +43,23 @@
         </div>
 
         {{-- Search & Filters Bar --}}
-        <form method="GET" action="{{ route('leases.index') }}" class="tenant-filter-bar">
+        <form method="GET" action="{{ route('leases.index') }}" class="tenant-filter-bar no-print">
             <input type="hidden" name="status" value="{{ $status }}">
             <input type="hidden" name="room_type" value="{{ $roomType }}">
 
-            <div class="tenant-filter-row">
-                <div class="tenant-filter-groups">
-                    <div class="tenant-filter-group">
-                        <span class="tenant-filter-label">Status:</span>
+            <div class="tenant-controls-wrap">
+                <div class="tenant-search-box">
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="lease-search-input" name="search" class="search-input" placeholder="Search room no or tenant name..." value="{{ $search }}" autocomplete="off">
+                    <button type="button" id="lease-search-clear" class="search-clear-btn" aria-label="Clear search" style="display: {{ $search !== '' ? 'inline-flex' : 'none' }};">&times;</button>
+                </div>
+
+                <div class="tenant-chips-container">
+                    <div class="tenant-chips-subgroup">
+                        <span class="status-label">Status:</span>
                         <div class="tenant-chips-wrap">
                             @foreach (['All' => 'All', 'Active' => 'Active', 'Ended' => 'Ended', 'Cancelled' => 'Cancelled'] as $st => $label)
                                 <a href="{{ route('leases.index', ['status' => $st, 'search' => $search, 'room_type' => $roomType]) }}"
@@ -59,8 +68,8 @@
                         </div>
                     </div>
 
-                    <div class="tenant-filter-group">
-                        <span class="tenant-filter-label">Room Type:</span>
+                    <div class="tenant-chips-subgroup">
+                        <span class="status-label">Room Type:</span>
                         <div class="tenant-chips-wrap">
                             @foreach (['All', 'Basic', 'Aircon'] as $rt)
                                 <a href="{{ route('leases.index', ['status' => $status, 'search' => $search, 'room_type' => $rt]) }}"
@@ -68,19 +77,9 @@
                             @endforeach
                         </div>
                     </div>
-                </div>
 
-                <div class="tenant-search-form">
-                    <div class="tenant-search-input-wrap">
-                        <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                        </svg>
-                        <input type="text" name="search" class="search-input" placeholder="Search room no or tenant name..." value="{{ $search }}" autocomplete="off">
-                    </div>
-                    <button type="submit" class="btn sec tenant-search-btn">Search</button>
                     @if ($search !== '' || $roomType !== 'All' || $status !== 'Active')
-                        <a href="{{ route('leases.index') }}" class="btn sec tenant-clear-btn" title="Clear all filters">Clear</a>
+                        <a href="{{ route('leases.index') }}" class="btn sec reset-filter-btn" title="Clear all filters">Reset</a>
                     @endif
                 </div>
             </div>
@@ -106,7 +105,9 @@
                         <th>Status</th>
                     </tr>
                     @foreach ($leases as $lease)
+                        @php($coTenant = $lease->coTenant())
                         <tr class="lease-row"
+                            data-search="{{ strtolower('MOA-' . str_pad($lease->lease_id, 4, '0', STR_PAD_LEFT) . ' ' . $lease->room->room_no . ' ' . $lease->room->room_type . ' ' . $lease->tenant->full_name . ' ' . ($coTenant ? $coTenant->full_name : '') . ' ' . $lease->tenant->contact_no) }}"
                             tabindex="0"
                             role="button"
                             aria-label="View details and actions for MOA-{{ str_pad($lease->lease_id, 4, '0', STR_PAD_LEFT) }}"
@@ -118,7 +119,6 @@
                                 <div class="sub nowrap muted">{{ $lease->room->room_type }}</div>
                             </td>
                             <td>
-                                @php($coTenant = $lease->coTenant())
                                 <div>
                                     <a href="{{ route('tenants.show', $lease->tenant) }}" style="font-weight: 600; text-decoration: none; color: inherit;" onclick="event.stopPropagation()">
                                         {{ $lease->tenant->full_name }}
@@ -148,7 +148,9 @@
             {{-- Mobile Cards View --}}
             <div class="lease-cards">
                 @foreach ($leases as $lease)
+                    @php($coTenant = $lease->coTenant())
                     <div class="lease-card lease-card-clickable"
+                         data-search="{{ strtolower('MOA-' . str_pad($lease->lease_id, 4, '0', STR_PAD_LEFT) . ' ' . $lease->room->room_no . ' ' . $lease->room->room_type . ' ' . $lease->tenant->full_name . ' ' . ($coTenant ? $coTenant->full_name : '') . ' ' . $lease->tenant->contact_no) }}"
                          tabindex="0"
                          role="button"
                          aria-label="View details and actions for MOA-{{ str_pad($lease->lease_id, 4, '0', STR_PAD_LEFT) }}"
@@ -360,6 +362,12 @@
         document.addEventListener('click', function(e) {
             if (e.target.classList.contains('modal-backdrop')) {
                 e.target.setAttribute('hidden', '');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof initRealtimeSearch === 'function') {
+                initRealtimeSearch('lease-search-input', 'lease-search-clear', '.lease-row, .lease-card');
             }
         });
     </script>

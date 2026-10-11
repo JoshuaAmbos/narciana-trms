@@ -57,45 +57,65 @@
         </div>
 
         {{-- Search & Filters Bar --}}
-        <form method="GET" action="{{ route('tenants.index') }}" class="tenant-filter-bar">
+        <form method="GET" action="{{ route('tenants.index') }}" class="tenant-filter-bar no-print">
             <input type="hidden" name="status" value="{{ $status }}">
             <input type="hidden" name="tenancy" value="{{ $tenancyFilter }}">
 
-            <div class="tenant-filter-row">
-                <div class="tenant-filter-groups">
-                    <div class="tenant-filter-group">
-                        <span class="tenant-filter-label">Status:</span>
-                        <div class="tenant-chips-wrap">
-                            @foreach ($statuses as $st)
-                                <a href="{{ route('tenants.index', ['status' => $st, 'search' => $search, 'tenancy' => $tenancyFilter]) }}"
-                                   class="chip {{ $status === $st ? 'on' : '' }}">{{ $st }}</a>
-                            @endforeach
-                        </div>
-                    </div>
-
-                    <div class="tenant-filter-group">
-                        <span class="tenant-filter-label">Tenancy:</span>
-                        <div class="tenant-chips-wrap">
-                            @foreach (['all' => 'All', 'active' => 'Currently Renting', 'past' => 'No Active Lease'] as $key => $lbl)
-                                <a href="{{ route('tenants.index', ['status' => $status, 'search' => $search, 'tenancy' => $key]) }}"
-                                   class="chip {{ $tenancyFilter === $key ? 'on' : '' }}">{{ $lbl }}</a>
-                            @endforeach
-                        </div>
-                    </div>
-                </div>
-
-                <div class="tenant-search-form">
+            <div class="tenant-controls-wrap">
+                {{-- Search Input (Option B: Top on Portrait; Option A: Left on Landscape) --}}
+                <div class="tenant-search-box">
                     <div class="tenant-search-input-wrap">
-                        <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="11" cy="11" r="8"></circle>
                             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                         </svg>
-                        <input type="text" name="search" class="search-input" placeholder="Search name, phone, ID, room..." value="{{ $search }}" autocomplete="off">
+                        <input type="text" 
+                            id="tenant-search-input"
+                            name="search" 
+                            class="search-input" 
+                            placeholder="Search name, phone, ID, room..." 
+                            value="{{ $search }}" 
+                            autocomplete="off">
+
+                        {{-- Instant Real-Time Clear Button --}}
+                        <button type="button" 
+                                id="tenant-search-clear" 
+                                class="tenant-search-clear-btn"
+                                title="Clear search"
+                                onclick="document.getElementById('tenant-search-input').value=''; this.style.display='none'; this.form.submit();"
+                                style="display: {{ $search ? 'inline-flex' : 'none' }};">
+                            &times;
+                        </button>
                     </div>
-                    <button type="submit" class="btn sec tenant-search-btn">Search</button>
-                    @if ($search !== '' || $status !== 'All' || $tenancyFilter !== 'all')
-                        <a href="{{ route('tenants.index') }}" class="btn sec tenant-clear-btn" title="Clear all filters">Clear</a>
-                    @endif
+                </div>
+
+                {{-- Filter Chips (Option B: Bottom on Portrait; Option A: Right on Landscape) --}}
+                <div class="tenant-chips-container">
+                    {{-- Status Chips --}}
+                    <div class="tenant-chips-subgroup">
+                        <span class="status-label">Status:</span>
+                        <div class="tenant-chips-wrap">
+                            @foreach ($statuses as $st)
+                                <a href="{{ route('tenants.index', ['status' => $st, 'search' => $search, 'tenancy' => $tenancyFilter]) }}"
+                                class="chip {{ $status === $st ? 'on' : '' }}">
+                                    {{ $st }}
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- Tenancy Chips --}}
+                    <div class="tenant-chips-subgroup">
+                        <span class="status-label">Tenancy:</span>
+                        <div class="tenant-chips-wrap">
+                            @foreach (['all' => 'All', 'active' => 'Currently Renting', 'past' => 'No Active Lease'] as $key => $lbl)
+                                <a href="{{ route('tenants.index', ['status' => $status, 'search' => $search, 'tenancy' => $key]) }}"
+                                class="chip {{ $tenancyFilter === $key ? 'on' : '' }}">
+                                    {{ $lbl }}
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
                 </div>
             </div>
         </form>

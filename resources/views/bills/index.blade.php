@@ -114,19 +114,47 @@
         {{-- Filter & Search Bar --}}
         <form method="GET" action="{{ route('bills.index') }}" class="billing-filter-bar">
             <input type="hidden" name="month" value="{{ $month->format('Y-m') }}">
-            <div class="billing-filter-group">
-                <span class="muted" style="font-size: 13px;">Status:</span>
-                @foreach (['All', 'Unpaid', 'Overdue', 'Paid'] as $st)
-                    <a href="{{ route('bills.index', ['month' => $month->format('Y-m'), 'status' => $st, 'search' => $searchQuery]) }}"
-                       class="chip {{ $statusFilter === $st ? 'on' : '' }}">{{ $st }}</a>
-                @endforeach
-            </div>
-            <div class="billing-filter-group">
-                <input type="text" name="search" class="search-input" placeholder="Search room or tenant..." value="{{ $searchQuery }}">
-                <button type="submit" class="btn sec" style="padding: 6px 12px; font-size: 13px;">Search</button>
-                @if ($searchQuery !== '' || $statusFilter !== 'All')
-                    <a href="{{ route('bills.index', ['month' => $month->format('Y-m')]) }}" class="btn sec" style="padding: 6px 10px; font-size: 13px;">Clear</a>
-                @endif
+
+            <div class="billing-controls-wrap">
+                {{-- Search Input (Full width on Portrait, Expands on Landscape) --}}
+                <div class="billing-search-box">
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" 
+                        id="billing-search-input"
+                        name="search" 
+                        class="search-input" 
+                        placeholder="Search room or tenant..." 
+                        value="{{ $searchQuery ?? request('search') }}" 
+                        autocomplete="off">
+
+                    <button type="button" 
+                            id="billing-search-clear" 
+                            class="billing-search-clear-btn"
+                            title="Clear search"
+                            style="display: {{ ($searchQuery ?? request('search')) ? 'block' : 'none' }};">
+                        &times;
+                    </button>
+                </div>
+
+                {{-- Status Filter Chips --}}
+                <div class="billing-chips-wrap">
+                    <span class="status-label">Status:</span>
+                    @foreach (['All', 'Unpaid', 'Overdue', 'Paid'] as $st)
+                        <a href="{{ route('bills.index', ['month' => $month->format('Y-m'), 'status' => $st, 'search' => $searchQuery]) }}"
+                        class="chip {{ $statusFilter === $st ? 'on' : '' }}">
+                            {{ $st }}
+                        </a>
+                    @endforeach
+
+                    @if (($searchQuery ?? request('search')) !== '' || ($statusFilter ?? 'All') !== 'All')
+                        <a href="{{ route('bills.index', ['month' => $month->format('Y-m')]) }}" class="btn sec" style="min-height: 38px; padding: 4px 12px; font-size: 13px;">
+                            Reset
+                        </a>
+                    @endif
+                </div>
             </div>
         </form>
 
@@ -427,7 +455,6 @@
                         Record Payment
                     </button>
                 </div>
-                <button type="button" class="btn sec" onclick="closeStatementModal()">Close</button>
             </div>
         </div>
     </div>
@@ -524,6 +551,93 @@
         function peso(val) {
             return '₱' + Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
+
+        // =========================================================================
+        // Real-Time Search Bar Query
+        // =========================================================================
+        document.addEventListener('DOMContentLoaded', function () {
+            // Find input by ID or fallback by class/name
+            const searchInput = document.getElementById('billing-search-input') 
+                             || document.querySelector('input.search-input')
+                             || document.querySelector('input[name="search"]');
+            const clearBtn = document.getElementById('billing-search-clear');
+            const searchBtn = document.getElementById('billing-search-btn');
+
+            if (!searchInput) return;
+
+            // Broad selector targeting rows across ledger tables and mobile cards
+            const getSearchTargets = () => {
+                const tableRows = Array.from(document.querySelectorAll('table.fit tbody tr, .table-wrap tbody tr, .dashboard-table-view tbody tr'));
+                const mobileCards = Array.from(document.querySelectorAll('.dashboard-mobile-cards > div, .bill-card, .dashboard-touch-card'));
+                return { tableRows, mobileCards };
+            };
+
+            let debounceTimer = null;
+
+            function filterItems(query) {
+                const cleanQuery = (query || '').toLowerCase().trim();
+                const { tableRows, mobileCards } = getSearchTargets();
+
+                // 1. Filter Table Rows (excluding empty-state "No bills" rows)
+                tableRows.forEach(row => {
+                    // Skip rows that act as empty-state message containers
+                    if (row.querySelector('td[colspan]')) return;
+
+                    const textContent = row.textContent.toLowerCase();
+                    const matches = cleanQuery === '' || textContent.includes(cleanQuery);
+                    row.style.display = matches ? '' : 'none';
+                });
+
+                // 2. Filter Mobile Cards
+                mobileCards.forEach(card => {
+                    const textContent = card.textContent.toLowerCase();
+                    const matches = cleanQuery === '' || textContent.includes(cleanQuery);
+                    card.style.display = matches ? '' : 'none';
+                });
+
+                // 3. Toggle Clear Icon
+                if (clearBtn) {
+                    clearBtn.style.display = cleanQuery ? 'block' : 'none';
+                }
+            }
+
+            // Real-time input listener (120ms debounce)
+            searchInput.addEventListener('input', function () {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    filterItems(this.value);
+                }, 120);
+            });
+
+            // Handle Clear Button click
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function () {
+                    searchInput.value = '';
+                    filterItems('');
+                    searchInput.focus();
+                });
+            }
+
+            if (searchBtn) {
+                searchBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    filterItems(searchInput.value);
+                });
+            }
+
+            // Prevent Enter from reloading the page
+            searchInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    filterItems(this.value);
+                }
+            });
+
+            // Initial check if pre-filled on page render
+            if (searchInput.value.trim() !== '') {
+                filterItems(searchInput.value);
+            }
+        });
 
         // =========================================================================
         // Generate Bill Modal Logic

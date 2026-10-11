@@ -32,41 +32,62 @@
         @endif
 
         {{-- Filter & Universal Search Bar --}}
-        <form method="GET" action="{{ route('concerns.index') }}" class="concern-filter-bar">
+        <form method="GET" action="{{ route('concerns.index') }}" class="concern-filter-bar no-print">
             @if ($room)
                 <input type="hidden" name="room" value="{{ $room->room_id }}">
             @endif
+            @if ($status && $status !== ($room ? 'all' : 'open'))
+                <input type="hidden" name="status" value="{{ $status }}">
+            @endif
+            @if ($mine)
+                <input type="hidden" name="mine" value="1">
+            @endif
 
-            <div class="concern-filter-groups">
-                <span class="muted" style="font-size: 13px; font-weight: 600;">Status:</span>
-                <div class="concern-chips-wrap">
-                    @foreach (['open' => 'Not resolved', 'Open' => 'Open', 'In progress' => 'In progress', 'Resolved' => 'Resolved', 'all' => 'All'] as $key => $label)
-                        <a href="{{ route('concerns.index', array_filter(['status' => $key, 'room' => $room?->room_id, 'search' => $search ?: null])) }}"
-                           class="concern-chip {{ $status === $key && !$mine ? 'on' : '' }}">
-                            {{ $label }} ({{ $counts[$key] ?? 0 }})
+            <div class="concern-controls-wrap">
+                {{-- Search Input (Option B: Top on Portrait; Option A: Left on Landscape) --}}
+                <div class="concern-search-box">
+                    <div class="concern-search-input-wrap">
+                        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" 
+                            id="concernSearchInput" 
+                            name="search" 
+                            class="search-input concern-search-input"
+                            placeholder="Search room, tenant, category, or keyword..."
+                            value="{{ $search }}" 
+                            autocomplete="off" 
+                            oninput="filterConcernsRealtime(this.value)">
+
+                        {{-- Instant Real-Time Clear Button --}}
+                        <button type="button" 
+                                id="concern-search-clear" 
+                                class="concern-search-clear-btn"
+                                title="Clear search"
+                                onclick="document.getElementById('concernSearchInput').value=''; filterConcernsRealtime(''); this.style.display='none';"
+                                style="display: {{ $search ? 'inline-flex' : 'none' }};">
+                            &times;
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Status Filter Chips (Option B: Bottom on Portrait; Option A: Right on Landscape) --}}
+                <div class="concern-chips-box">
+                    <span class="status-label">Status:</span>
+                    <div class="concern-chips-wrap">
+                        @foreach (['open' => 'Not resolved', 'Open' => 'Open', 'In progress' => 'In progress', 'Resolved' => 'Resolved', 'all' => 'All'] as $key => $label)
+                            <a href="{{ route('concerns.index', array_filter(['status' => $key, 'room' => $room?->room_id, 'search' => $search ?: null])) }}"
+                            class="chip concern-chip {{ $status === $key && !$mine ? 'on' : '' }}">
+                                {{ $label }} ({{ $counts[$key] ?? 0 }})
+                            </a>
+                        @endforeach
+                        <a href="{{ route('concerns.index', array_filter(['status' => $status, 'room' => $room?->room_id, 'mine' => $mine ? null : 1, 'search' => $search ?: null])) }}"
+                        class="chip concern-chip {{ $mine ? 'on' : '' }}">
+                            Assigned to me ({{ $counts['mine'] ?? 0 }})
                         </a>
-                    @endforeach
-                    <a href="{{ route('concerns.index', array_filter(['status' => $status, 'room' => $room?->room_id, 'mine' => $mine ? null : 1, 'search' => $search ?: null])) }}"
-                       class="concern-chip {{ $mine ? 'on' : '' }}">
-                        Assigned to me ({{ $counts['mine'] ?? 0 }})
-                    </a>
+                    </div>
                 </div>
-            </div>
-
-            <div class="concern-search-form">
-                <div class="concern-search-input-wrap">
-                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                    <input type="text" id="concernSearchInput" name="search" class="concern-search-input"
-                           placeholder="Search room, tenant, category, or keyword..."
-                           value="{{ $search }}" autocomplete="off" oninput="filterConcernsRealtime(this.value)">
-                </div>
-                <button type="submit" class="btn sec concern-search-btn">Search</button>
-                @if ($search !== '' || $status !== ($room ? 'all' : 'open') || $mine)
-                    <a href="{{ route('concerns.index', array_filter(['room' => $room?->room_id])) }}" class="btn sec concern-clear-btn" title="Clear filters">Clear</a>
-                @endif
             </div>
         </form>
 
@@ -207,7 +228,7 @@
 
     {{-- Floating Action Button (FAB) for Mobile / Portrait Views --}}
     <button type="button" class="concern-fab" onclick="openCreateConcernModal()" aria-label="Log New Concern" title="Log New Concern">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="12" y2="19"></line>
         </svg>

@@ -30,58 +30,79 @@ class PaymentController extends Controller
     {
         $this->payments->refreshOverdue();
 
-        $filter = $request->validate(['month' => ['nullable', 'date_format:Y-m']]);
-        $month = isset($filter['month']) ? Carbon::createFromFormat('Y-m-d', $filter['month'].'-01') : today()->startOfMonth();
-
+        $month = $this->resolveMonth($request);
         $breachedLeases = $this->delinquency->breachedLeases();
+        $collections = $this->collectionsForMonth($month);
+
+        return view('payments.index', [
+            'month' => $month,
+            'breachedLeases' => $breachedLeases,
+            'breachedLeasesMap' => $this->breachedLeasesMap($breachedLeases),
+            'toCollect' => $this->toCollect($breachedLeases),
+            'collections' => $collections,
+            'totals' => [
+                'Cash' => $this->sumPayments($collections->where('mode', 'Cash')),
+                'GCash' => $this->sumPayments($collections->where('mode', 'GCash')),
+                'All' => $this->sumPayments($collections),
+            ],
+            'byReceiver' => $collections->groupBy(fn (Payment $p) => $p->user->role)->map(fn ($items) => $this->sumPayments($items)),
+        ]);
+    }
+
+    private function resolveMonth(Request $request): Carbon
+    {
+        $filter = $request->validate(['month' => ['nullable', 'date_format:Y-m']]);
+
+        return isset($filter['month'])
+            ? Carbon::createFromFormat('Y-m-d', $filter['month'].'-01')
+            : today()->startOfMonth();
+    }
+
+    private function toCollect($breachedLeases): \Illuminate\Support\Collection
+    {
         $breachedLeaseIds = $breachedLeases->pluck('lease.lease_id')->all();
 
         // Bills still to collect, oldest first, with what they would cost if paid today.
-        $toCollect = Bill::with(['lease.room', 'lease.tenant'])->where('status', '!=', 'Paid')->orderBy('due_date')->get()
-            ->map(fn (Bill $b) => [
-                'bill' => $b,
-                'today' => $this->penalties->forBill($b, today()),
-                'can_pay' => $this->payments->canPay($b),
-                'is_breached' => in_array($b->lease_id, $breachedLeaseIds, true),
+        return Bill::with(['lease.room', 'lease.tenant'])->where('status', '!=', 'Paid')->orderBy('due_date')->get()
+            ->map(fn (Bill $bill) => [
+                'bill' => $bill,
+                'today' => $this->penalties->forBill($bill, today()),
+                'can_pay' => $this->payments->canPay($bill),
+                'is_breached' => in_array($bill->lease_id, $breachedLeaseIds, true),
             ]);
+    }
 
-        $collections = Payment::with(['bill.lease.room', 'bill.lease.tenant', 'user'])
+    private function collectionsForMonth(Carbon $month): \Illuminate\Support\Collection
+    {
+        return Payment::with(['bill.lease.room', 'bill.lease.tenant', 'user'])
             ->whereYear('payment_date', $month->year)->whereMonth('payment_date', $month->month)
             ->orderBy('payment_date')->orderBy('payment_id')->get();
+    }
 
-        $sum = fn ($items) => round($items->sum(fn (Payment $p) => (float) $p->amount), 2);
+    private function sumPayments($items): float
+    {
+        return round($items->sum(fn (Payment $payment) => (float) $payment->amount), 2);
+    }
 
-        $breachedLeasesMap = $breachedLeases->mapWithKeys(function ($breach) {
-            $l = $breach['lease'];
+    private function breachedLeasesMap($breachedLeases): array
+    {
+        return $breachedLeases->mapWithKeys(function ($breach) {
+            $lease = $breach['lease'];
             $deficit = max(0, (float) $breach['total_arrears'] - (float) $breach['total_deposit']);
 
-            return [$l->lease_id => [
-                'lease_id' => $l->lease_id,
-                'room_no' => $l->room->room_no,
-                'tenant_name' => $l->tenant->full_name,
+            return [$lease->lease_id => [
+                'lease_id' => $lease->lease_id,
+                'room_no' => $lease->room->room_no,
+                'tenant_name' => $lease->tenant->full_name,
                 'unpaid_bills_sum' => (float) $breach['base_arrears'],
                 'penalties_sum' => (float) $breach['penalty_arrears'],
                 'total_arrears' => (float) $breach['total_arrears'],
                 'security_deposit' => (float) $breach['total_deposit'],
                 'net_deficit' => (float) $deficit,
-                'lease_url' => route('leases.show', $l),
-                'terminate_url' => route('leases.terminate-breach', $l),
+                'lease_url' => route('leases.show', $lease),
+                'terminate_url' => route('leases.terminate-breach', $lease),
             ]];
         })->all();
-
-        return view('payments.index', [
-            'month' => $month,
-            'breachedLeases' => $breachedLeases,
-            'breachedLeasesMap' => $breachedLeasesMap,
-            'toCollect' => $toCollect,
-            'collections' => $collections,
-            'totals' => [
-                'Cash' => $sum($collections->where('mode', 'Cash')),
-                'GCash' => $sum($collections->where('mode', 'GCash')),
-                'All' => $sum($collections),
-            ],
-            'byReceiver' => $collections->groupBy(fn (Payment $p) => $p->user->role)->map($sum),
-        ]);
     }
 
     /** Record-payment form. The penalty depends on the payment date, so "Show amount" recomputes it (GET). */
@@ -132,7 +153,7 @@ class PaymentController extends Controller
         return view('payments.show', [
             'payment' => $payment,
             'statement' => $billing->statementForBill($payment->bill),
-            'daysLate' => $this->penalties->daysLate($payment->bill->due_date, $payment->payment_date,
+            'daysLate' => $this->penalties->daysLate($payment->bill->due_date, Carbon::parse($payment->payment_date),
                 (int) Setting::current()->grace_days),
             'canVoid' => Gate::allows('void', $payment),
         ]);

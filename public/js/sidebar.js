@@ -1,19 +1,18 @@
 // Narciana TRMS - Responsive sidebar toggle (drawer / rail / full)
 function toggleSidebarWidth() {
-    var width = window.innerWidth;
-    if (width < 1024) {
-        document.body.classList.toggle('nav-open');
-        return;
-    }
     document.documentElement.classList.remove('preload-nav');
     document.body.classList.remove('preload-nav');
+    document.body.classList.remove('nav-open');
 
+    var width = window.innerWidth;
     var isLandscapeTablet = width >= 1024 && width <= 1280;
+    var isPortrait = width < 1024;
+
     var current = 'default';
     if (document.body.classList.contains('side-expanded')) current = 'expanded';
     else if (document.body.classList.contains('side-rail')) current = 'rail';
     else if (document.body.classList.contains('side-collapsed')) current = 'collapsed';
-    else current = isLandscapeTablet ? 'rail' : 'expanded';
+    else current = (isLandscapeTablet || isPortrait) ? 'rail' : 'expanded';
 
     document.body.classList.remove('side-rail', 'side-expanded', 'side-collapsed');
     document.documentElement.classList.remove('side-rail', 'side-expanded', 'side-collapsed');
@@ -24,7 +23,7 @@ function toggleSidebarWidth() {
     } else if (current === 'expanded') {
         next = 'collapsed';
     } else {
-        next = 'rail';
+        next = isPortrait ? 'expanded' : 'rail';
     }
     document.body.classList.add('side-' + next);
     document.documentElement.classList.add('side-' + next);

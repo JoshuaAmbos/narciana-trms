@@ -79,11 +79,9 @@ return [
                     if (PHP_OS_FAMILY === 'Windows') {
                         return 'C:\\xampp\\mysql\\bin';
                     }
-
                     if (is_dir('/opt/lampp/bin') && file_exists('/opt/lampp/bin/mysqldump')) {
                         return '/opt/lampp/bin';
                     }
-
                     return '/usr/bin';
                 })(),
                 'use_single_transaction' => true,

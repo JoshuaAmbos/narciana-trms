@@ -7,9 +7,8 @@ use Symfony\Component\Process\Process;
 
 /**
  * Runs the MySQL command-line tools for backups: mysqldump (save the database to a .sql file) and
- * mysql (load a .sql file back). Paths come from BACKUP_MYSQLDUMP_PATH / BACKUP_MYSQL_PATH in .env.
- * The database password is put in a temporary options file, never on the command line
- * (where other users of a shared server could see it).
+ * mysql (load a .sql file back).
+ * Auto-detects binary paths across Windows XAMPP, Linux LAMPP, and Native Linux.
  */
 class BackupRunner
 {
@@ -17,11 +16,12 @@ class BackupRunner
     public function dump(string $file): void
     {
         $db = $this->connection();
-        $ignore = array_map(fn (string $t) => '--ignore-table='.$db['database'].'.'.$t, config('narciana.backup.skip_tables'));
+        $skipTables = config('narciana.backup.skip_tables', ['sessions', 'cache', 'cache_locks']);
+        $ignore = array_map(fn (string $t) => '--ignore-table='.$db['database'].'.'.$t, $skipTables);
 
         $this->withOptionsFile($db, function (string $options) use ($db, $ignore, $file) {
             $process = new Process([
-                config('narciana.backup.mysqldump'),
+                $this->resolveBinary('mysqldump'),
                 '--defaults-extra-file='.$options, // must be the first option
                 '--single-transaction',            // consistent copy without locking the tables
                 '--no-tablespaces',                // shared hosting users lack the PROCESS privilege
@@ -48,7 +48,7 @@ class BackupRunner
         try {
             $this->withOptionsFile($db, function (string $options) use ($db, $input) {
                 $process = new Process([
-                    config('narciana.backup.mysql'),
+                    $this->resolveBinary('mysql'),
                     '--defaults-extra-file='.$options,
                     '--default-character-set=utf8mb4',
                     $db['database'],
@@ -61,6 +61,46 @@ class BackupRunner
                 fclose($input);
             }
         }
+    }
+
+    /**
+     * Dynamically resolve binary paths across:
+     * 1. config('narciana.backup.mysql') or config('narciana.backup.mysqldump')
+     * 2. Linux LAMPP (/opt/lampp/bin)
+     * 3. Windows XAMPP (C:\xampp\mysql\bin)
+     * 4. Native Linux /usr/bin or /usr/local/bin
+     */
+    private function resolveBinary(string $tool): string
+    {
+        // 1. Check explicit configuration in config/narciana.php
+        $configured = config("narciana.backup.{$tool}");
+        if (! empty($configured) && $configured !== $tool) {
+            return $configured;
+        }
+
+        // 2. Linux LAMPP (/opt/lampp/bin)
+        $lamppPath = "/opt/lampp/bin/{$tool}";
+        if (is_file($lamppPath) && is_executable($lamppPath)) {
+            return $lamppPath;
+        }
+
+        // 3. Windows XAMPP
+        if (PHP_OS_FAMILY === 'Windows') {
+            $xamppPath = "C:\\xampp\\mysql\\bin\\{$tool}.exe";
+            if (is_file($xamppPath)) {
+                return $xamppPath;
+            }
+        }
+
+        // 4. Standard Linux paths
+        foreach (['/usr/bin', '/usr/local/bin'] as $dir) {
+            $nativePath = "{$dir}/{$tool}";
+            if (is_file($nativePath) && is_executable($nativePath)) {
+                return $nativePath;
+            }
+        }
+
+        return $tool;
     }
 
     private function connection(): array

@@ -133,7 +133,7 @@
             @if (session('error'))
                 <div class="alert alert-err">{{ session('error') }}</div>
             @endif
-            @if ($errors->any())
+            @if ($errors->any() && !old('from_index'))
                 <div class="alert alert-err">Please check the highlighted fields.</div>
             @endif
 

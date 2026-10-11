@@ -1409,12 +1409,6 @@ tr.tot-row td { border-top: 2px solid var(--text); font-weight: 600; }
 .settle-actions p { margin: 0; }
 .moveout-link { margin-top: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-@media print {
-    .top, .alert { display: none !important; }
-    .printable { border: 0; padding: 0; max-width: none; }
-    .statement { border: 1px solid #999; }
-    .print-note { font-size: 11px; }
-}
 
 /* ---------- Module 9a: dashboard and reports ---------- */
 a.card-link { display: block; color: inherit; text-decoration: none; }
@@ -1809,25 +1803,265 @@ td.audit-details { min-width: 220px; font-size: 13.5px; overflow-wrap: anywhere;
 
 
 @media print {
-    body.statement-modal-open .app > *:not(#statementModal) {
+    @page {
+        size: auto;
+        margin: 12mm 15mm;
+    }
+
+    html, body {
+        background: #fff !important;
+        color: #000 !important;
+        font-size: 11pt !important;
+        line-height: 1.35 !important;
+    }
+
+    /* Hide Navigation, Web Headers, Overlays, and Interactive Chrome */
+    .side,
+    #side,
+    .scrim,
+    .top,
+    .alert,
+    .idle-warning,
+    .no-print,
+    .modal-backdrop:not(.printable-modal-active),
+    .menu-btn,
+    .rail-toggle-btn,
+    .side-footer,
+    .search-clear-btn,
+    .pager,
+    .pagination-bar,
+    .btn,
+    button,
+    .filters,
+    .report-filters,
+    .report-actions,
+    .print-report-btn,
+    .search-box,
+    .collections-controls-wrap,
+    .to-collect-controls-wrap,
+    .billing-filter-bar,
+    .inquiry-filter-bar,
+    .modal-header,
+    .modal-actions-bar,
+    .modal-close-btn,
+    .month-nav {
         display: none !important;
     }
-    #statementModal {
+
+    /* Expand application layout to full printable width */
+    .app {
+        display: block !important;
+        width: 100% !important;
+        min-height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .main {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .body {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Printable Panels & Container Resets */
+    .panel {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 0 16px 0 !important;
+    }
+
+    .panel.printable,
+    .panel.reports-container,
+    .panel.form-panel.printable {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        max-width: none !important;
+        background: transparent !important;
+    }
+
+    /* Report & Statement Headers */
+    .print-only {
+        display: flex !important;
+    }
+
+    p.print-only {
+        display: block !important;
+    }
+
+    .statement-head,
+    .report-head {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: flex-start !important;
+        border-bottom: 2px solid #0f223a !important;
+        padding-bottom: 10px !important;
+        margin-bottom: 16px !important;
+        width: 100% !important;
+    }
+
+    .statement-head b,
+    .report-head b {
+        font-size: 13pt !important;
+        color: #000 !important;
+    }
+
+    .statement-head .muted,
+    .report-head .muted,
+    .statement-head .sub,
+    .report-head .sub {
+        color: #333 !important;
+        font-size: 9pt !important;
+    }
+
+    /* KPI Summary Cards in Reports & Collections */
+    .cards {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 8px !important;
+        margin-bottom: 16px !important;
+        page-break-inside: avoid !important;
+    }
+
+    .card {
+        background: #f8fafc !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: none !important;
+        border-radius: 6px !important;
+        padding: 8px 12px !important;
+        page-break-inside: avoid !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .card .n {
+        font-size: 16pt !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+    }
+
+    .card .l {
+        font-size: 8.5pt !important;
+        color: #475569 !important;
+    }
+
+    /* Report Tables & Data Grids */
+    .table-wrap,
+    .report-table-wrap,
+    .collections-table-wrap {
+        display: block !important;
+        overflow: visible !important;
+        width: 100% !important;
+        margin-bottom: 16px !important;
+    }
+
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        page-break-inside: auto !important;
+    }
+
+    th, td {
+        border: 1px solid #94a3b8 !important;
+        padding: 6px 8px !important;
+        font-size: 9.5pt !important;
+        color: #000 !important;
+    }
+
+    th {
+        background-color: #e2e8f0 !important;
+        font-weight: 700 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    tr {
+        page-break-inside: avoid !important;
+    }
+
+    tr.tot-row td {
+        border-top: 2px solid #000 !important;
+        font-weight: 700 !important;
+        background-color: #f1f5f9 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Statements */
+    .statement {
+        border: 1px solid #475569 !important;
+        padding: 16px !important;
+        background: #fff !important;
+        margin-bottom: 16px !important;
+        page-break-inside: avoid !important;
+    }
+
+    .statement table {
+        border: none !important;
+    }
+
+    .statement th,
+    .statement td {
+        border-left: none !important;
+        border-right: none !important;
+    }
+
+    .print-note {
+        font-size: 8.5pt !important;
+        color: #64748b !important;
+        margin-top: 10px !important;
+    }
+
+    /* Hide Mobile Cards in Print */
+    .bill-cards,
+    .collections-cards,
+    .report-cards,
+    .to-collect-cards,
+    .concern-cards,
+    .tenant-cards,
+    .room-cards,
+    .inquiry-cards {
+        display: none !important;
+    }
+
+    /* Specific: Statement Modal Viewport (When triggered from Billings Index) */
+    body.statement-modal-open .body > *:not(#statementModal) {
+        display: none !important;
+    }
+
+    body.statement-modal-open #statementModal {
+        display: block !important;
         position: static !important;
         background: transparent !important;
         padding: 0 !important;
+        margin: 0 !important;
         width: 100% !important;
-        height: auto !important;
-        display: block !important;
+        box-shadow: none !important;
     }
-    #statementModal .modal-box {
+
+    body.statement-modal-open #statementModal .modal-box {
         max-width: 100% !important;
-        border: 0 !important;
+        width: 100% !important;
+        border: none !important;
         box-shadow: none !important;
         padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
     }
-    .no-print {
-        display: none !important;
+
+    body.statement-modal-open #statementModal #printable-statement-target {
+        display: block !important;
+        width: 100% !important;
     }
 }
 
@@ -2786,25 +3020,6 @@ svg.w-4 {
     }
 }
 
-@media print {
-    .report-actions,
-    .print-report-btn,
-    .report-filters {
-        display: none !important;
-    }
-    .report-table-wrap {
-        display: block !important;
-        overflow: visible !important;
-    }
-    .report-cards {
-        display: none !important;
-    }
-    .panel.printable {
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-    }
-}
 
 /* Rooms Module Responsive Styles & Modals */
 .rooms-table-wrap {

@@ -251,104 +251,123 @@
                 <button type="button" class="modal-close-btn" onclick="closeCreateConcernModal()" aria-label="Close modal">&times;</button>
             </div>
 
+            <div id="createConcernErrorAlert" class="alert alert-err" style="{{ ($errors->any() && old('from_index') && !old('concern_id')) ? '' : 'display: none;' }} margin-bottom: 14px;">
+                Please check the highlighted fields.
+            </div>
+
             <form method="POST" action="{{ route('concerns.store') }}" enctype="multipart/form-data" id="createConcernForm">
                 @csrf
                 <input type="hidden" name="from_index" value="1">
 
                 <div class="row">
-                    <div class="f">
+                    <div class="f @if(old('from_index') && !old('concern_id')) @error('category') has-err @enderror @endif">
                         <label for="create_category">Category</label>
                         <select id="create_category" name="category" onchange="handleCreateCategoryChange(this)">
                             @foreach ($categories as $name => $help)
-                                <option value="{{ $name }}" data-help="{{ $help }}">{{ $name }}</option>
+                                <option value="{{ $name }}" data-help="{{ $help }}" @selected(old('category') === $name)>{{ $name }}</option>
                             @endforeach
                         </select>
                         <div class="hint category-help" id="create_category_help">{{ reset($categories) }}</div>
+                        @if(old('from_index') && !old('concern_id')) @error('category') <div class="err">{{ $message }}</div> @enderror @endif
                     </div>
-                    <div class="f">
+                    <div class="f @if(old('from_index') && !old('concern_id')) @error('room_id') has-err @enderror @endif" id="create_room_id_field">
                         <label for="create_room_id">Room</label>
                         <select id="create_room_id" name="room_id" onchange="handleCreateRoomChange(this)">
-                            <option value="" disabled selected>Choose a room…</option>
+                            <option value="" disabled @selected(!old('room_id'))>Choose a room…</option>
                             @foreach ($rooms as $r)
-                                <option value="{{ $r['room_id'] }}" data-lease="{{ $r['lease_id'] }}" data-tenant="{{ $r['tenant'] }}">{{ $r['label'] }}{{ $r['tenant'] ? ' — '.$r['tenant'] : ' — vacant' }}</option>
+                                <option value="{{ $r['room_id'] }}" data-lease="{{ $r['lease_id'] }}" data-tenant="{{ $r['tenant'] }}" @selected(old('room_id') == $r['room_id'])>{{ $r['label'] }}{{ $r['tenant'] ? ' — '.$r['tenant'] : ' — vacant' }}</option>
                             @endforeach
-                            <option value="shared" data-lease="">No room (shared area)</option>
+                            <option value="shared" data-lease="" @selected(old('room_id') === 'shared')>No room (shared area)</option>
                         </select>
+                        @if(old('from_index') && !old('concern_id')) @error('room_id') <div class="err">{{ $message }}</div> @enderror @endif
                     </div>
-                    <div class="f">
+                    <div class="f @if(old('from_index') && !old('concern_id')) @error('lease_id') has-err @enderror @endif">
                         <label for="create_lease_id">Tenant</label>
                         <select id="create_lease_id" name="lease_id">
                             <option value="">None</option>
                             @foreach ($rooms->whereNotNull('lease_id') as $r)
-                                <option value="{{ $r['lease_id'] }}">{{ $r['tenant'] }} ({{ $r['label'] }})</option>
+                                <option value="{{ $r['lease_id'] }}" @selected(old('lease_id') == $r['lease_id'])>{{ $r['tenant'] }} ({{ $r['label'] }})</option>
                             @endforeach
                         </select>
                         <div class="hint">Filled in from the room. Needed to charge the tenant.</div>
+                        @if(old('from_index') && !old('concern_id')) @error('lease_id') <div class="err">{{ $message }}</div> @enderror @endif
                     </div>
                 </div>
 
                 <div class="row">
-                    <div class="f">
+                    <div class="f @if(old('from_index') && !old('concern_id')) @error('reported_at') has-err @enderror @endif">
                         <label for="create_reported_at">Reported on</label>
-                        <input id="create_reported_at" name="reported_at" type="datetime-local" max="{{ now()->format('Y-m-d\TH:i') }}" value="{{ now()->format('Y-m-d\TH:i') }}">
+                        <input id="create_reported_at" name="reported_at" type="datetime-local" max="{{ now()->format('Y-m-d\TH:i') }}" value="{{ old('reported_at', now()->format('Y-m-d\TH:i')) }}">
+                        @if(old('from_index') && !old('concern_id')) @error('reported_at') <div class="err">{{ $message }}</div> @enderror @endif
                     </div>
-                    <div class="f">
+                    <div class="f @if(old('from_index') && !old('concern_id')) @error('channel') has-err @enderror @endif">
                         <label for="create_channel">Reported by</label>
                         <select id="create_channel" name="channel">
                             @foreach ($channels as $c)
-                                <option value="{{ $c }}">{{ $c }}</option>
+                                <option value="{{ $c }}" @selected(old('channel') === $c)>{{ $c }}</option>
                             @endforeach
                         </select>
+                        @if(old('from_index') && !old('concern_id')) @error('channel') <div class="err">{{ $message }}</div> @enderror @endif
                     </div>
-                    <div class="f">
+                    <div class="f @if(old('from_index') && !old('concern_id')) @error('priority') has-err @enderror @endif">
                         <label for="create_priority">Priority</label>
                         <select id="create_priority" name="priority">
                             @foreach ($priorities as $p)
-                                <option value="{{ $p }}">{{ $p }}</option>
+                                <option value="{{ $p }}" @selected(old('priority') === $p)>{{ $p }}</option>
                             @endforeach
                         </select>
+                        @if(old('from_index') && !old('concern_id')) @error('priority') <div class="err">{{ $message }}</div> @enderror @endif
                     </div>
-                    <div class="f">
+                    <div class="f @if(old('from_index') && !old('concern_id')) @error('assigned_to') has-err @enderror @endif">
                         <label for="create_assigned_to">Assigned to</label>
                         <select id="create_assigned_to" name="assigned_to">
                             @foreach ($users as $u)
-                                <option value="{{ $u->user_id }}" @selected($u->user_id === auth()->id())>{{ $u->role }} ({{ $u->full_name }})</option>
+                                <option value="{{ $u->user_id }}" @selected((string) old('assigned_to', auth()->id()) === (string) $u->user_id)>{{ $u->role }} ({{ $u->full_name }})</option>
                             @endforeach
                         </select>
+                        @if(old('from_index') && !old('concern_id')) @error('assigned_to') <div class="err">{{ $message }}</div> @enderror @endif
                     </div>
                 </div>
 
-                <div class="f">
+                <div class="f @if(old('from_index') && !old('concern_id')) @error('description') has-err @enderror @endif" id="create_description_field">
                     <label for="create_description">Concern</label>
-                    <textarea id="create_description" name="description" rows="3" maxlength="500" placeholder="What is the problem? For a shared area, specify the exact location (e.g. 2nd-floor hallway or CR)."></textarea>
+                    <textarea id="create_description" name="description" rows="3" maxlength="500" placeholder="What is the problem? For a shared area, specify the exact location (e.g. 2nd-floor hallway or CR).">{{ old('description') }}</textarea>
+                    @if(old('from_index') && !old('concern_id')) @error('description') <div class="err">{{ $message }}</div> @enderror @endif
                 </div>
 
-                <div class="f">
+                <div class="f @if(old('from_index') && !old('concern_id')) @error('photo') has-err @enderror @endif">
                     <label for="create_photo">Photo of the problem (optional)</label>
                     <input id="create_photo" name="photo" type="file" accept="image/jpeg,image/png" capture="environment">
                     <div class="hint">Proof of the problem when it was reported. Take it with the tablet camera or pick one. JPG or PNG, up to 5 MB.</div>
+                    @if(old('from_index') && !old('concern_id')) @error('photo') <div class="err">{{ $message }}</div> @enderror @endif
                 </div>
 
                 <fieldset class="resolution-box" style="margin-top: 14px;">
                     <legend>Progress &amp; Financials</legend>
                     <div class="row">
-                        <div class="f">
+                        <div class="f @if(old('from_index') && !old('concern_id')) @error('status') has-err @enderror @endif">
                             <label for="create_status">Status</label>
                             <select id="create_status" name="status">
                                 @foreach ($statuses as $s)
-                                    <option value="{{ $s }}">{{ $s }}</option>
+                                    <option value="{{ $s }}" @selected(old('status') === $s)>{{ $s }}</option>
                                 @endforeach
                             </select>
+                            @if(old('from_index') && !old('concern_id')) @error('status') <div class="err">{{ $message }}</div> @enderror @endif
                         </div>
                     </div>
                     @if ($canSetMoney)
-                        <div class="row">
-                            <div class="f">
+                        <div class="row" style="align-items: flex-end;">
+                            <div class="f @if(old('from_index') && !old('concern_id')) @error('cost') has-err @enderror @endif">
                                 <label for="create_cost">Cost of repair (₱)</label>
-                                <input id="create_cost" name="cost" type="number" min="0" step="0.01" inputmode="decimal">
+                                <input id="create_cost" name="cost" type="number" min="0" step="0.01" inputmode="decimal" value="{{ old('cost') }}">
+                                @if(old('from_index') && !old('concern_id')) @error('cost') <div class="err">{{ $message }}</div> @enderror @endif
                             </div>
-                            <div class="f check">
-                                <label><input type="checkbox" id="create_charged_to_tenant" name="charged_to_tenant" value="1"> Charge to Tenant</label>
+                            <div class="f check @if(old('from_index') && !old('concern_id')) @error('charged_to_tenant') has-err @enderror @endif" style="display: flex; align-items: center; min-height: 44px; margin-bottom: 0;">
+                                <label style="margin: 0; min-height: 44px; display: inline-flex; align-items: center; gap: 8px;">
+                                    <input type="checkbox" id="create_charged_to_tenant" name="charged_to_tenant" value="1" @checked(old('charged_to_tenant'))>
+                                    <span>Charge to Tenant</span>
+                                </label>
+                                @if(old('from_index') && !old('concern_id')) @error('charged_to_tenant') <div class="err">{{ $message }}</div> @enderror @endif
                             </div>
                         </div>
                     @else
@@ -509,14 +528,17 @@
                 <fieldset class="resolution-box" style="margin-top: 14px;">
                     <legend>Cost &amp; Charge</legend>
                     @if ($canSetMoney)
-                        <div class="row">
+                        <div class="row" style="align-items: flex-end;">
                             <div class="f">
                                 <label for="update_cost">Cost of repair (₱)</label>
                                 <input id="update_cost" name="cost" type="number" min="0" step="0.01" inputmode="decimal">
                                 <input type="hidden" name="cost" id="update_cost_hidden" disabled>
                             </div>
-                            <div class="f check">
-                                <label><input type="checkbox" id="update_charged_to_tenant" name="charged_to_tenant" value="1"> Charge to Tenant</label>
+                            <div class="f check" style="display: flex; align-items: center; min-height: 44px; margin-bottom: 0;">
+                                <label style="margin: 0; min-height: 44px; display: inline-flex; align-items: center; gap: 8px;">
+                                    <input type="checkbox" id="update_charged_to_tenant" name="charged_to_tenant" value="1">
+                                    <span>Charge to Tenant</span>
+                                </label>
                                 <input type="hidden" name="charged_to_tenant" id="update_charged_to_tenant_hidden" disabled>
                             </div>
                         </div>
@@ -813,6 +835,90 @@
                 openDetailModal({{ $selectedConcernId }});
             @endif
         });
+
+        // Client-side validation for Logging New Concern
+        const createConcernForm = document.getElementById('createConcernForm');
+        if (createConcernForm) {
+            createConcernForm.addEventListener('submit', function (e) {
+                let hasErrors = false;
+                const errorAlert = document.getElementById('createConcernErrorAlert');
+                const roomSelect = document.getElementById('create_room_id');
+                const roomField = document.getElementById('create_room_id_field');
+                const descTextarea = document.getElementById('create_description');
+                const descField = document.getElementById('create_description_field');
+
+                // Check room
+                if (!roomSelect || !roomSelect.value) {
+                    hasErrors = true;
+                    if (roomField) {
+                        roomField.classList.add('has-err');
+                        let errEl = roomField.querySelector('.client-err');
+                        if (!errEl) {
+                            errEl = document.createElement('div');
+                            errEl.className = 'err client-err';
+                            errEl.textContent = 'Please choose a room or select shared area.';
+                            roomField.appendChild(errEl);
+                        }
+                        errEl.style.display = 'block';
+                    }
+                } else {
+                    if (roomField) {
+                        roomField.classList.remove('has-err');
+                        const errEl = roomField.querySelector('.client-err');
+                        if (errEl) errEl.style.display = 'none';
+                    }
+                }
+
+                // Check description
+                if (!descTextarea || !descTextarea.value.trim()) {
+                    hasErrors = true;
+                    if (descField) {
+                        descField.classList.add('has-err');
+                        let errEl = descField.querySelector('.client-err');
+                        if (!errEl) {
+                            errEl = document.createElement('div');
+                            errEl.className = 'err client-err';
+                            errEl.textContent = 'Please describe the concern.';
+                            descField.appendChild(errEl);
+                        }
+                        errEl.style.display = 'block';
+                    }
+                } else {
+                    if (descField) {
+                        descField.classList.remove('has-err');
+                        const errEl = descField.querySelector('.client-err');
+                        if (errEl) errEl.style.display = 'none';
+                    }
+                }
+
+                if (hasErrors) {
+                    e.preventDefault();
+                    if (errorAlert) {
+                        errorAlert.textContent = 'Please check the highlighted fields.';
+                        errorAlert.style.display = 'block';
+                    }
+                    const firstErrField = document.querySelector('#createConcernModal .has-err input, #createConcernModal .has-err select, #createConcernModal .has-err textarea');
+                    if (firstErrField) firstErrField.focus();
+                }
+            });
+
+            // Clear highlights as user interacts
+            ['create_room_id', 'create_description'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    const clearFn = function () {
+                        const field = el.closest('.f');
+                        if (field && el.value.trim()) {
+                            field.classList.remove('has-err');
+                            const errEl = field.querySelector('.client-err');
+                            if (errEl) errEl.style.display = 'none';
+                        }
+                    };
+                    el.addEventListener('input', clearFn);
+                    el.addEventListener('change', clearFn);
+                }
+            });
+        }
 
         // Escape key closes open modals
         document.addEventListener('keydown', function (e) {

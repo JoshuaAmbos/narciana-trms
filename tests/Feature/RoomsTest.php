@@ -94,11 +94,11 @@ class RoomsTest extends TestCase
 
     public function test_owner_can_set_a_basic_room_as_metered_and_an_aircon_room_as_not(): void
     {
-        $this->actingAs($this->owner)->post('/rooms', $this->validRoom(['room_no' => 'B1', 'room_type' => 'Basic', 'is_metered' => '1']));
-        $this->actingAs($this->owner)->post('/rooms', $this->validRoom(['room_no' => 'A1', 'room_type' => 'Aircon', 'is_metered' => null]));
+        $this->actingAs($this->owner)->post('/rooms', $this->validRoom(['room_no' => '111', 'room_type' => 'Basic', 'is_metered' => '1']));
+        $this->actingAs($this->owner)->post('/rooms', $this->validRoom(['room_no' => '112', 'room_type' => 'Aircon', 'is_metered' => null]));
 
-        $this->assertTrue(Room::where('room_no', 'B1')->value('is_metered'));
-        $this->assertFalse((bool) Room::where('room_no', 'A1')->value('is_metered'));
+        $this->assertTrue(Room::where('room_no', '111')->value('is_metered'));
+        $this->assertFalse((bool) Room::where('room_no', '112')->value('is_metered'));
     }
 
     public function test_owner_can_edit_a_room_but_not_its_status(): void
@@ -143,6 +143,16 @@ class RoomsTest extends TestCase
         ]))->assertSessionHasErrors(['room_no', 'room_type', 'max_occupants', 'monthly_rent']);
 
         $this->actingAs($this->owner)->post('/rooms', $this->validRoom(['monthly_rent' => '3000.555']))
+            ->assertSessionHasErrors(['monthly_rent']);
+
+        // Rejects non-number room numbers
+        $this->actingAs($this->owner)->post('/rooms', $this->validRoom(['room_no' => 'ABC']))
+            ->assertSessionHasErrors(['room_no']);
+        $this->actingAs($this->owner)->post('/rooms', $this->validRoom(['room_no' => 'Room-1']))
+            ->assertSessionHasErrors(['room_no']);
+
+        // Rejects non-money monthly rent
+        $this->actingAs($this->owner)->post('/rooms', $this->validRoom(['monthly_rent' => 'not-money']))
             ->assertSessionHasErrors(['monthly_rent']);
 
         $this->assertSame(1, Room::count());

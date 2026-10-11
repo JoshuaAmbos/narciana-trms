@@ -157,6 +157,15 @@
                 return;
             }
 
+            if (!/^\d+$/.test(val)) {
+                if (roomNoField) roomNoField.classList.add('has-err');
+                roomNoFeedback.style.display = 'block';
+                roomNoFeedback.className = 'err text-red';
+                roomNoFeedback.innerHTML = 'The room number must be a number.';
+                if (submitBtn) { submitBtn.disabled = true; submitBtn.style.opacity = '0.55'; }
+                return;
+            }
+
             var valLower = val.toLowerCase();
             if (valLower === String(currentRoomNo).trim().toLowerCase()) {
                 applyStandaloneResult(val, false);
@@ -197,14 +206,46 @@
         }
         if (formEl) {
             formEl.addEventListener('submit', function (e) {
-                if (!roomNoInput) return;
-                var val = roomNoInput.value.trim();
-                var valLower = val.toLowerCase();
-                if (valLower !== String(currentRoomNo).trim().toLowerCase() && standaloneCache[valLower] === false) {
-                    e.preventDefault();
-                    applyStandaloneResult(val, true);
-                    roomNoInput.focus();
-                    return false;
+                if (roomNoInput) {
+                    var val = roomNoInput.value.trim();
+                    if (!/^\d+$/.test(val)) {
+                        e.preventDefault();
+                        if (roomNoField) roomNoField.classList.add('has-err');
+                        roomNoFeedback.style.display = 'block';
+                        roomNoFeedback.className = 'err text-red';
+                        roomNoFeedback.innerHTML = 'The room number must be a number.';
+                        roomNoInput.focus();
+                        return false;
+                    }
+                    var valLower = val.toLowerCase();
+                    if (valLower !== String(currentRoomNo).trim().toLowerCase() && standaloneCache[valLower] === false) {
+                        e.preventDefault();
+                        applyStandaloneResult(val, true);
+                        roomNoInput.focus();
+                        return false;
+                    }
+                }
+                var rentInput = document.getElementById('monthly_rent');
+                if (rentInput) {
+                    var rentVal = rentInput.value.trim();
+                    var rentNum = parseFloat(rentVal);
+                    if (!rentVal || isNaN(rentNum) || rentNum <= 0 || !/^\d+(\.\d{1,2})?$/.test(rentVal)) {
+                        e.preventDefault();
+                        var rentField = rentInput.closest('.f');
+                        if (rentField) {
+                            rentField.classList.add('has-err');
+                            var errEl = rentField.querySelector('.err:not(.server-err)');
+                            if (!errEl) {
+                                errEl = document.createElement('div');
+                                errEl.className = 'err';
+                                rentField.appendChild(errEl);
+                            }
+                            errEl.textContent = 'The monthly rent must be a valid money amount (e.g. 3000.00).';
+                            errEl.style.display = 'block';
+                        }
+                        rentInput.focus();
+                        return false;
+                    }
                 }
             });
         }

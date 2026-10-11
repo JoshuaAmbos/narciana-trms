@@ -7,6 +7,19 @@
 
     {{-- SECTION 1: Collections Panel --}}
     <div class="panel printable mb-6">
+        {{-- Print-only official report heading --}}
+        <div class="statement-head report-head print-only" style="display: none;">
+            <div>
+                <b>Narciana House Space Rental</b><br>
+                <span class="muted">Km. 6 Carnation St., Buhangin, Davao City</span>
+            </div>
+            <div class="r">
+                <b>Monthly Collection Summary</b><br>
+                <span class="muted">{{ $month->format('F Y') }}</span><br>
+                <span class="sub">Generated {{ now()->format('j M Y, g:i A') }} by {{ auth()->user()->role }}</span>
+            </div>
+        </div>
+
         <h2>
             Collections, {{ $month->format('F Y') }}
             <span class="month-nav no-print">
@@ -32,7 +45,7 @@
         @if ($collections->isEmpty())
             <p class="muted">No payments in {{ $month->format('F Y') }}.</p>
         @else
-            <div class="collections-controls-wrap">
+            <div class="collections-controls-wrap no-print">
                 {{-- Search Bar (flexes on landscape) --}}
                 <div class="collections-search-box">
                     <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -88,6 +101,7 @@
                 </table>
                 <p id="collections-no-match" class="muted" style="display: none; padding: 12px; text-align: center;">No collections matching your filter criteria.</p>
             </div>
+            <p class="muted print-note print-only" style="display: none; margin-top: 14px;">Official monthly collection statement for {{ $month->format('F Y') }} · Narciana TRMS.</p>
         @endif
     </div>
 

@@ -42,7 +42,7 @@ class UpdateRoomRequest extends FormRequest
                 'required',
                 'string',
                 'max:10',
-                'regex:/^[A-Za-z0-9 -]+$/',
+                'regex:/^[0-9]+$/',
                 Rule::unique('tbl_room', 'room_no')->ignore($room?->room_id, 'room_id'),
             ],
             'room_type' => ['required', Rule::in(Room::TYPES)],
@@ -73,11 +73,16 @@ class UpdateRoomRequest extends FormRequest
         $max = max((int) ($room?->max_occupants ?? 1), Room::maxCapacity());
 
         return [
+            'room_no.required' => 'The room number is required.',
             'room_no.unique' => 'This room number already exists.',
-            'room_no.regex' => 'Use only letters, numbers, spaces or dashes.',
+            'room_no.regex' => 'The room number must be a number.',
+            'room_no.max' => 'The room number cannot exceed 10 digits.',
             'max_occupants.between' => "A room can have 1 or {$max} occupants at most.",
+            'monthly_rent.required' => 'The monthly rent is required.',
+            'monthly_rent.numeric' => 'The monthly rent must be a valid money amount (e.g. 3000.00).',
             'monthly_rent.decimal' => 'Use at most 2 decimal places (centavos).',
             'monthly_rent.min' => 'The monthly rent must be more than ₱0.00.',
+            'monthly_rent.max' => 'The monthly rent cannot exceed ₱99,999,999.99.',
         ];
     }
 }

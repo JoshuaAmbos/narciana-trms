@@ -554,6 +554,19 @@
                 return;
             }
 
+            if (!/^\d+$/.test(val)) {
+                if (createRoomNoField) createRoomNoField.classList.add('has-err');
+                createRoomNoFeedback.style.display = 'block';
+                createRoomNoFeedback.className = 'err text-red';
+                createRoomNoFeedback.innerHTML = 'The room number must be a number.';
+                if (createRoomSubmitBtn) {
+                    createRoomSubmitBtn.disabled = true;
+                    createRoomSubmitBtn.style.opacity = '0.55';
+                    createRoomSubmitBtn.style.cursor = 'not-allowed';
+                }
+                return;
+            }
+
             const valLower = val.toLowerCase();
             if (roomAvailabilityCache[valLower] !== undefined) {
                 applyCreateRoomValidationResult(val, !roomAvailabilityCache[valLower]);
@@ -593,12 +606,43 @@
             createRoomForm.addEventListener('submit', function (e) {
                 if (!createRoomNoInput) return;
                 const val = createRoomNoInput.value.trim();
+                if (!/^\d+$/.test(val)) {
+                    e.preventDefault();
+                    if (createRoomNoField) createRoomNoField.classList.add('has-err');
+                    createRoomNoFeedback.style.display = 'block';
+                    createRoomNoFeedback.className = 'err text-red';
+                    createRoomNoFeedback.innerHTML = 'The room number must be a number.';
+                    createRoomNoInput.focus();
+                    return false;
+                }
                 const valLower = val.toLowerCase();
                 if (roomAvailabilityCache[valLower] === false) {
                     e.preventDefault();
                     applyCreateRoomValidationResult(val, true);
                     createRoomNoInput.focus();
                     return false;
+                }
+                const rentInput = document.getElementById('create_monthly_rent');
+                if (rentInput) {
+                    const rentVal = rentInput.value.trim();
+                    const rentNum = parseFloat(rentVal);
+                    if (!rentVal || isNaN(rentNum) || rentNum <= 0 || !/^\d+(\.\d{1,2})?$/.test(rentVal)) {
+                        e.preventDefault();
+                        const rentField = rentInput.closest('.f');
+                        if (rentField) {
+                            rentField.classList.add('has-err');
+                            let errEl = rentField.querySelector('.err:not(.server-err)');
+                            if (!errEl) {
+                                errEl = document.createElement('div');
+                                errEl.className = 'err';
+                                rentField.appendChild(errEl);
+                            }
+                            errEl.textContent = 'The monthly rent must be a valid money amount (e.g. 3000.00).';
+                            errEl.style.display = 'block';
+                        }
+                        rentInput.focus();
+                        return false;
+                    }
                 }
             });
         }
@@ -688,6 +732,19 @@
                 return;
             }
 
+            if (!/^\d+$/.test(val)) {
+                if (editRoomNoField) editRoomNoField.classList.add('has-err');
+                editRoomNoFeedback.style.display = 'block';
+                editRoomNoFeedback.className = 'err text-red';
+                editRoomNoFeedback.innerHTML = 'The room number must be a number.';
+                if (editRoomSubmitBtn) {
+                    editRoomSubmitBtn.disabled = true;
+                    editRoomSubmitBtn.style.opacity = '0.55';
+                    editRoomSubmitBtn.style.cursor = 'not-allowed';
+                }
+                return;
+            }
+
             const valLower = val.toLowerCase();
             if (valLower === String(currentEditingRoomNo).trim().toLowerCase()) {
                 applyEditRoomValidationResult(val, false);
@@ -726,12 +783,43 @@
             editRoomForm.addEventListener('submit', function (e) {
                 if (!editRoomNoInput) return;
                 const val = editRoomNoInput.value.trim();
+                if (!/^\d+$/.test(val)) {
+                    e.preventDefault();
+                    if (editRoomNoField) editRoomNoField.classList.add('has-err');
+                    editRoomNoFeedback.style.display = 'block';
+                    editRoomNoFeedback.className = 'err text-red';
+                    editRoomNoFeedback.innerHTML = 'The room number must be a number.';
+                    editRoomNoInput.focus();
+                    return false;
+                }
                 const valLower = val.toLowerCase();
                 if (valLower !== String(currentEditingRoomNo).trim().toLowerCase() && roomAvailabilityCache[valLower] === false) {
                     e.preventDefault();
                     applyEditRoomValidationResult(val, true);
                     editRoomNoInput.focus();
                     return false;
+                }
+                const rentInput = document.getElementById('edit_monthly_rent');
+                if (rentInput) {
+                    const rentVal = rentInput.value.trim();
+                    const rentNum = parseFloat(rentVal);
+                    if (!rentVal || isNaN(rentNum) || rentNum <= 0 || !/^\d+(\.\d{1,2})?$/.test(rentVal)) {
+                        e.preventDefault();
+                        const rentField = rentInput.closest('.f');
+                        if (rentField) {
+                            rentField.classList.add('has-err');
+                            let errEl = rentField.querySelector('.err:not(.server-err)');
+                            if (!errEl) {
+                                errEl = document.createElement('div');
+                                errEl.className = 'err';
+                                rentField.appendChild(errEl);
+                            }
+                            errEl.textContent = 'The monthly rent must be a valid money amount (e.g. 3000.00).';
+                            errEl.style.display = 'block';
+                        }
+                        rentInput.focus();
+                        return false;
+                    }
                 }
             });
         }

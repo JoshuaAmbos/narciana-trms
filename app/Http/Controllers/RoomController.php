@@ -112,6 +112,15 @@ class RoomController extends Controller
             ]);
         }
 
+        if (! ctype_digit($roomNo)) {
+            return response()->json([
+                'available' => false,
+                'exists' => false,
+                'room_no' => $roomNo,
+                'message' => 'The room number must be a number.',
+            ]);
+        }
+
         $query = Room::whereRaw('LOWER(TRIM(room_no)) = ?', [strtolower($roomNo)]);
         if ($excludeId) {
             $query->where('room_id', '!=', $excludeId);

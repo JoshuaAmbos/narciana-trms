@@ -909,13 +909,16 @@
             }
 
             document.getElementById('statementModal').removeAttribute('hidden');
+            document.body.classList.add('statement-modal-open');
         }
 
         function closeStatementModal() {
             document.getElementById('statementModal').setAttribute('hidden', '');
+            document.body.classList.remove('statement-modal-open');
         }
 
         function printModalStatement() {
+            document.body.classList.add('statement-modal-open');
             window.print();
         }
 
@@ -1012,6 +1015,9 @@
                 el.addEventListener('click', function(e) {
                     if (e.target === this) {
                         this.setAttribute('hidden', '');
+                        if (this.id === 'statementModal') {
+                            document.body.classList.remove('statement-modal-open');
+                        }
                     }
                 });
             }

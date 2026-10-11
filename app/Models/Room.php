@@ -62,11 +62,6 @@ class Room extends Model
         return (bool) ($this->is_rentable ?? true);
     }
 
-    public function isVacating(): bool
-    {
-        return $this->status === 'Occupied' && $this->expected_vacant_date !== null;
-    }
-
     public function leases(): HasMany
     {
         return $this->hasMany(Lease::class, 'room_id');

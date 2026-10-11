@@ -675,9 +675,6 @@
                 <button type="button" class="room-chip" data-status="Vacant">
                     Vacant <span class="chip-count">({{ $vacantRoomsCount }})</span>
                 </button>
-                <button type="button" class="room-chip" data-status="Vacating">
-                    Vacating <span class="chip-count">({{ $vacatingRooms->count() }})</span>
-                </button>
                 <button type="button" class="room-chip" data-status="Occupied">
                     Occupied <span class="chip-count">({{ $occupiedRoomsCount }})</span>
                 </button>
@@ -699,12 +696,10 @@
                     <tbody>
                         @foreach ($rooms as $room)
                             @php
-                                $isVacating = $room->status === 'Occupied' && $room->expected_vacant_date !== null;
-                                $filterStatus = $isVacating ? 'Vacating' : $room->status;
                                 $activeLease = $room->relationLoaded('leases') ? $room->leases->firstWhere('status', 'Active') : null;
                             @endphp
                             <tr class="clickable-row room-row"
-                                data-room-status="{{ $filterStatus }}"
+                                data-room-status="{{ $room->status }}"
                                 onclick="window.location='{{ route('rooms.index', ['search' => $room->room_no]) }}'"
                                 tabindex="0"
                                 role="button"
@@ -713,11 +708,6 @@
                                 <td>{{ $room->room_type }}</td>
                                 <td>
                                     <x-room-status :room="$room" />
-                                    @if ($isVacating)
-                                        <span class="tag t-amber" title="Expected move-out: {{ $room->expected_vacant_date->format('j M Y') }}">
-                                            Vacating ({{ $room->expected_vacant_date->format('j M') }})
-                                        </span>
-                                    @endif
                                 </td>
                                 @if ($staff)
                                     <td>
@@ -740,12 +730,10 @@
             <div class="dashboard-mobile-cards" id="rooms-mobile-list">
                 @foreach ($rooms as $room)
                     @php
-                        $isVacating = $room->status === 'Occupied' && $room->expected_vacant_date !== null;
-                        $filterStatus = $isVacating ? 'Vacating' : $room->status;
                         $activeLease = $room->relationLoaded('leases') ? $room->leases->firstWhere('status', 'Active') : null;
                     @endphp
                     <div class="dashboard-touch-card clickable-row room-mobile-card"
-                         data-room-status="{{ $filterStatus }}"
+                         data-room-status="{{ $room->status }}"
                          onclick="window.location='{{ route('rooms.index', ['search' => $room->room_no]) }}'"
                          tabindex="0"
                          role="button"
@@ -754,9 +742,6 @@
                             <span class="font-bold">Room {{ $room->room_no }}</span>
                             <div class="flex items-center gap-1">
                                 <x-room-status :room="$room" />
-                                @if ($isVacating)
-                                    <span class="tag t-amber">Vacating ({{ $room->expected_vacant_date->format('j M') }})</span>
-                                @endif
                             </div>
                         </div>
                         <div class="touch-card-body">

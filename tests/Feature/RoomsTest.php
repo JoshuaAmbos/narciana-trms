@@ -64,6 +64,15 @@ class RoomsTest extends TestCase
     public function test_room_statuses_are_strictly_vacant_or_occupied(): void
     {
         $this->assertSame(['Vacant', 'Occupied'], Room::STATUSES);
+
+        $this->actingAs($this->owner)->get('/rooms')
+            ->assertOk()
+            ->assertDontSee('data-status="Vacating"', false)
+            ->assertDontSee('status=Vacating', false);
+
+        $this->actingAs($this->owner)->get('/')
+            ->assertOk()
+            ->assertDontSee('data-status="Vacating"', false);
     }
 
     // ---------- Add / edit (Owner) ----------

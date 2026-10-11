@@ -469,7 +469,7 @@
                         </div>
                     </div>
 
-                    <p class="muted" style="margin-top: 14px;">The tenancy status (Vacant / Occupied) updates automatically via signed MOAs and move-outs.</p>
+                    <p class="muted" style="margin-top: 14px;">The tenancy status (Vacant / Occupied) updates automatically via signed MOAs and lease endings.</p>
 
                     <div class="form-actions" style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;">
                         <button type="button" class="btn sec" onclick="closeEditRoomModal()" style="min-height: 44px; padding: 0 18px;">Cancel</button>

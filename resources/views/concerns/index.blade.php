@@ -423,7 +423,6 @@
 
             <div class="modal-actions-bar" style="margin-top: 18px; border-top: 1px solid var(--border); padding-top: 14px; display: flex; justify-content: flex-end; gap: 8px;">
                 <button type="button" class="btn" id="detail_update_button" onclick="openUpdateModalFromDetail()" style="min-height: 44px; padding: 0 16px;">Update Concern</button>
-                <button type="button" class="btn sec" onclick="closeDetailModal()" style="min-height: 44px; padding: 0 16px;">Close</button>
             </div>
         </div>
     </div>

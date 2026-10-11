@@ -275,10 +275,6 @@
                                 </form>
                             @endif
                         @endcan
-
-                        <button type="button" class="btn sec" onclick="closeRoomModal({{ $room->room_id }})" style="min-height: 44px; padding: 0 18px;">
-                            Close
-                        </button>
                     </div>
                 </div>
             </div>

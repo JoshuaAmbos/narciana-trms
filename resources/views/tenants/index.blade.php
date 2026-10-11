@@ -299,7 +299,6 @@
                             @elseif ($active)
                                 <a href="{{ route('leases.show', $active) }}" class="btn sec">View Active MOA</a>
                             @endif
-                            <button type="button" class="btn sec" onclick="closeTenantModal({{ $tenant->tenant_id }})">Close</button>
                         </div>
                     </div>
                 </div>

@@ -27,6 +27,7 @@ class BackupRunner
                 '--no-tablespaces',                // shared hosting users lack the PROCESS privilege
                 '--default-character-set=utf8mb4',
                 '--add-drop-table',
+                '--ssl-mode=REQUIRED',             // Require TLS without failing on self-signed CA
                 ...$ignore,
                 '--result-file='.$file,
                 $db['database'],
@@ -51,6 +52,7 @@ class BackupRunner
                     $this->resolveBinary('mysql'),
                     '--defaults-extra-file='.$options,
                     '--default-character-set=utf8mb4',
+                    '--ssl-mode=REQUIRED',
                     $db['database'],
                 ]);
                 $process->setInput($input);
@@ -92,11 +94,17 @@ class BackupRunner
             }
         }
 
-        // 4. Standard Linux paths
+        // 4. Standard Linux paths (includes mariadb alternatives on Alpine)
+        $alternatives = $tool === 'mysqldump' 
+            ? ['mysqldump', 'mariadb-dump'] 
+            : ['mysql', 'mariadb'];
+
         foreach (['/usr/bin', '/usr/local/bin', '/bin'] as $dir) {
-            $nativePath = "{$dir}/{$tool}";
-            if (is_file($nativePath) && is_executable($nativePath)) {
-                return $nativePath;
+            foreach ($alternatives as $binary) {
+                $nativePath = "{$dir}/{$binary}";
+                if (is_file($nativePath) && is_executable($nativePath)) {
+                    return $nativePath;
+                }
             }
         }
 
@@ -112,7 +120,14 @@ class BackupRunner
     private function withOptionsFile(array $db, callable $callback): void
     {
         $quote = fn ($v) => '"'.addcslashes((string) $v, '"\\').'"';
-        $lines = ['[client]', 'user='.$quote($db['username']), 'password='.$quote($db['password'] ?? '')];
+        $lines = [
+            '[client]',
+            'user='.$quote($db['username']),
+            'password='.$quote($db['password'] ?? ''),
+            'ssl=1',
+            'ssl-verify-server-cert=0', // Bypass self-signed chain failure on cloud hosts like Aiven
+        ];
+
         if (! empty($db['unix_socket'])) {
             $lines[] = 'socket='.$quote($db['unix_socket']);
         } else {

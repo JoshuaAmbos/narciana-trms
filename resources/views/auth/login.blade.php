@@ -36,7 +36,6 @@
         </div>
 
         <button type="submit" class="btn block">Log in</button>
-        <div class="muted center login-foot">Authorized users only: Owner, Manager, Caretaker</div>
     </form>
 </div>
 </body>

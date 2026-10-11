@@ -93,7 +93,7 @@ class BackupRunner
         }
 
         // 4. Standard Linux paths
-        foreach (['/usr/bin', '/usr/local/bin'] as $dir) {
+        foreach (['/usr/bin', '/usr/local/bin', '/bin'] as $dir) {
             $nativePath = "{$dir}/{$tool}";
             if (is_file($nativePath) && is_executable($nativePath)) {
                 return $nativePath;

@@ -63,6 +63,32 @@ return [
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
+
+            /*
+             |--------------------------------------------------------------------------
+             | Backup / Dump Binary Resolution
+             |--------------------------------------------------------------------------
+             | Auto-resolves mysqldump across:
+             | 1. .env override (DUMP_BINARY_PATH)
+             | 2. Windows XAMPP (C:\xampp\mysql\bin)
+             | 3. Linux LAMPP (/opt/lampp/bin)
+             | 4. Native Linux / Ubuntu (/usr/bin)
+             */
+            'dump' => [
+                'dump_binary_path' => env('DUMP_BINARY_PATH') ?: (function () {
+                    if (PHP_OS_FAMILY === 'Windows') {
+                        return 'C:\\xampp\\mysql\\bin';
+                    }
+
+                    if (is_dir('/opt/lampp/bin') && file_exists('/opt/lampp/bin/mysqldump')) {
+                        return '/opt/lampp/bin';
+                    }
+
+                    return '/usr/bin';
+                })(),
+                'use_single_transaction' => true,
+                'timeout' => 60 * 5,
+            ],
         ],
 
         'mariadb' => [

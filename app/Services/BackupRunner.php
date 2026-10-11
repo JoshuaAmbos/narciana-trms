@@ -6,9 +6,9 @@ use RuntimeException;
 use Symfony\Component\Process\Process;
 
 /**
- * Runs the MySQL command-line tools for backups: mysqldump (save the database to a .sql file) and
+ * Runs the MySQL/MariaDB command-line tools for backups: mysqldump (save the database to a .sql file) and
  * mysql (load a .sql file back).
- * Auto-detects binary paths across Windows XAMPP, Linux LAMPP, and Native Linux.
+ * Auto-detects binary paths across Windows XAMPP, Linux LAMPP, Native Linux, and Alpine Docker.
  */
 class BackupRunner
 {
@@ -24,10 +24,9 @@ class BackupRunner
                 $this->resolveBinary('mysqldump'),
                 '--defaults-extra-file='.$options, // must be the first option
                 '--single-transaction',            // consistent copy without locking the tables
-                '--no-tablespaces',                // shared hosting users lack the PROCESS privilege
+                '--no-tablespaces',                // avoid PROCESS privilege requirements
                 '--default-character-set=utf8mb4',
                 '--add-drop-table',
-                '--ssl-mode=REQUIRED',             // Require TLS without failing on self-signed CA
                 ...$ignore,
                 '--result-file='.$file,
                 $db['database'],
@@ -52,7 +51,6 @@ class BackupRunner
                     $this->resolveBinary('mysql'),
                     '--defaults-extra-file='.$options,
                     '--default-character-set=utf8mb4',
-                    '--ssl-mode=REQUIRED',
                     $db['database'],
                 ]);
                 $process->setInput($input);
@@ -70,7 +68,7 @@ class BackupRunner
      * 1. config('narciana.backup.mysql') or config('narciana.backup.mysqldump')
      * 2. Linux LAMPP (/opt/lampp/bin)
      * 3. Windows XAMPP (C:\xampp\mysql\bin)
-     * 4. Native Linux /usr/bin or /usr/local/bin
+     * 4. Native Linux /usr/bin or /usr/local/bin (with MariaDB fallbacks on Alpine)
      */
     private function resolveBinary(string $tool): string
     {
@@ -96,8 +94,8 @@ class BackupRunner
 
         // 4. Standard Linux paths (includes mariadb alternatives on Alpine)
         $alternatives = $tool === 'mysqldump' 
-            ? ['mysqldump', 'mariadb-dump'] 
-            : ['mysql', 'mariadb'];
+            ? ['mariadb-dump', 'mysqldump'] 
+            : ['mariadb', 'mysql'];
 
         foreach (['/usr/bin', '/usr/local/bin', '/bin'] as $dir) {
             foreach ($alternatives as $binary) {

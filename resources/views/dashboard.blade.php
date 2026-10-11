@@ -4,18 +4,12 @@
 
 @section('content')
 <div class="dashboard-shell w-full max-w-full lg:max-w-7xl mx-auto">
-    {{-- Part 1: Clean Operations Dashboard Header --}}
-    <div class="dashboard-header mb-6">
-        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Operations Dashboard</h1>
-        <p class="text-xs text-slate-500 mt-0.5">Live occupancy, billing alerts, and facility status.</p>
-    </div>
-
-    {{-- Part 2: KPI Cards Grid (Strict Semantic Palette & Inverted Hierarchy) --}}
+    {{-- Part 1: KPI Cards Grid (Strict Semantic Palette & Inverted Hierarchy) --}}
     @php
         $showRefundsCard = $isOwner;
         $gridModifier = !$staff ? 'caretaker-grid' : ($showRefundsCard ? 'has-6' : 'has-5');
     @endphp
-    <div class="kpi-cards-grid {{ $gridModifier }} grid grid-cols-1 sm:grid-cols-2 {{ $staff ? ($isOwner ? 'lg:grid-cols-3 xl:grid-cols-6' : 'lg:grid-cols-3 xl:grid-cols-5') : 'lg:grid-cols-2' }} gap-4 mb-6">
+    <div class="kpi-cards-grid {{ $gridModifier }} grid grid-cols-1 sm:grid-cols-2 {{ $staff ? ($isOwner ? 'lg:grid-cols-3 xl:grid-cols-6' : 'lg:grid-cols-3 xl:grid-cols-5') : 'lg:grid-cols-2' }} gap-[14px] mb-4">
         @if ($staff)
             {{-- 1. Bills Due in Next 7 Days (Neutral) --}}
             <a href="{{ route('payments.index') }}" class="kpi-metric-card bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition text-inherit" aria-label="Bills due in next 7 days">
@@ -87,7 +81,7 @@
         @endif
     </div>
 
-    {{-- Part 3: Immediate Action Required Panel (Matching System Design & Clickable Rows) --}}
+    {{-- Part 2: Immediate Action Required Panel (Matching System Design & Clickable Rows) --}}
     @if ($staff)
         <div class="panel mb-6">
             <h2>
@@ -778,7 +772,7 @@
 .dashboard-shell {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 2px;
     width: 100%;
 }
 
@@ -805,7 +799,7 @@
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 14px;
     width: 100%;
-    margin-bottom: 24px;
+    margin-bottom: 14px;
 }
 .kpi-cards-grid.has-6 {
     grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -818,6 +812,7 @@
     .kpi-cards-grid,
     .kpi-cards-grid.has-6 {
         grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
     }
 }
 @media (max-width: 800px) {
@@ -825,6 +820,7 @@
     .kpi-cards-grid.has-6,
     .kpi-cards-grid.caretaker-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
     }
 }
 @media (max-width: 480px) {
@@ -832,6 +828,7 @@
     .kpi-cards-grid.has-6,
     .kpi-cards-grid.caretaker-grid {
         grid-template-columns: 1fr;
+        gap: 10px;
     }
 }
 
@@ -1007,7 +1004,7 @@
     .dashboard-mobile-cards {
         display: flex !important;
         flex-direction: column;
-        gap: 10px;
+        gap: 12px;
     }
     .dashboard-table-view {
         display: none !important;

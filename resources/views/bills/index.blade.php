@@ -191,6 +191,9 @@
                                 <td><x-bill-status :status="$bill->status" /></td>
                             </tr>
                         @endforeach
+                        <tr id="bills-table-empty" class="empty-filter-row" data-filter-id="billing-search-input" style="display: none;">
+                            <td colspan="7" class="muted" style="text-align: center; padding: 24px;">No matching billing records found.</td>
+                        </tr>
                     </tbody>
                     <tfoot>
                         <tr class="tot-row">
@@ -277,6 +280,9 @@
                         @endif
                     </div>
                 @endforeach
+                <div id="bills-cards-empty" class="empty-filter-card muted" data-filter-id="billing-search-input" style="display: none; text-align: center; padding: 24px; border: 1px dashed var(--border, #cbd5e1); border-radius: 8px;">
+                    No matching billing records found.
+                </div>
             </div>
         @endif
     </div>
@@ -1013,7 +1019,7 @@
 
         // Auto-open statement modal if requested in URL (e.g. redirected from store)
         document.addEventListener('DOMContentLoaded', function() {
-            initRealtimeSearch('billing-search-input', 'billing-search-clear', '.bill-row, .bill-card');
+            initRealtimeFilter('billing-search-input', 'billing-search-clear', '.bill-row, .bill-card');
 
             const params = new URLSearchParams(window.location.search);
             const statementId = params.get('statement');

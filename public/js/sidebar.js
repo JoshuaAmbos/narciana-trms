@@ -55,12 +55,13 @@ function toggleSidebarWidth() {
 
 /**
  * Generic Real-Time Client-Side Filter
+ * Option 2 (Pure Client-Side Filtering) architecture helper
  * @param {string} inputId - ID of the text input
  * @param {string} clearBtnId - ID of the clear (×) button
  * @param {string} itemSelector - CSS selector for target rows/cards
  * @param {string} [emptyMsgId] - Optional ID for empty state placeholder
  */
-function initRealtimeSearch(inputId, clearBtnId, itemSelector, emptyMsgId = null) {
+function initRealtimeFilter(inputId, clearBtnId, itemSelector, emptyMsgId = null) {
     const input = document.getElementById(inputId);
     const clearBtn = document.getElementById(clearBtnId);
     if (!input) return;
@@ -81,10 +82,24 @@ function initRealtimeSearch(inputId, clearBtnId, itemSelector, emptyMsgId = null
             clearBtn.style.display = query ? 'inline-flex' : 'none';
         }
 
+        const isZeroMatches = (items.length > 0 && matchCount === 0);
+
+        // 1. Explicit empty element ID if provided
         if (emptyMsgId) {
             const emptyEl = document.getElementById(emptyMsgId);
-            if (emptyEl) emptyEl.style.display = matchCount === 0 ? 'block' : 'none';
+            if (emptyEl) {
+                // If it's a table row, show as table-row/default; if div/p, show as block
+                emptyEl.style.display = isZeroMatches ? (emptyEl.tagName === 'TR' ? '' : 'block') : 'none';
+            }
         }
+
+        // 2. Discover contextual empty placeholders in relevant table bodies or cards containers
+        const contextualPlaceholders = document.querySelectorAll(
+            `[data-empty-for="${inputId}"], .empty-filter-row[data-filter-id="${inputId}"], .empty-filter-card[data-filter-id="${inputId}"]`
+        );
+        contextualPlaceholders.forEach(placeholder => {
+            placeholder.style.display = isZeroMatches ? (placeholder.tagName === 'TR' ? '' : 'block') : 'none';
+        });
     }
 
     input.addEventListener('input', executeFilter);
@@ -108,4 +123,8 @@ function initRealtimeSearch(inputId, clearBtnId, itemSelector, emptyMsgId = null
         executeFilter();
     }
 }
+
+// Global aliases for maximum compatibility across views
+window.initRealtimeFilter = initRealtimeFilter;
+window.initRealtimeSearch = initRealtimeFilter;
 

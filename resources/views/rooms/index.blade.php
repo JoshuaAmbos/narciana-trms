@@ -116,6 +116,9 @@
                                 </td>
                             </tr>
                         @endforeach
+                        <tr id="rooms-table-empty" class="empty-filter-row" data-filter-id="room-search-input" style="display: none;">
+                            <td colspan="5" class="muted" style="text-align: center; padding: 24px;">No matching rooms found.</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -160,9 +163,10 @@
                         </div>
                     </div>
                 @endforeach
+                <div id="rooms-cards-empty" class="empty-filter-card muted" data-filter-id="room-search-input" style="display: none; text-align: center; padding: 24px; border: 1px dashed var(--border, #cbd5e1); border-radius: 8px;">
+                    No matching rooms found.
+                </div>
             </div>
-
-            @include('partials.pagination', ['paginator' => $rooms])
 
             <p class="muted">Status changes automatically: Occupied when an MOA is encoded, Vacant when a lease is ended.</p>
         @endif
@@ -850,7 +854,7 @@
 
         // Auto-reopen modal if validation errors exist
         document.addEventListener('DOMContentLoaded', function () {
-            initRealtimeSearch('room-search-input', 'room-search-clear', '.room-row-clickable, .room-card');
+            initRealtimeFilter('room-search-input', 'room-search-clear', '.room-row-clickable, .room-card');
 
             @if ($errors->any())
                 @if (old('is_modal_edit'))

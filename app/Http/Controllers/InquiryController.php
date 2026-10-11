@@ -52,7 +52,7 @@ class InquiryController extends Controller
             $query->orderByDesc('inquiry_date')->orderByDesc('inquiry_id');
         }
 
-        $inquiries = $query->paginate(10)->withQueryString();
+        $inquiries = $query->get();
 
         $rooms = Room::orderBy('room_no')->get();
         $vacantRooms = $rooms->where('status', 'Vacant');

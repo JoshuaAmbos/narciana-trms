@@ -51,10 +51,7 @@ class RoomController extends Controller
             'Basic' => Inquiry::where('status', 'Waiting')->whereIn('preferred_type', ['Basic', 'Any'])->count(),
         ];
 
-        // Paginate results (default: 8 per page) and keep query strings
-        $rooms = $query->orderBy('room_no', 'asc')
-            ->paginate(8)
-            ->withQueryString();
+        $rooms = $query->orderBy('room_no', 'asc')->get();
 
         $rooms->each(function (Room $room) use ($waitingDemands) {
             $room->waiting_demand = $waitingDemands[$room->room_type] ?? 0;
@@ -70,7 +67,7 @@ class RoomController extends Controller
 
         $setting = Setting::current();
 
-        $roomsMap = $rooms->getCollection()->keyBy('room_id')->map(function (Room $r) {
+        $roomsMap = $rooms->keyBy('room_id')->map(function (Room $r) {
             return [
                 'room_id' => $r->room_id,
                 'room_no' => $r->room_no,

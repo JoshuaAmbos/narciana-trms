@@ -60,10 +60,10 @@ class ConcernController extends Controller
             ->orderByRaw("status = 'Resolved'")          // unresolved first
             ->orderByRaw("priority = 'Urgent' DESC")     // urgent first
             ->orderByDesc('reported_at')
-            ->paginate(25)->withQueryString();
+            ->get();
 
         $concernsMap = [];
-        foreach ($list->items() as $item) {
+        foreach ($list as $item) {
             $concernsMap[$item->concern_id] = $this->mapConcernData($item);
         }
 

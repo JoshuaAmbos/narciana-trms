@@ -304,7 +304,7 @@ class RoomsTest extends TestCase
 
     public function test_rooms_pagination_and_query_string_retention(): void
     {
-        // Create 12 rooms (page limit is 8 per page)
+        // Create 12 rooms
         for ($i = 1; $i <= 12; $i++) {
             $this->room([
                 'room_no' => sprintf('2%02d', $i),
@@ -313,27 +313,21 @@ class RoomsTest extends TestCase
             ]);
         }
 
-        // Page 1 should have 8 rooms
-        $page1 = $this->actingAs($this->owner)->get(route('rooms.index'))->assertOk();
-        $page1->assertSee('Page 1 of 2');
-        $page1->assertSee('201');
-        $page1->assertSee('208');
-        $page1->assertDontSee('209');
+        // Option 2: All records load on single page without page offsets hiding records
+        $res = $this->actingAs($this->owner)->get(route('rooms.index'))->assertOk();
+        $res->assertDontSee('Page 1 of');
+        $res->assertSee('201');
+        $res->assertSee('208');
+        $res->assertSee('209');
+        $res->assertSee('212');
 
-        // Page 2 should have remaining 4 rooms
-        $page2 = $this->actingAs($this->owner)->get(route('rooms.index', ['page' => 2]))->assertOk();
-        $page2->assertSee('Page 2 of 2');
-        $page2->assertSee('209');
-        $page2->assertSee('212');
-        $page2->assertDontSee('201');
-
-        // With filter and search, query parameters are retained in pagination links
+        // With filter and search, query parameters apply directly
         $filtered = $this->actingAs($this->owner)->get(route('rooms.index', [
             'type' => 'Aircon',
             'search' => '2',
         ]))->assertOk();
 
-        // 6 Aircon rooms (202, 204, 206, 208, 210, 212) all match and fit on 1 page
+        // 6 Aircon rooms (202, 204, 206, 208, 210, 212) all match and render on page
         $filtered->assertSee('202');
         $filtered->assertSee('212');
         $filtered->assertDontSee('201');

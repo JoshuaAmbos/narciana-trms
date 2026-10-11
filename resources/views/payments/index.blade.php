@@ -32,9 +32,8 @@
         @if ($collections->isEmpty())
             <p class="muted">No payments in {{ $month->format('F Y') }}.</p>
         @else
-            {{-- Filter Group & Real-Time Search Bar for Collections --}}
-            <div class="collections-controls-wrap no-print">
-                {{-- Search Bar (Full width on portrait/mobile, flexes on landscape) --}}
+            <div class="collections-controls-wrap">
+                {{-- Search Bar (flexes on landscape) --}}
                 <div class="collections-search-box">
                     <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="11" cy="11" r="8"></circle>
@@ -88,15 +87,6 @@
                     </tbody>
                 </table>
                 <p id="collections-no-match" class="muted" style="display: none; padding: 12px; text-align: center;">No collections matching your filter criteria.</p>
-            </div>
-
-            {{-- Collections Pagination Bar --}}
-            <div class="panel-pagination-bar no-print" id="collections-pagination-bar">
-                <span class="sub text-xs" id="collections-page-label">Showing 1–5 of {{ $collections->count() }}</span>
-                <div class="pagination-actions">
-                    <button type="button" class="btn sec pagination-btn" id="collections-prev-btn" disabled>&larr; Prev</button>
-                    <button type="button" class="btn sec pagination-btn" id="collections-next-btn">Next &rarr;</button>
-                </div>
             </div>
         @endif
     </div>
@@ -181,7 +171,8 @@
         @if ($toCollect->isEmpty())
             <p class="muted">Every bill is paid.</p>
         @else
-            <div class="table-wrap">
+            {{-- Tablet Landscape (~1024px – 1280px) & Desktop: Clean Table with Clickable Rows --}}
+            <div class="table-wrap to-collect-table-wrap">
                 <table id="to-collect-table">
                     <thead>
                         <tr><th>Due date</th><th>Room</th><th>Tenant</th><th class="r">Bill</th><th>Status</th><th class="r">Penalty so far</th><th class="r">Due if paid today</th></tr>
@@ -201,6 +192,11 @@
                                                                     <tr class="to-collect-row" 
                                                                         data-status="{{ $statusType }}" 
                                                                         data-search="{{ strtolower($b->lease->room->room_no . ' ' . $b->lease->tenant->full_name . ' ' . $statusType) }}"
+                                                                        onclick="openRecordPaymentModal({{ $b->bill_id }})"
+                                                                        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); openRecordPaymentModal({{ $b->bill_id }});}"
+                                                                        tabindex="0"
+                                                                        role="button"
+                                                                        aria-label="Record payment for Room {{ $b->lease->room->room_no }} - {{ $b->lease->tenant->full_name }}"
                                                                         @if (!empty($row['is_breached'])) style="background: #fff5f5;" @endif>
                                                                         <td class="nowrap">{{ $dueDate->format('j M Y') }}</td>
                                                                         <td><b>{{ $b->lease->room->room_no }}</b></td>
@@ -245,17 +241,77 @@
                         @endforeach
                     </tbody>
                 </table>
-                <p id="to-collect-no-match" class="muted" style="display: none; padding: 12px; text-align: center;">No bills matching your filter criteria.</p>
             </div>
 
-            {{-- Bills to Collect Pagination Bar --}}
-            <div class="panel-pagination-bar no-print" id="to-collect-pagination-bar">
-                <span class="sub text-xs" id="to-collect-page-label">Showing 1–5 of {{ $toCollect->count() }}</span>
-                <div class="pagination-actions">
-                    <button type="button" class="btn sec pagination-btn" id="to-collect-prev-btn" disabled>&larr; Prev</button>
-                    <button type="button" class="btn sec pagination-btn" id="to-collect-next-btn">Next &rarr;</button>
-                </div>
+            {{-- Tablet Portrait (~712px – 800px) & Mobile: Stacked Touch-Friendly Cards --}}
+            <div class="to-collect-cards" id="toCollectCardsContainer">
+                @foreach ($toCollect as $row)
+                    @foreach ([$row['bill']] as $b)
+                        @foreach ([\Carbon\Carbon::parse($b->due_date)->startOfDay()] as $dueDate)
+                            @foreach ([today()->startOfDay()] as $today)
+                                @foreach ([(int) ($row['today']['days_late'] ?? 0)] as $daysLate)
+                                    @foreach ([$daysLate > 0] as $isOverdue)
+                                        @foreach ([$dueDate->gt($today)] as $isFuture)
+                                            @foreach ([$dueDate->equalTo($today)] as $isDueToday)
+                                                @foreach ([(int) $today->diffInDays($dueDate, false)] as $daysUntilDue)
+                                                    @foreach ([!$isFuture && !$isDueToday && !$isOverdue] as $inGrace)
+                                                        @foreach ([$isOverdue ? 'Overdue' : ($inGrace ? 'Grace' : 'Upcoming')] as $statusType)
+                                                            <div class="to-collect-card"
+                                                                 data-status="{{ $statusType }}"
+                                                                 data-search="{{ strtolower($b->lease->room->room_no . ' ' . $b->lease->tenant->full_name . ' ' . $statusType) }}"
+                                                                 onclick="openRecordPaymentModal({{ $b->bill_id }})"
+                                                                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); openRecordPaymentModal({{ $b->bill_id }});}"
+                                                                 tabindex="0"
+                                                                 role="button"
+                                                                 aria-label="Record payment for Room {{ $b->lease->room->room_no }} - {{ $b->lease->tenant->full_name }}"
+                                                                 @if (!empty($row['is_breached'])) style="background: #fff5f5;" @endif>
+                                                                <div class="to-collect-card-head">
+                                                                    <div>
+                                                                        <span class="to-collect-card-room">Room {{ $b->lease->room->room_no }}</span>
+                                                                        <div class="to-collect-card-tenant">{{ $b->lease->tenant->full_name }}</div>
+                                                                    </div>
+                                                                    <div>
+                                                                        @if ($isOverdue)
+                                                                            <span class="tag t-red">Overdue {{ $daysLate }} {{ Str::plural('day', $daysLate) }}</span>
+                                                                        @elseif ($isFuture)
+                                                                            <span class="tag t-amber">Due in {{ $daysUntilDue }} {{ Str::plural('day', $daysUntilDue) }}</span>
+                                                                        @elseif ($isDueToday)
+                                                                            <span class="tag t-amber">Due today</span>
+                                                                        @elseif (!empty($row['today']['in_grace']))
+                                                                            <span class="tag t-amber">Grace Period (Day {{ $row['today']['grace_day'] ?? 1 }} of {{ $row['today']['grace_days'] ?? 3 }})</span>
+                                                                        @elseif ($inGrace)
+                                                                            <span class="tag t-amber">In grace period</span>
+                                                                        @else
+                                                                            <span class="tag t-amber">Unpaid</span>
+                                                                        @endif
+                                                                    </div>
+                                                                </div>
+                                                                <div class="to-collect-card-body">
+                                                                    <span class="muted">Due {{ $dueDate->format('j M Y') }}</span>
+                                                                    <span class="money"><b>@peso($row['today']['total'] ?? $b->total_amount)</b></span>
+                                                                </div>
+                                                                @if (!empty($row['is_breached']))
+                                                                    <div>
+                                                                        <span class="inline-block px-1.5 py-0.5 text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded" style="display: inline-block; padding: 2px 6px; font-size: 11px; font-weight: 600; color: #be123c; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 4px;">
+                                                                            Deposit Exhausted
+                                                                        </span>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+                                                        @endforeach
+                                                    @endforeach
+                                                @endforeach
+                                            @endforeach
+                                        @endforeach
+                                    @endforeach
+                                @endforeach
+                            @endforeach
+                        @endforeach
+                    @endforeach
+                @endforeach
             </div>
+
+            <p id="to-collect-no-match" class="muted" style="display: none; padding: 12px; text-align: center;">No bills matching your filter criteria.</p>
         @endif
     </div>
 
@@ -317,6 +373,81 @@
         </div>
     </div>
 
+    {{-- Settlement Modal for Bills to Collect (#recordPaymentModal) --}}
+    <div id="recordPaymentModal" class="modal-backdrop" hidden>
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="header-icon"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                    <span>Record Payment</span>
+                </h2>
+                <button type="button" class="modal-close-btn" onclick="closeRecordPaymentModal()" aria-label="Close modal">&times;</button>
+            </div>
+
+            <form method="POST" action="{{ route('payments.store') }}" id="record-payment-form" novalidate>
+                @csrf
+                <input type="hidden" name="bill_id" id="rpm_bill_id">
+
+                <div class="modal-summary-grid">
+                    <div><span class="summary-lbl">Room</span><b id="rpm_room_display">-</b></div>
+                    <div><span class="summary-lbl">Tenant</span><b id="rpm_tenant_display">-</b></div>
+                    <div><span class="summary-lbl">Bill Due</span><b id="rpm_due_display">-</b></div>
+                    <div><span class="summary-lbl">Status</span><span id="rpm_status_display">-</span></div>
+                </div>
+
+                <table class="sum amount-box" style="margin: 14px 0;">
+                    <tr>
+                        <td>Bill Total</td>
+                        <td class="money" id="rpm_base_amount">₱0.00</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Late Penalty
+                            <span class="sub red" id="rpm_late_sub" style="display: none;"></span>
+                        </td>
+                        <td class="money" id="rpm_penalty_amount">₱0.00</td>
+                    </tr>
+                    <tr class="tot">
+                        <td>Total to Receive</td>
+                        <td class="money" id="rpm_total_due">₱0.00</td>
+                    </tr>
+                </table>
+
+                <div class="row">
+                    <div class="f">
+                        <label for="rpm_payment_date">Payment date <span class="req">*</span></label>
+                        <input id="rpm_payment_date" name="payment_date" type="date" max="{{ today()->toDateString() }}" value="{{ today()->toDateString() }}" required>
+                    </div>
+                    <div class="f">
+                        <label for="rpm_mode">Payment mode <span class="req">*</span></label>
+                        <select id="rpm_mode" name="mode" onchange="toggleRpmMode(this.value)">
+                            <option value="Cash">Cash</option>
+                            <option value="GCash">GCash</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="f" id="rpm_gcash_wrap" style="display: none;">
+                    <label for="rpm_gcash_ref_no">GCash Reference No. (13 digits) <span class="req">*</span></label>
+                    <input id="rpm_gcash_ref_no" name="gcash_ref_no" type="text" inputmode="numeric" maxlength="20" placeholder="e.g. 1001234567890">
+                    <div class="hint">Exactly 13 digits from the GCash transaction receipt.</div>
+                </div>
+
+                <div class="f">
+                    <label for="rpm_amount">Amount received (₱) <span class="req">*</span></label>
+                    <input id="rpm_amount" name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" required autocomplete="off">
+                    <div class="hint" id="rpm_amount_hint">Full payment required: exactly <b id="rpm_hint_amount">₱0.00</b> (no partial payments).</div>
+                </div>
+
+                <div class="form-actions" style="margin-top: 18px;">
+                    <button type="submit" class="btn" id="rpm_submit_btn">Save &amp; Issue Acknowledgment</button>
+                    <button type="button" class="btn sec" onclick="closeRecordPaymentModal()">Cancel</button>
+                </div>
+                <p class="muted small" style="margin-top: 10px;">Received by: <b>{{ auth()->user()->role }}</b> (you).</p>
+            </form>
+        </div>
+    </div>
+
     <style>
         .breach-row {
             transition: background-color 0.15s ease;
@@ -328,42 +459,19 @@
             border-color: #3b82f6 !important;
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
         }
-        .panel-pagination-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 12px;
-            padding-top: 10px;
-            border-top: 1px solid var(--border, #e2e8f0);
-        }
-        .pagination-actions {
-            display: flex;
-            gap: 8px;
-        }
-        .pagination-btn {
-            min-height: 34px !important;
-            padding: 4px 12px !important;
-            font-size: 12px !important;
-        }
-        .pagination-btn:disabled {
-            opacity: 0.45;
-            cursor: not-allowed;
-        }
         @media (max-width: 768px) {
             .breach-row {
                 flex-direction: column;
                 align-items: flex-start !important;
                 gap: 8px !important;
             }
-            .pagination-btn {
-                min-height: 44px !important;
-                padding: 6px 14px !important;
-            }
         }
     </style>
 
     <script>
         const breachedLeasesData = @json($breachedLeasesMap ?? []);
+        const toCollectBillsData = @json($toCollectMap ?? []);
+        window.billsData = toCollectBillsData;
 
         function openBreachModal(leaseId) {
             const data = breachedLeasesData[leaseId];
@@ -396,6 +504,69 @@
             }
         }
 
+        function openRecordPaymentModal(billId) {
+            const bill = toCollectBillsData[billId];
+            if (!bill) return;
+
+            if (!bill.can_pay) {
+                alert('Room ' + bill.room_no + ': please pay the older bill for this room first.');
+                return;
+            }
+
+            document.getElementById('rpm_bill_id').value = bill.bill_id;
+            document.getElementById('rpm_room_display').textContent = 'Room ' + bill.room_no;
+            document.getElementById('rpm_tenant_display').textContent = bill.tenant;
+            document.getElementById('rpm_due_display').textContent = bill.due_date_fmt;
+            document.getElementById('rpm_status_display').innerHTML = bill.status === 'Overdue'
+                ? '<span class="tag t-red">Overdue</span>'
+                : '<span class="tag t-amber">Unpaid</span>';
+
+            document.getElementById('rpm_base_amount').textContent = formatPeso(bill.base_amount);
+            document.getElementById('rpm_penalty_amount').textContent = formatPeso(bill.penalty);
+            document.getElementById('rpm_total_due').textContent = formatPeso(bill.total);
+
+            const lateSub = document.getElementById('rpm_late_sub');
+            if (bill.days_late > 0) {
+                lateSub.textContent = `(${bill.days_late} day${bill.days_late === 1 ? '' : 's'} late after grace period)`;
+                lateSub.style.display = 'inline';
+            } else {
+                lateSub.style.display = 'none';
+            }
+
+            document.getElementById('rpm_amount').value = Number(bill.total).toFixed(2);
+            document.getElementById('rpm_hint_amount').textContent = formatPeso(bill.total);
+
+            document.getElementById('rpm_mode').value = 'Cash';
+            toggleRpmMode('Cash');
+
+            const modal = document.getElementById('recordPaymentModal');
+            if (modal) {
+                modal.removeAttribute('hidden');
+            }
+        }
+
+        function closeRecordPaymentModal() {
+            const modal = document.getElementById('recordPaymentModal');
+            if (modal) {
+                modal.setAttribute('hidden', '');
+            }
+        }
+
+        function toggleRpmMode(mode) {
+            const gcashWrap = document.getElementById('rpm_gcash_wrap');
+            const gcashInput = document.getElementById('rpm_gcash_ref_no');
+            if (!gcashWrap || !gcashInput) return;
+            if (mode === 'GCash') {
+                gcashWrap.style.display = 'block';
+                gcashInput.required = true;
+                setTimeout(() => gcashInput.focus(), 50);
+            } else {
+                gcashWrap.style.display = 'none';
+                gcashInput.required = false;
+                gcashInput.value = '';
+            }
+        }
+
         function formatPeso(amount) {
             return '₱' + Number(amount || 0).toLocaleString('en-US', {
                 minimumFractionDigits: 2,
@@ -405,9 +576,13 @@
 
         // Close on backdrop click
         document.addEventListener('click', function(e) {
-            const modal = document.getElementById('breachDetailModal');
-            if (modal && !modal.hasAttribute('hidden') && e.target === modal) {
+            const breachModal = document.getElementById('breachDetailModal');
+            if (breachModal && !breachModal.hasAttribute('hidden') && e.target === breachModal) {
                 closeBreachModal();
+            }
+            const recordModal = document.getElementById('recordPaymentModal');
+            if (recordModal && !recordModal.hasAttribute('hidden') && e.target === recordModal) {
+                closeRecordPaymentModal();
             }
         });
 
@@ -415,188 +590,149 @@
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 closeBreachModal();
+                closeRecordPaymentModal();
             }
         });
 
         // =========================================================================
-        // Client-Side Filtering, Searching, & Pagination Controller
+        // Option 2 Pure Client-Side Real-Time Filter Controller
         // =========================================================================
         document.addEventListener('DOMContentLoaded', function() {
-            const PAGE_SIZE = 5;
-
-            function setupPaginatedList(config) {
-                let currentPage = 1;
-                let activeCategory = 'All';
-                let activeQuery = '';
-
-                function getMatchingItems() {
-                    return config.items.filter(item => {
-                        const categoryVal = config.getCategory ? config.getCategory(item) : 'All';
-                        const matchesCategory = (activeCategory === 'All') || (categoryVal === activeCategory);
-
-                        const text = (item.getAttribute('data-search') || item.textContent || '').toLowerCase();
-                        const matchesText = (activeQuery === '') || text.includes(activeQuery);
-
-                        return matchesCategory && matchesText;
-                    });
-                }
-
-                function updateView() {
-                    const filtered = getMatchingItems();
-                    const total = filtered.length;
-                    const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
-                    if (currentPage > totalPages) currentPage = totalPages;
-
-                    const start = (currentPage - 1) * PAGE_SIZE;
-                    const end = start + PAGE_SIZE;
-
-                    config.items.forEach(item => {
-                        const isInSlice = filtered.slice(start, end).includes(item);
-                        item.style.display = isInSlice ? (config.displayType || '') : 'none';
-                    });
-
-                    if (config.pageLabel) {
-                        const startDisplay = total === 0 ? 0 : start + 1;
-                        const endDisplay = Math.min(end, total);
-                        config.pageLabel.textContent = `Showing ${startDisplay}–${endDisplay} of ${total}`;
-                    }
-
-                    if (config.prevBtn) config.prevBtn.disabled = (currentPage <= 1);
-                    if (config.nextBtn) config.nextBtn.disabled = (currentPage >= totalPages);
-
-                    if (config.noMatchEl) {
-                        config.noMatchEl.style.display = (config.items.length > 0 && total === 0) ? 'block' : 'none';
-                    }
-
-                    if (config.onViewUpdated) {
-                        config.onViewUpdated(filtered, activeCategory, activeQuery);
-                    }
-                }
-
-                // Filter chip click handler
-                if (config.chips && config.chips.length > 0) {
-                    config.chips.forEach(chip => {
-                        chip.addEventListener('click', function() {
-                            config.chips.forEach(c => c.classList.remove('on'));
-                            this.classList.add('on');
-                            activeCategory = this.getAttribute(config.chipDataAttr) || 'All';
-                            currentPage = 1;
-                            updateView();
-                        });
-                    });
-                }
-
-                // Search input listener
-                if (config.searchInput) {
-                    let debounceTimer = null;
-                    config.searchInput.addEventListener('input', function() {
-                        clearTimeout(debounceTimer);
-                        debounceTimer = setTimeout(() => {
-                            activeQuery = (this.value || '').toLowerCase().trim();
-                            currentPage = 1;
-                            updateView();
-                            if (config.clearBtn) {
-                                config.clearBtn.style.display = activeQuery ? 'inline-flex' : 'none';
-                            }
-                        }, 120);
-                    });
-
-                    config.searchInput.addEventListener('keydown', function(e) {
-                        if (e.key === 'Enter') e.preventDefault();
-                    });
-                }
-
-                // Clear search button
-                if (config.clearBtn && config.searchInput) {
-                    config.clearBtn.addEventListener('click', function() {
-                        config.searchInput.value = '';
-                        activeQuery = '';
-                        currentPage = 1;
-                        updateView();
-                        this.style.display = 'none';
-                        config.searchInput.focus();
-                    });
-                }
-
-                // Pagination buttons
-                if (config.prevBtn) {
-                    config.prevBtn.addEventListener('click', () => {
-                        if (currentPage > 1) {
-                            currentPage--;
-                            updateView();
-                        }
-                    });
-                }
-
-                if (config.nextBtn) {
-                    config.nextBtn.addEventListener('click', () => {
-                        const total = getMatchingItems().length;
-                        const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
-                        if (currentPage < totalPages) {
-                            currentPage++;
-                            updateView();
-                        }
-                    });
-                }
-
-                updateView();
-            }
-
             // 1. Collections Controller
             const collectionRows = Array.from(document.querySelectorAll('tr.collection-row'));
             const collectionsTotalRow = document.getElementById('collections-total-row');
             const collectionChips = Array.from(document.querySelectorAll('.collections-filter-chip'));
+            const collectionsSearchInput = document.getElementById('collections-search-input');
+            const collectionsClearBtn = document.getElementById('collections-search-clear');
+            const collectionsNoMatch = document.getElementById('collections-no-match');
+            let activeCollectionMode = 'All';
 
-            setupPaginatedList({
-                items: collectionRows,
-                chips: collectionChips,
-                chipDataAttr: 'data-mode',
-                getCategory: (row) => row.getAttribute('data-mode'),
-                searchInput: document.getElementById('collections-search-input'),
-                clearBtn: document.getElementById('collections-search-clear'),
-                prevBtn: document.getElementById('collections-prev-btn'),
-                nextBtn: document.getElementById('collections-next-btn'),
-                pageLabel: document.getElementById('collections-page-label'),
-                noMatchEl: document.getElementById('collections-no-match'),
-                onViewUpdated: function(filtered) {
-                    if (collectionsTotalRow) {
-                        collectionsTotalRow.style.display = filtered.length > 0 ? '' : 'none';
-                    }
+            function filterCollections() {
+                const query = (collectionsSearchInput ? collectionsSearchInput.value : '').toLowerCase().trim();
+                let matchCount = 0;
+
+                collectionRows.forEach(row => {
+                    const rowMode = row.getAttribute('data-mode') || 'All';
+                    const modeMatches = (activeCollectionMode === 'All') || (rowMode === activeCollectionMode);
+                    const searchData = (row.getAttribute('data-search') || row.textContent || '').toLowerCase();
+                    const textMatches = !query || searchData.includes(query);
+
+                    const visible = modeMatches && textMatches;
+                    row.style.display = visible ? '' : 'none';
+                    if (visible) matchCount++;
+                });
+
+                if (collectionsClearBtn) {
+                    collectionsClearBtn.style.display = query ? 'inline-flex' : 'none';
                 }
+                if (collectionsTotalRow) {
+                    collectionsTotalRow.style.display = matchCount > 0 ? '' : 'none';
+                }
+                if (collectionsNoMatch) {
+                    collectionsNoMatch.style.display = (collectionRows.length > 0 && matchCount === 0) ? 'block' : 'none';
+                }
+            }
+
+            if (collectionsSearchInput) {
+                collectionsSearchInput.addEventListener('input', filterCollections);
+                collectionsSearchInput.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+            }
+            if (collectionsClearBtn && collectionsSearchInput) {
+                collectionsClearBtn.addEventListener('click', () => {
+                    collectionsSearchInput.value = '';
+                    filterCollections();
+                    collectionsSearchInput.focus();
+                });
+            }
+            collectionChips.forEach(chip => {
+                chip.addEventListener('click', function() {
+                    collectionChips.forEach(c => c.classList.remove('on'));
+                    this.classList.add('on');
+                    activeCollectionMode = this.getAttribute('data-mode') || 'All';
+                    filterCollections();
+                });
             });
 
             // 2. Bills to Collect Controller
             const toCollectRows = Array.from(document.querySelectorAll('tr.to-collect-row'));
+            const toCollectCards = Array.from(document.querySelectorAll('.to-collect-card'));
             const breachRows = Array.from(document.querySelectorAll('.breach-row'));
             const breachContainer = document.getElementById('breach-panel-container');
             const toCollectChips = Array.from(document.querySelectorAll('.to-collect-filter-chip'));
+            const toCollectSearchInput = document.getElementById('to-collect-search-input');
+            const toCollectClearBtn = document.getElementById('to-collect-search-clear');
+            const toCollectNoMatch = document.getElementById('to-collect-no-match');
+            let activeToCollectStatus = 'All';
 
-            setupPaginatedList({
-                items: toCollectRows,
-                chips: toCollectChips,
-                chipDataAttr: 'data-status',
-                getCategory: (row) => row.getAttribute('data-status'),
-                searchInput: document.getElementById('to-collect-search-input'),
-                clearBtn: document.getElementById('to-collect-search-clear'),
-                prevBtn: document.getElementById('to-collect-prev-btn'),
-                nextBtn: document.getElementById('to-collect-next-btn'),
-                pageLabel: document.getElementById('to-collect-page-label'),
-                noMatchEl: document.getElementById('to-collect-no-match'),
-                onViewUpdated: function(filtered, activeStatus, activeText) {
-                    let visibleBreaches = 0;
-                    const canShowBreach = (activeStatus === 'All' || activeStatus === 'Overdue');
+            function filterToCollect() {
+                const query = (toCollectSearchInput ? toCollectSearchInput.value : '').toLowerCase().trim();
+                let matchCount = 0;
 
-                    breachRows.forEach(row => {
-                        const matchesText = (activeText === '') || row.textContent.toLowerCase().includes(activeText);
-                        const isVisible = canShowBreach && matchesText;
-                        row.style.display = isVisible ? 'flex' : 'none';
-                        if (isVisible) visibleBreaches++;
-                    });
+                toCollectRows.forEach(row => {
+                    const rowStatus = row.getAttribute('data-status') || 'All';
+                    const statusMatches = (activeToCollectStatus === 'All') || (rowStatus === activeToCollectStatus);
+                    const searchData = (row.getAttribute('data-search') || row.textContent || '').toLowerCase();
+                    const textMatches = !query || searchData.includes(query);
 
-                    if (breachContainer) {
-                        breachContainer.style.display = (breachRows.length > 0 && visibleBreaches > 0) ? 'block' : 'none';
-                    }
+                    const visible = statusMatches && textMatches;
+                    row.style.display = visible ? '' : 'none';
+                    if (visible) matchCount++;
+                });
+
+                toCollectCards.forEach(card => {
+                    const cardStatus = card.getAttribute('data-status') || 'All';
+                    const statusMatches = (activeToCollectStatus === 'All') || (cardStatus === activeToCollectStatus);
+                    const searchData = (card.getAttribute('data-search') || card.textContent || '').toLowerCase();
+                    const textMatches = !query || searchData.includes(query);
+
+                    const visible = statusMatches && textMatches;
+                    card.style.display = visible ? 'flex' : 'none';
+                });
+
+                // Filter breaches
+                let visibleBreaches = 0;
+                const canShowBreach = (activeToCollectStatus === 'All' || activeToCollectStatus === 'Overdue');
+                breachRows.forEach(row => {
+                    const searchData = (row.getAttribute('data-search') || row.textContent || '').toLowerCase();
+                    const textMatches = !query || searchData.includes(query);
+                    const isVisible = canShowBreach && textMatches;
+                    row.style.display = isVisible ? 'flex' : 'none';
+                    if (isVisible) visibleBreaches++;
+                });
+
+                if (breachContainer) {
+                    breachContainer.style.display = (breachRows.length > 0 && visibleBreaches > 0) ? 'block' : 'none';
                 }
+
+                if (toCollectClearBtn) {
+                    toCollectClearBtn.style.display = query ? 'inline-flex' : 'none';
+                }
+
+                if (toCollectNoMatch) {
+                    const hasItems = toCollectRows.length > 0 || breachRows.length > 0;
+                    const totalVisible = matchCount + visibleBreaches;
+                    toCollectNoMatch.style.display = (hasItems && totalVisible === 0) ? 'block' : 'none';
+                }
+            }
+
+            if (toCollectSearchInput) {
+                toCollectSearchInput.addEventListener('input', filterToCollect);
+                toCollectSearchInput.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+            }
+            if (toCollectClearBtn && toCollectSearchInput) {
+                toCollectClearBtn.addEventListener('click', () => {
+                    toCollectSearchInput.value = '';
+                    filterToCollect();
+                    toCollectSearchInput.focus();
+                });
+            }
+            toCollectChips.forEach(chip => {
+                chip.addEventListener('click', function() {
+                    toCollectChips.forEach(c => c.classList.remove('on'));
+                    this.classList.add('on');
+                    activeToCollectStatus = this.getAttribute('data-status') || 'All';
+                    filterToCollect();
+                });
             });
         });
     </script>

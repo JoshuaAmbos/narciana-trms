@@ -1309,6 +1309,88 @@ tr.tot-row td { border-top: 2px solid var(--text); font-weight: 600; }
 .ack-no { font-size: 18px; font-weight: 700; color: var(--navy); }
 .small { font-size: 12px; }
 
+/* Bills to Collect: Accessible Table Rows & Touch Cards */
+.to-collect-table-wrap {
+    width: 100%;
+}
+.to-collect-row {
+    cursor: pointer !important;
+    min-height: var(--tap, 44px) !important;
+    transition: background-color 0.15s ease;
+}
+.to-collect-row td {
+    min-height: var(--tap, 44px);
+    vertical-align: middle;
+}
+.to-collect-row:hover {
+    background-color: #f1f5f9;
+}
+.to-collect-row:focus-visible {
+    outline: 2px solid var(--navy-2, #2f5d91);
+    outline-offset: -2px;
+}
+
+.to-collect-cards {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.to-collect-card {
+    background: #fff;
+    border: 1px solid var(--border, #d6dee8);
+    border-radius: 10px;
+    padding: 14px 16px;
+    cursor: pointer !important;
+    min-height: var(--tap, 44px) !important;
+    transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-sizing: border-box;
+}
+.to-collect-card:hover {
+    border-color: var(--navy-2, #2f5d91);
+    box-shadow: 0 2px 8px rgba(15, 28, 46, 0.08);
+}
+.to-collect-card:focus-visible {
+    outline: 2px solid var(--navy-2, #2f5d91);
+    outline-offset: -2px;
+}
+.to-collect-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+.to-collect-card-room {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--navy, #1f3a5f);
+}
+.to-collect-card-tenant {
+    font-size: 13.5px;
+    color: var(--text, #1f2d3d);
+    font-weight: 500;
+    margin-top: 2px;
+}
+.to-collect-card-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+    gap: 8px;
+}
+
+@media (max-width: 900px) {
+    .to-collect-table-wrap {
+        display: none !important;
+    }
+    .to-collect-cards {
+        display: flex !important;
+    }
+}
+
 /* ---------- Module 7: concerns ---------- */
 .f textarea { min-height: 70px; resize: vertical; }
 .resolution-box { border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px 4px; margin: 6px 0 12px; }
@@ -3171,9 +3253,56 @@ svg.w-4 {
 /* ==============================================================
    2. CONTAINER-AWARE FILTER & SEARCH CONTROLS
    ============================================================== */
+/* Container wrap */
+.collections-controls-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 16px;
+    box-sizing: border-box;
+}
+
+/* Base Mobile & Portrait (< 768px): Stacked */
+.collections-search-box {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+.collections-chips-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+}
+
+/* Landscape Tablet (>= 768px / >= 1024px) & Desktop: Single Inline Row */
+@media (min-width: 768px) {
+    .collections-controls-wrap {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+    }
+
+    .collections-search-box {
+        flex: 1 1 auto;
+        width: auto;          /* Overrides width: 100% */
+        max-width: 440px;      /* Prevents search box from stretching excessively */
+    }
+
+    .collections-chips-wrap {
+        width: auto;          /* Overrides width: 100% */
+        flex-shrink: 0;       /* Keeps chips tightly grouped on the right */
+        justify-content: flex-end;
+    }
+}
+
 .filter-bar,
 .billing-filter-bar,
-.collections-controls-wrap,
 .to-collect-controls-wrap,
 .tenant-filter-bar,
 .concern-filter-bar,

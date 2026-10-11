@@ -32,13 +32,15 @@ class PaymentController extends Controller
 
         $month = $this->resolveMonth($request);
         $breachedLeases = $this->delinquency->breachedLeases();
+        $toCollect = $this->toCollect($breachedLeases);
         $collections = $this->collectionsForMonth($month);
 
         return view('payments.index', [
             'month' => $month,
             'breachedLeases' => $breachedLeases,
             'breachedLeasesMap' => $this->breachedLeasesMap($breachedLeases),
-            'toCollect' => $this->toCollect($breachedLeases),
+            'toCollect' => $toCollect,
+            'toCollectMap' => $this->toCollectMap($toCollect),
             'collections' => $collections,
             'totals' => [
                 'Cash' => $this->sumPayments($collections->where('mode', 'Cash')),
@@ -101,6 +103,28 @@ class PaymentController extends Controller
                 'net_deficit' => (float) $deficit,
                 'lease_url' => route('leases.show', $lease),
                 'terminate_url' => route('leases.terminate-breach', $lease),
+            ]];
+        })->all();
+    }
+
+    private function toCollectMap(\Illuminate\Support\Collection $toCollect): array
+    {
+        return $toCollect->mapWithKeys(function ($row) {
+            $bill = $row['bill'];
+            $today = $row['today'] ?? [];
+            $daysLate = (int) ($today['days_late'] ?? 0);
+
+            return [$bill->bill_id => [
+                'bill_id' => $bill->bill_id,
+                'room_no' => $bill->lease->room->room_no,
+                'tenant' => $bill->lease->tenant->full_name,
+                'due_date_fmt' => Carbon::parse($bill->due_date)->format('j M Y'),
+                'status' => $daysLate > 0 ? 'Overdue' : 'Unpaid',
+                'base_amount' => (float) $bill->total_amount - (float) $bill->penalty_amount,
+                'total' => (float) ($today['total'] ?? $bill->total_amount),
+                'penalty' => (float) ($today['penalty'] ?? 0),
+                'days_late' => $daysLate,
+                'can_pay' => (bool) ($row['can_pay'] ?? true),
             ]];
         })->all();
     }

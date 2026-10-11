@@ -156,6 +156,9 @@
                                 </td>
                             </tr>
                         @endforeach
+                        <tr id="concerns-table-empty" style="display: none;">
+                            <td colspan="6" class="muted" style="text-align: center; padding: 24px;">No matching concerns found.</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -220,9 +223,10 @@
                         </div>
                     </div>
                 @endforeach
+                <div id="concerns-cards-empty" class="muted" style="display: none; text-align: center; padding: 24px; border: 1px dashed var(--border, #cbd5e1); border-radius: 8px;">
+                    No matching concerns found.
+                </div>
             </div>
-
-            @include('partials.pagination', ['paginator' => $concerns])
         @endif
     </div>
 
@@ -769,17 +773,32 @@
             if (clearBtn) {
                 clearBtn.style.display = q ? 'inline-flex' : 'none';
             }
+            let rowMatches = 0;
             const rows = document.querySelectorAll('#concernsTableBody .concern-row');
             rows.forEach(row => {
-                const text = row.getAttribute('data-search') || '';
-                row.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
+                const text = (row.getAttribute('data-search') || row.textContent || '').toLowerCase();
+                const matches = (!q || text.indexOf(q) !== -1);
+                row.style.display = matches ? '' : 'none';
+                if (matches) rowMatches++;
             });
 
+            let cardMatches = 0;
             const cards = document.querySelectorAll('#concernCardsContainer .concern-card');
             cards.forEach(card => {
-                const text = card.getAttribute('data-search') || '';
-                card.style.display = (!q || text.indexOf(q) !== -1) ? 'flex' : 'none';
+                const text = (card.getAttribute('data-search') || card.textContent || '').toLowerCase();
+                const matches = (!q || text.indexOf(q) !== -1);
+                card.style.display = matches ? 'flex' : 'none';
+                if (matches) cardMatches++;
             });
+
+            const tableEmpty = document.getElementById('concerns-table-empty');
+            if (tableEmpty) {
+                tableEmpty.style.display = (rows.length > 0 && rowMatches === 0) ? '' : 'none';
+            }
+            const cardsEmpty = document.getElementById('concerns-cards-empty');
+            if (cardsEmpty) {
+                cardsEmpty.style.display = (cards.length > 0 && cardMatches === 0) ? 'block' : 'none';
+            }
         }
 
         // Auto-open modal if redirected with concern ID or validation errors

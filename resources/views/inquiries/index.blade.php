@@ -107,6 +107,9 @@
                                 <td>{{ $inquiry->user->role }}</td>
                             </tr>
                         @endforeach
+                        <tr id="inquiries-table-empty" class="empty-filter-row" data-filter-id="inquiry-search-input" style="display: none;">
+                            <td colspan="7" class="muted" style="text-align: center; padding: 24px;">No matching inquiries found.</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -148,10 +151,9 @@
                         </div>
                     </div>
                 @endforeach
-            </div>
-
-            <div class="inquiries-pagination pb-20 lg:pb-0">
-                @include('partials.pagination', ['paginator' => $inquiries])
+                <div id="inquiries-cards-empty" class="empty-filter-card muted" data-filter-id="inquiry-search-input" style="display: none; text-align: center; padding: 24px; border: 1px dashed var(--border, #cbd5e1); border-radius: 8px;">
+                    No matching inquiries found.
+                </div>
             </div>
 
             {{-- Inquiry Details & Actions Popups for each record --}}
@@ -410,7 +412,7 @@
             }
         });
         document.addEventListener('DOMContentLoaded', function () {
-            initRealtimeSearch('inquiry-search-input', 'inquiry-search-clear', '.inquiry-row, .inquiry-card');
+            initRealtimeFilter('inquiry-search-input', 'inquiry-search-clear', '.inquiry-row, .inquiry-card');
         });
     </script>
 @endsection

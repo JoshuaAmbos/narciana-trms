@@ -179,6 +179,9 @@
                             </td>
                         </tr>
                     @endforeach
+                    <tr id="tenants-table-empty" class="empty-filter-row" data-filter-id="tenant-search-input" style="display: none;">
+                        <td colspan="6" class="muted" style="text-align: center; padding: 24px;">No matching tenants found.</td>
+                    </tr>
                 </table>
             </div>
 
@@ -221,6 +224,9 @@
                         </div>
                     </div>
                 @endforeach
+                <div id="tenants-cards-empty" class="empty-filter-card muted" data-filter-id="tenant-search-input" style="display: none; text-align: center; padding: 24px; border: 1px dashed var(--border, #cbd5e1); border-radius: 8px;">
+                    No matching tenants found.
+                </div>
             </div>
 
             {{-- Tenant Details & Actions Popups for each record --}}
@@ -322,7 +328,7 @@
         });
 
         document.addEventListener('DOMContentLoaded', function() {
-            initRealtimeSearch('tenant-search-input', 'tenant-search-clear', '.tenant-row, .tenant-card');
+            initRealtimeFilter('tenant-search-input', 'tenant-search-clear', '.tenant-row, .tenant-card');
         });
     </script>
 @endsection

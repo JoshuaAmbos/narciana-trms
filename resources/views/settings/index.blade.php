@@ -102,4 +102,13 @@
             Every change is recorded in the <a href="{{ route('audit-log.index', ['action' => 'Settings changed']) }}">audit log</a>.
         </p>
     </div>
+
+    <div class="panel form-panel">
+        <h2>Fixed rules <span class="muted">set by the MOA and the system, not changed here</span></h2>
+        <dl class="facts">
+            @foreach ($fixedRules as [$label, $value])
+                <div><dt>{{ $label }}</dt><dd>{{ $value }}</dd></div>
+            @endforeach
+        </dl>
+    </div>
 @endsection

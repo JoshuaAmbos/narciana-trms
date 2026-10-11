@@ -663,7 +663,7 @@ class InquiriesTest extends TestCase
 
     public function test_inquiries_pagination_and_query_string_retention(): void
     {
-        // Create 15 inquiries (page size is 10)
+        // Create 15 inquiries
         for ($i = 1; $i <= 15; $i++) {
             $this->inquiry([
                 'prospect_name' => sprintf('Prospect %02d', $i),
@@ -673,24 +673,13 @@ class InquiriesTest extends TestCase
             ]);
         }
 
-        // Page 1 should display 10 inquiries with pager info and Next link
-        $page1 = $this->actingAs($this->caretaker)->get(route('inquiries.index', ['status' => 'Waiting', 'page' => 1]))->assertOk();
-        $page1->assertSee('Page 1 of 2');
-        $page1->assertSee('Prospect 01');
-        $page1->assertSee('Prospect 10');
-        $page1->assertDontSee('Prospect 11');
-        $page1->assertSee('Next');
-
-        // Page 2 should display remaining 5 inquiries with Previous link
-        $page2 = $this->actingAs($this->caretaker)->get(route('inquiries.index', ['status' => 'Waiting', 'page' => 2]))->assertOk();
-        $page2->assertSee('Page 2 of 2');
-        $page2->assertSee('Prospect 11');
-        $page2->assertSee('Prospect 15');
-        $page2->assertDontSee('Prospect 01');
-        $page2->assertSee('Previous');
-
-        // Query string retention: 'status=Waiting' preserved in pagination links
-        $page1->assertSee('status=Waiting');
+        // Option 2: All 15 inquiries load directly on single page without page offsets hiding records
+        $res = $this->actingAs($this->caretaker)->get(route('inquiries.index', ['status' => 'Waiting']))->assertOk();
+        $res->assertDontSee('Page 1 of');
+        $res->assertSee('Prospect 01');
+        $res->assertSee('Prospect 10');
+        $res->assertSee('Prospect 11');
+        $res->assertSee('Prospect 15');
     }
 
     public function test_search_inquiries_by_prospect_name_or_contact_or_remarks(): void

@@ -116,6 +116,7 @@ class BackupRunner
     }
 
     /** Write user/password/host to a temporary [client] options file, call $callback with its path, then delete it. */
+    /** Write user/password/host to a temporary [client] options file, call $callback with its path, then delete it. */
     private function withOptionsFile(array $db, callable $callback): void
     {
         $quote = fn ($v) => '"'.addcslashes((string) $v, '"\\').'"';
@@ -124,8 +125,7 @@ class BackupRunner
             'user='.$quote($db['username']),
             'password='.$quote($db['password'] ?? ''),
             'ssl=1',
-            'ssl-verify-server-cert=0', // Bypass self-signed chain failure on cloud hosts like Aiven
-            'connect-timeout=15',       // Fail fast instead of hanging indefinitely if connection is blocked
+            'ssl-verify-server-cert=0',
         ];
 
         if (! empty($db['unix_socket'])) {

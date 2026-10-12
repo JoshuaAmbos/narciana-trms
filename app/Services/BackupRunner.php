@@ -23,8 +23,9 @@ class BackupRunner
             $process = new Process([
                 $this->resolveBinary('mysqldump'),
                 '--defaults-extra-file='.$options, // must be the first option
-                '--single-transaction',            // consistent copy without locking the tables
-                '--no-tablespaces',                // avoid PROCESS privilege requirements
+                '--quick',                         // dump rows line-by-line; prevents hanging/timeouts on cloud databases
+                '--single-transaction',            // consistent copy without locking tables
+                '--no-tablespaces',                // avoid PROCESS privilege requirements on cloud hosts
                 '--default-character-set=utf8mb4',
                 '--add-drop-table',
                 ...$ignore,
@@ -124,6 +125,7 @@ class BackupRunner
             'password='.$quote($db['password'] ?? ''),
             'ssl=1',
             'ssl-verify-server-cert=0', // Bypass self-signed chain failure on cloud hosts like Aiven
+            'connect-timeout=15',       // Fail fast instead of hanging indefinitely if connection is blocked
         ];
 
         if (! empty($db['unix_socket'])) {

@@ -45,7 +45,7 @@
 
                     <div id="tenant-existing" @if ($mode !== 'existing') hidden @endif>
                         <div class="f @error('tenant_id') has-err @enderror">
-                            <label for="tenant_id">Select tenant from Master Directory</label>
+                            <label for="tenant_id">Select tenant from Master Directory <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                             <select id="tenant_id" name="tenant_id">
                                 <option value="">Choose registered tenant…</option>
                                 @foreach ($availableTenants as $t)
@@ -80,8 +80,8 @@
                     </div>
 
                     <div class="f @error('room_id') has-err @enderror">
-                        <label for="room_id">Room</label>
-                        <select id="room_id" name="room_id">
+                        <label for="room_id">Room <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+                        <select id="room_id" name="room_id" required>
                             <option value="">Choose…</option>
                             @foreach ($rooms as $room)
                                 <option value="{{ $room->room_id }}" data-rent="{{ $room->monthly_rent }}" data-max="{{ $room->max_occupants }}" data-metered="{{ $room->is_metered ? 1 : 0 }}" data-type="{{ $room->room_type }}"
@@ -96,7 +96,7 @@
                     {{-- Aircon Submeter Reading --}}
                     <div class="f @error('move_in_reading') has-err @enderror" id="move-in-reading"
                          @if (! $isAirconSelected) hidden @endif>
-                        <label for="move_in_reading">Baseline move-in meter reading (kWh) <span style="color: #ef4444;">*</span></label>
+                        <label for="move_in_reading">Baseline move-in meter reading (kWh) <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                         <input id="move_in_reading" name="move_in_reading" type="number" min="0" step="0.01" inputmode="decimal"
                                value="{{ old('move_in_reading') }}"
                                @if ($isAirconSelected) required @endif>
@@ -144,7 +144,7 @@
                 <div class="panel p-6 sm:p-8 space-y-5 sm:space-y-6">
                     <h2>3. Declared Co-Tenant (Optional)</h2>
                     <div class="f @error('co_tenant_name') has-err @enderror">
-                        <label for="co_tenant_name">Full name of co-tenant</label>
+                        <label for="co_tenant_name">Full name of co-tenant <span class="text-muted" style="font-weight: normal; font-size: 0.85em;">(optional)</span></label>
                         <input id="co_tenant_name" name="co_tenant_name" type="text" maxlength="255" value="{{ old('co_tenant_name') }}">
                         <div class="hint">Maximum 2 occupants per room (principal renter + 1). Leave blank if the tenant lives alone.</div>
                         @error('co_tenant_name') <div class="err">{{ $message }}</div> @enderror
@@ -159,7 +159,7 @@
                     </p>
                     <div class="row">
                         <div class="f @error('mode') @error('payment_mode') has-err @enderror @enderror" style="flex: 1 1 200px;">
-                            <label for="payment_mode">Payment Mode <span style="color: #ef4444;">*</span></label>
+                            <label for="payment_mode">Payment Mode <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                             <select id="payment_mode" name="payment_mode" required>
                                 <option value="Cash" @selected(old('payment_mode', old('mode', 'Cash')) === 'Cash')>Cash</option>
                                 <option value="GCash" @selected(old('payment_mode', old('mode')) === 'GCash')>GCash</option>
@@ -171,9 +171,10 @@
 
                         <div class="f @error('gcash_ref_no') has-err @enderror" id="gcash-ref-container" style="flex: 1 1 260px;"
                              @if (old('payment_mode', old('mode', 'Cash')) !== 'GCash') hidden @endif>
-                            <label for="gcash_ref_no">GCash Reference Number (13 digits) <span style="color: #ef4444;">*</span></label>
+                            <label for="gcash_ref_no">GCash Reference Number (13 digits) <span class="req-star" id="moa_gcash_star" style="color: #dc2626; font-weight: 700; margin-left: 2px; {{ old('payment_mode', old('mode', 'Cash')) === 'GCash' ? '' : 'display: none;' }}" aria-hidden="true">*</span></label>
                             <input id="gcash_ref_no" name="gcash_ref_no" type="text" maxlength="13" inputmode="numeric"
-                                   value="{{ old('gcash_ref_no') }}" placeholder="13-digit reference number">
+                                   value="{{ old('gcash_ref_no') }}" placeholder="13-digit reference number"
+                                   {{ old('payment_mode', old('mode', 'Cash')) === 'GCash' ? 'required' : 'disabled' }}>
                             <div class="hint">Strictly 13 numerical digits from the GCash transaction SMS/receipt.</div>
                             @error('gcash_ref_no') <div class="err">{{ $message }}</div> @enderror
                         </div>
@@ -349,11 +350,32 @@
                         var modeSelect = document.getElementById('payment_mode');
                         var modeAlias = document.getElementById('mode_alias');
                         var gcashContainer = document.getElementById('gcash-ref-container');
-                        if (modeSelect && gcashContainer) {
+                        var gcashInput = document.getElementById('gcash_ref_no');
+                        var gcashStar = document.getElementById('moa_gcash_star');
+
+                        function updatePaymentMode(mode) {
+                            if (modeAlias) modeAlias.value = mode;
+                            var isGcash = (mode === 'GCash');
+                            if (gcashContainer) gcashContainer.hidden = !isGcash;
+                            if (gcashInput) {
+                                gcashInput.disabled = !isGcash;
+                                if (isGcash) {
+                                    gcashInput.setAttribute('required', 'required');
+                                } else {
+                                    gcashInput.removeAttribute('required');
+                                    gcashInput.value = '';
+                                }
+                            }
+                            if (gcashStar) {
+                                gcashStar.style.display = isGcash ? 'inline' : 'none';
+                            }
+                        }
+
+                        if (modeSelect) {
                             modeSelect.addEventListener('change', function () {
-                                if (modeAlias) modeAlias.value = this.value;
-                                gcashContainer.hidden = (this.value !== 'GCash');
+                                updatePaymentMode(this.value);
                             });
+                            updatePaymentMode(modeSelect.value);
                         }
                     })();
                 </script>

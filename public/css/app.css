@@ -351,7 +351,39 @@ td.r, th.r { text-align: right; }
 .alert-warn { background: #fdf3e1; color: var(--amber); border: 1px solid #f1d9a8; }
 
 .f .hint { color: var(--muted-2); font-size: 12.5px; margin-top: 3px; }
-.f input:disabled { background: #eef1f4; color: var(--muted); }
+.f input:disabled, .f select:disabled, .f textarea:disabled { background: #eef1f4; color: var(--muted); cursor: not-allowed; }
+
+.req-star {
+    color: #dc2626;
+    font-weight: 700;
+    margin-left: 2px;
+}
+
+.concern-cost-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+.concern-cost-row .f {
+    margin-bottom: 0;
+}
+.concern-charge-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: var(--tap, 44px);
+    margin: 0;
+    cursor: pointer;
+}
+.concern-charge-wrap input[type="checkbox"] {
+    width: auto;
+    min-height: auto;
+    margin: 0;
+    vertical-align: middle;
+}
+
 .form-panel { max-width: 860px; }
 .form-panel.narrow { max-width: 480px; }
 .form-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }

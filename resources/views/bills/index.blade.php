@@ -345,22 +345,22 @@
 
                     <div class="row">
                         <div class="f">
-                            <label for="gbm_previous_reading">Previous reading (kWh)</label>
+                            <label for="gbm_previous_reading">Previous reading (kWh) <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                             <input type="number" id="gbm_previous_reading" name="previous_reading" step="0.01" min="0" readonly class="input-readonly">
                         </div>
                         <div class="f">
-                            <label for="gbm_current_reading">Current reading (kWh) <span class="req">*</span></label>
+                            <label for="gbm_current_reading">Current reading (kWh) <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                             <input type="number" id="gbm_current_reading" name="current_reading" step="0.01" min="0" oninput="recalcGenerateBillModal()">
                         </div>
                     </div>
 
                     <div class="row">
                         <div class="f">
-                            <label for="gbm_reading_date">Reading date</label>
+                            <label for="gbm_reading_date">Reading date <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                             <input type="date" id="gbm_reading_date" name="reading_date" max="{{ today()->toDateString() }}">
                         </div>
                         <div class="f">
-                            <label for="gbm_source">Source</label>
+                            <label for="gbm_source">Source <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                             <select id="gbm_source" name="source">
                                 @foreach ($sources as $source)
                                     <option value="{{ $source }}">{{ $source }}</option>
@@ -486,11 +486,11 @@
 
                 <div class="row">
                     <div class="f">
-                        <label for="rpm_payment_date">Payment date <span class="req">*</span></label>
+                        <label for="rpm_payment_date">Payment date <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                         <input id="rpm_payment_date" name="payment_date" type="date" max="{{ today()->toDateString() }}" value="{{ today()->toDateString() }}" required>
                     </div>
                     <div class="f">
-                        <label for="rpm_mode">Payment mode <span class="req">*</span></label>
+                        <label for="rpm_mode">Payment mode <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                         <select id="rpm_mode" name="mode" onchange="toggleRpmMode(this.value)">
                             <option value="Cash">Cash</option>
                             <option value="GCash">GCash</option>
@@ -499,13 +499,13 @@
                 </div>
 
                 <div class="f" id="rpm_gcash_wrap" style="display: none;">
-                    <label for="rpm_gcash_ref_no">GCash Reference No. (13 digits) <span class="req">*</span></label>
+                    <label for="rpm_gcash_ref_no">GCash Reference No. (13 digits) <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                     <input id="rpm_gcash_ref_no" name="gcash_ref_no" type="text" inputmode="numeric" maxlength="20" placeholder="e.g. 1001234567890">
                     <div class="hint">Exactly 13 digits from the GCash transaction receipt.</div>
                 </div>
 
                 <div class="f">
-                    <label for="rpm_amount">Amount received (₱) <span class="req">*</span></label>
+                    <label for="rpm_amount">Amount received (₱) <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                     <input id="rpm_amount" name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" required autocomplete="off">
                     <div class="hint" id="rpm_amount_hint">Full payment required: exactly <b id="rpm_hint_amount">₱0.00</b> (no partial payments).</div>
                 </div>
@@ -656,16 +656,28 @@
             if (data.is_metered) {
                 meterSec.style.display = 'block';
                 appRow.style.display = 'none';
+                document.getElementById('gbm_previous_reading').disabled = false;
                 document.getElementById('gbm_previous_reading').value = data.prev_reading.toFixed(2);
+                currInput.disabled = false;
                 currInput.value = '';
                 currInput.required = true;
+                currInput.style.borderColor = '';
+                currInput.classList.remove('has-err');
+                document.getElementById('gbm_reading_date').disabled = false;
                 document.getElementById('gbm_reading_date').value = data.default_date;
+                document.getElementById('gbm_source').disabled = false;
                 document.getElementById('gbm_source').value = 'Meter';
             } else {
                 meterSec.style.display = 'none';
                 appRow.style.display = 'flex';
+                document.getElementById('gbm_previous_reading').disabled = true;
+                currInput.disabled = true;
                 currInput.required = false;
                 currInput.value = '';
+                currInput.style.borderColor = '';
+                currInput.classList.remove('has-err');
+                document.getElementById('gbm_reading_date').disabled = true;
+                document.getElementById('gbm_source').disabled = true;
                 document.getElementById('gbm_appliance_display').textContent = peso(data.appliance_amount);
                 document.getElementById('gbm_appliance_desc').textContent = data.appliances + ' appliance' + (data.appliances === 1 ? '' : 's') + ' × ' + peso(activeApplianceFee);
             }
@@ -716,25 +728,32 @@
             let isValid = true;
             const submitBtn = document.getElementById('gbm_submit_btn');
             const warnEl = document.getElementById('gbm_calc_warning');
+            const currInput = document.getElementById('gbm_current_reading');
 
             if (data.is_metered) {
                 const prev = parseFloat(document.getElementById('gbm_previous_reading').value) || 0;
-                const currVal = document.getElementById('gbm_current_reading').value;
+                const currVal = currInput.value;
                 const curr = parseFloat(currVal);
 
                 if (currVal === '' || isNaN(curr)) {
                     document.getElementById('gbm_calc_kwh').textContent = '0.00';
                     document.getElementById('gbm_calc_elec').textContent = '₱0.00';
                     warnEl.style.display = 'none';
+                    currInput.style.borderColor = '';
+                    currInput.classList.remove('has-err');
                     electricity = 0;
                 } else if (curr < prev) {
                     warnEl.style.display = 'block';
                     isValid = false;
+                    currInput.style.borderColor = '#dc2626';
+                    currInput.classList.add('has-err');
                     document.getElementById('gbm_calc_kwh').textContent = '0.00';
                     document.getElementById('gbm_calc_elec').textContent = '₱0.00';
                     electricity = 0;
                 } else {
                     warnEl.style.display = 'none';
+                    currInput.style.borderColor = '';
+                    currInput.classList.remove('has-err');
                     const diff = curr - prev;
                     electricity = diff * (data.rate_per_kwh || activeKwhRate);
                     document.getElementById('gbm_calc_kwh').textContent = diff.toFixed(2);
@@ -987,12 +1006,15 @@
         function toggleRpmMode(mode) {
             const gcashWrap = document.getElementById('rpm_gcash_wrap');
             const gcashInput = document.getElementById('rpm_gcash_ref_no');
+            if (!gcashWrap || !gcashInput) return;
             if (mode === 'GCash') {
                 gcashWrap.style.display = 'block';
+                gcashInput.disabled = false;
                 gcashInput.required = true;
                 setTimeout(() => gcashInput.focus(), 50);
             } else {
                 gcashWrap.style.display = 'none';
+                gcashInput.disabled = true;
                 gcashInput.required = false;
                 gcashInput.value = '';
             }

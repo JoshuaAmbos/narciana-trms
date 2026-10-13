@@ -271,7 +271,7 @@
                 </div>
                 <div class="row">
                     <div class="f">
-                        <label for="status">Status</label>
+                        <label for="status">Status</label><span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span>
                         <select id="status" name="status" required onchange="handleStatusChange(this.value)">
                             @foreach ($statuses as $s)
                                 <option value="{{ $s }}">{{ $s }}</option>
@@ -279,7 +279,7 @@
                         </select>
                     </div>
                     <div class="f" id="sm_room_group">
-                        <label for="sm_room_id">Assigned room</label>
+                        <label for="sm_room_id" id="sm_room_label">Assigned room</label>
                         <select id="sm_room_id" name="room_id">
                             <option value="">None</option>
                             @foreach ($rooms as $r)
@@ -291,7 +291,7 @@
 
                 {{-- Structured Reason Group for Declined Outcome --}}
                 <div class="f" id="declined_reason_group" style="display: none;">
-                    <label for="sm_declined_reason">Reason for decline <span class="req" style="color: var(--red);">*</span></label>
+                    <label for="sm_declined_reason">Reason for decline <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                     <select id="sm_declined_reason" name="declined_reason" onchange="handleDeclinedReasonChange(this.value)">
                         <option value="">-- Select structured reason --</option>
                         @foreach ($declinedReasons as $reason)
@@ -302,7 +302,7 @@
                 </div>
 
                 <div class="f">
-                    <label for="sm_remarks" id="sm_remarks_label">Remarks</label>
+                    <label for="sm_remarks" id="sm_remarks_label">Remarks <span class="text-muted" style="font-weight: normal; font-size: 0.85em;">(optional)</span></label>
                     <input id="sm_remarks" name="remarks" type="text" maxlength="255" placeholder="e.g. Student rule mismatch, parking limitations, pricing objection...">
                     <div class="hint" id="sm_remarks_hint">Persisted into inquiry remarks.</div>
                 </div>
@@ -332,6 +332,9 @@
         function handleStatusChange(status) {
             const declinedGroup = document.getElementById('declined_reason_group');
             const declinedSelect = document.getElementById('sm_declined_reason');
+            const roomGroup = document.getElementById('sm_room_group');
+            const roomSelect = document.getElementById('sm_room_id');
+            const roomLabel = document.getElementById('sm_room_label');
 
             if (status === 'Declined') {
                 declinedGroup.style.display = 'block';
@@ -339,6 +342,20 @@
             } else {
                 declinedGroup.style.display = 'none';
                 declinedSelect.removeAttribute('required');
+            }
+
+            if (roomSelect) {
+                if (status === 'Rented') {
+                    roomSelect.setAttribute('required', 'required');
+                    if (roomLabel) {
+                        roomLabel.innerHTML = 'Assigned room <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span>';
+                    }
+                } else {
+                    roomSelect.removeAttribute('required');
+                    if (roomLabel) {
+                        roomLabel.innerHTML = 'Assigned room';
+                    }
+                }
             }
         }
         function handleDeclinedReasonChange(reason) {

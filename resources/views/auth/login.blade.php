@@ -23,14 +23,14 @@
         @endif
 
         <div class="f @error('username') has-err @enderror">
-            <label for="username">Username</label>
+            <label for="username">Username <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
             <input id="username" name="username" type="text" value="{{ old('username') }}"
                    autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required autofocus>
             @error('username') <div class="err">{{ $message }}</div> @enderror
         </div>
 
         <div class="f @error('password') has-err @enderror">
-            <label for="password">Password</label>
+            <label for="password">Password <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
             <input id="password" name="password" type="password" autocomplete="current-password" required>
             @error('password') <div class="err">{{ $message }}</div> @enderror
         </div>

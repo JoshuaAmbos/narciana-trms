@@ -46,9 +46,9 @@
                 @csrf
                 <div class="row">
                     <div class="f {{ $bag->has('appliance_name') ? 'has-err' : '' }}">
-                        <label for="appliance_name">Appliance</label>
+                        <label for="appliance_name">Appliance <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                         <input id="appliance_name" name="appliance_name" type="text" maxlength="100" list="appliance-names"
-                               placeholder="e.g. Rice cooker" value="{{ old('appliance_name') }}">
+                               placeholder="e.g. Rice cooker" value="{{ old('appliance_name') }}" required>
                         <datalist id="appliance-names">
                             @foreach (['Rice cooker', 'Electric kettle', 'Electric fan (extra)', 'Television', 'Refrigerator', 'Laptop', 'Hair dryer', 'Flat iron', 'Induction cooker'] as $name)
                                 <option value="{{ $name }}">
@@ -57,16 +57,16 @@
                         @if ($bag->has('appliance_name'))<div class="err">{{ $bag->first('appliance_name') }}</div>@endif
                     </div>
                     <div class="f {{ $bag->has('source') ? 'has-err' : '' }}">
-                        <label for="source">How it was found</label>
-                        <select id="source" name="source">
+                        <label for="source">How it was found <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+                        <select id="source" name="source" required>
                             @foreach (\App\Models\Appliance::SOURCES as $source)
                                 <option value="{{ $source }}" @selected(old('source', 'Declared') === $source)>{{ $source === 'CCTV' ? 'Seen on CCTV' : 'Declared by tenant' }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="f {{ $bag->has('date_added') ? 'has-err' : '' }}">
-                        <label for="appliance_date">Since</label>
-                        <input id="appliance_date" name="date_added" type="date" max="{{ today()->toDateString() }}" value="{{ old('date_added', today()->toDateString()) }}">
+                        <label for="appliance_date">Since <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+                        <input id="appliance_date" name="date_added" type="date" max="{{ today()->toDateString() }}" value="{{ old('date_added', today()->toDateString()) }}" required>
                         @if ($bag->has('date_added'))<div class="err">{{ $bag->first('date_added') }}</div>@endif
                     </div>
                 </div>

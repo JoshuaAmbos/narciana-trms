@@ -261,7 +261,7 @@
 
                 <div class="row">
                     <div class="f @if(old('from_index') && !old('concern_id')) @error('category') has-err @enderror @endif">
-                        <label for="create_category">Category</label>
+                        <label for="create_category">Category <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                         <select id="create_category" name="category" onchange="handleCreateCategoryChange(this)">
                             @foreach ($categories as $name => $help)
                                 <option value="{{ $name }}" data-help="{{ $help }}" @selected(old('category') === $name)>{{ $name }}</option>
@@ -271,7 +271,7 @@
                         @if(old('from_index') && !old('concern_id')) @error('category') <div class="err">{{ $message }}</div> @enderror @endif
                     </div>
                     <div class="f @if(old('from_index') && !old('concern_id')) @error('room_id') has-err @enderror @endif" id="create_room_id_field">
-                        <label for="create_room_id">Room</label>
+                        <label for="create_room_id">Room <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                         <select id="create_room_id" name="room_id" onchange="handleCreateRoomChange(this)">
                             <option value="" disabled @selected(!old('room_id'))>Choose a room…</option>
                             @foreach ($rooms as $r)
@@ -281,27 +281,28 @@
                         </select>
                         @if(old('from_index') && !old('concern_id')) @error('room_id') <div class="err">{{ $message }}</div> @enderror @endif
                     </div>
-                    <div class="f @if(old('from_index') && !old('concern_id')) @error('lease_id') has-err @enderror @endif">
+                    <div class="f @if(old('from_index') && !old('concern_id')) @error('lease_id') has-err @enderror @endif" id="create_lease_id_field">
                         <label for="create_lease_id">Tenant</label>
-                        <select id="create_lease_id" name="lease_id">
+                        <select id="create_lease_id" name="lease_id" onchange="handleCreateTenantChange(this)">
                             <option value="">None</option>
                             @foreach ($rooms->whereNotNull('lease_id') as $r)
-                                <option value="{{ $r['lease_id'] }}" @selected(old('lease_id') == $r['lease_id'])>{{ $r['tenant'] }} ({{ $r['label'] }})</option>
+                                <option value="{{ $r['lease_id'] }}" data-room="{{ $r['room_id'] }}" @selected(old('lease_id') == $r['lease_id'])>{{ $r['tenant'] }} ({{ $r['label'] }})</option>
                             @endforeach
                         </select>
-                        <div class="hint">Filled in from the room. Needed to charge the tenant.</div>
-                        @if(old('from_index') && !old('concern_id')) @error('lease_id') <div class="err">{{ $message }}</div> @enderror @endif
+                        <div class="hint" id="create_lease_hint">Filled in from the room. Needed to charge the tenant.</div>
+                        <div id="create_tenant_mismatch_err" class="err client-err" style="display: none;">This tenant does not rent the chosen room.</div>
+                        @if(old('from_index') && !old('concern_id')) @error('lease_id') <div class="err server-err">{{ $message }}</div> @enderror @endif
                     </div>
                 </div>
 
                 <div class="row">
                     <div class="f @if(old('from_index') && !old('concern_id')) @error('reported_at') has-err @enderror @endif">
-                        <label for="create_reported_at">Reported on</label>
+                        <label for="create_reported_at">Reported on <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                         <input id="create_reported_at" name="reported_at" type="datetime-local" max="{{ now()->format('Y-m-d\TH:i') }}" value="{{ old('reported_at', now()->format('Y-m-d\TH:i')) }}">
                         @if(old('from_index') && !old('concern_id')) @error('reported_at') <div class="err">{{ $message }}</div> @enderror @endif
                     </div>
                     <div class="f @if(old('from_index') && !old('concern_id')) @error('channel') has-err @enderror @endif">
-                        <label for="create_channel">Reported by</label>
+                        <label for="create_channel">Reported by <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                         <select id="create_channel" name="channel">
                             @foreach ($channels as $c)
                                 <option value="{{ $c }}" @selected(old('channel') === $c)>{{ $c }}</option>
@@ -310,7 +311,7 @@
                         @if(old('from_index') && !old('concern_id')) @error('channel') <div class="err">{{ $message }}</div> @enderror @endif
                     </div>
                     <div class="f @if(old('from_index') && !old('concern_id')) @error('priority') has-err @enderror @endif">
-                        <label for="create_priority">Priority</label>
+                        <label for="create_priority">Priority <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                         <select id="create_priority" name="priority">
                             @foreach ($priorities as $p)
                                 <option value="{{ $p }}" @selected(old('priority') === $p)>{{ $p }}</option>
@@ -319,7 +320,7 @@
                         @if(old('from_index') && !old('concern_id')) @error('priority') <div class="err">{{ $message }}</div> @enderror @endif
                     </div>
                     <div class="f @if(old('from_index') && !old('concern_id')) @error('assigned_to') has-err @enderror @endif">
-                        <label for="create_assigned_to">Assigned to</label>
+                        <label for="create_assigned_to">Assigned to <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                         <select id="create_assigned_to" name="assigned_to">
                             @foreach ($users as $u)
                                 <option value="{{ $u->user_id }}" @selected((string) old('assigned_to', auth()->id()) === (string) $u->user_id)>{{ $u->role }} ({{ $u->full_name }})</option>
@@ -330,7 +331,7 @@
                 </div>
 
                 <div class="f @if(old('from_index') && !old('concern_id')) @error('description') has-err @enderror @endif" id="create_description_field">
-                    <label for="create_description">Concern</label>
+                    <label for="create_description">Concern <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                     <textarea id="create_description" name="description" rows="3" maxlength="500" placeholder="What is the problem? For a shared area, specify the exact location (e.g. 2nd-floor hallway or CR).">{{ old('description') }}</textarea>
                     @if(old('from_index') && !old('concern_id')) @error('description') <div class="err">{{ $message }}</div> @enderror @endif
                 </div>
@@ -346,7 +347,7 @@
                     <legend>Progress &amp; Financials</legend>
                     <div class="row">
                         <div class="f @if(old('from_index') && !old('concern_id')) @error('status') has-err @enderror @endif">
-                            <label for="create_status">Status</label>
+                            <label for="create_status">Status <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                             <select id="create_status" name="status">
                                 @foreach ($statuses as $s)
                                     <option value="{{ $s }}" @selected(old('status') === $s)>{{ $s }}</option>
@@ -356,15 +357,15 @@
                         </div>
                     </div>
                     @if ($canSetMoney)
-                        <div class="row" style="align-items: flex-end;">
-                            <div class="f @if(old('from_index') && !old('concern_id')) @error('cost') has-err @enderror @endif">
+                        <div class="concern-cost-row" style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;">
+                            <div class="f @if(old('from_index') && !old('concern_id')) @error('cost') has-err @enderror @endif" style="margin-bottom: 0;">
                                 <label for="create_cost">Cost of repair (₱)</label>
                                 <input id="create_cost" name="cost" type="number" min="0" step="0.01" inputmode="decimal" value="{{ old('cost') }}">
                                 @if(old('from_index') && !old('concern_id')) @error('cost') <div class="err">{{ $message }}</div> @enderror @endif
                             </div>
-                            <div class="f check @if(old('from_index') && !old('concern_id')) @error('charged_to_tenant') has-err @enderror @endif" style="display: flex; align-items: center; min-height: 44px; margin-bottom: 0;">
-                                <label style="margin: 0; min-height: 44px; display: inline-flex; align-items: center; gap: 8px;">
-                                    <input type="checkbox" id="create_charged_to_tenant" name="charged_to_tenant" value="1" @checked(old('charged_to_tenant'))>
+                            <div class="f check @if(old('from_index') && !old('concern_id')) @error('charged_to_tenant') has-err @enderror @endif" style="margin-bottom: 0;">
+                                <label class="concern-charge-wrap" style="display: inline-flex; align-items: center; gap: 8px; min-height: var(--tap, 44px); margin: 0; cursor: pointer;">
+                                    <input type="checkbox" id="create_charged_to_tenant" name="charged_to_tenant" value="1" @checked(old('charged_to_tenant')) style="margin: 0; vertical-align: middle;">
                                     <span>Charge to Tenant</span>
                                 </label>
                                 @if(old('from_index') && !old('concern_id')) @error('charged_to_tenant') <div class="err">{{ $message }}</div> @enderror @endif
@@ -477,7 +478,7 @@
 
                 <div class="row">
                     <div class="f">
-                        <label for="update_status">Status</label>
+                        <label for="update_status">Status <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                         <select id="update_status" name="status">
                             @foreach ($statuses as $s)
                                 <option value="{{ $s }}">{{ $s }}</option>
@@ -486,7 +487,7 @@
                         <input type="hidden" name="status" id="update_status_hidden" disabled>
                     </div>
                     <div class="f">
-                        <label for="update_priority">Priority</label>
+                        <label for="update_priority">Priority <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                         <select id="update_priority" name="priority">
                             @foreach ($priorities as $p)
                                 <option value="{{ $p }}">{{ $p }}</option>
@@ -494,7 +495,7 @@
                         </select>
                     </div>
                     <div class="f">
-                        <label for="update_assigned_to">Assigned to</label>
+                        <label for="update_assigned_to">Assigned to <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                         <select id="update_assigned_to" name="assigned_to">
                             @foreach ($users as $u)
                                 <option value="{{ $u->user_id }}">{{ $u->role }} ({{ $u->full_name }})</option>
@@ -528,15 +529,15 @@
                 <fieldset class="resolution-box" style="margin-top: 14px;">
                     <legend>Cost &amp; Charge</legend>
                     @if ($canSetMoney)
-                        <div class="row" style="align-items: flex-end;">
-                            <div class="f">
+                        <div class="concern-cost-row" style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;">
+                            <div class="f" style="margin-bottom: 0;">
                                 <label for="update_cost">Cost of repair (₱)</label>
                                 <input id="update_cost" name="cost" type="number" min="0" step="0.01" inputmode="decimal">
                                 <input type="hidden" name="cost" id="update_cost_hidden" disabled>
                             </div>
-                            <div class="f check" style="display: flex; align-items: center; min-height: 44px; margin-bottom: 0;">
-                                <label style="margin: 0; min-height: 44px; display: inline-flex; align-items: center; gap: 8px;">
-                                    <input type="checkbox" id="update_charged_to_tenant" name="charged_to_tenant" value="1">
+                            <div class="f check" style="margin-bottom: 0;">
+                                <label class="concern-charge-wrap" style="display: inline-flex; align-items: center; gap: 8px; min-height: var(--tap, 44px); margin: 0; cursor: pointer;">
+                                    <input type="checkbox" id="update_charged_to_tenant" name="charged_to_tenant" value="1" style="margin: 0; vertical-align: middle;">
                                     <span>Charge to Tenant</span>
                                 </label>
                                 <input type="hidden" name="charged_to_tenant" id="update_charged_to_tenant_hidden" disabled>
@@ -670,6 +671,8 @@
 
         function openCreateConcernModal() {
             document.getElementById('createConcernModal').removeAttribute('hidden');
+            const roomSelect = document.getElementById('create_room_id');
+            if (roomSelect) handleCreateRoomChange(roomSelect);
         }
 
         function closeCreateConcernModal() {
@@ -770,10 +773,88 @@
         }
 
         function handleCreateRoomChange(select) {
-            const lease = select.options[select.selectedIndex].dataset.lease || '';
+            if (!select) return;
             const tenantSelect = document.getElementById('create_lease_id');
-            if (tenantSelect) {
-                tenantSelect.value = lease;
+            const tenantField = document.getElementById('create_lease_id_field');
+            const hintEl = document.getElementById('create_lease_hint');
+            const mismatchErr = document.getElementById('create_tenant_mismatch_err');
+            const serverErr = tenantField ? tenantField.querySelector('.server-err') : null;
+
+            const selectedOpt = select.options[select.selectedIndex];
+            const val = select.value;
+            const lease = selectedOpt ? (selectedOpt.dataset.lease || '') : '';
+
+            // Clear any existing tenant mismatch error banners/borders
+            if (tenantField) tenantField.classList.remove('has-err');
+            if (mismatchErr) mismatchErr.style.display = 'none';
+            if (serverErr) serverErr.style.display = 'none';
+
+            if (!val || val === 'shared') {
+                if (tenantSelect) {
+                    tenantSelect.value = '';
+                    tenantSelect.disabled = true;
+                }
+                if (hintEl) {
+                    hintEl.textContent = val === 'shared'
+                        ? 'Selected room is vacant — tenant field disabled.'
+                        : 'Filled in from the room. Needed to charge the tenant.';
+                }
+            } else if (!lease) {
+                // Vacant Room State:
+                // 1. Set Tenant dropdown value to empty ("")
+                // 2. Disable Tenant field (disabled = true)
+                // 3. Clear existing mismatch error banners/borders
+                // 4. Display contextual helper note underneath
+                if (tenantSelect) {
+                    tenantSelect.value = '';
+                    tenantSelect.disabled = true;
+                }
+                if (hintEl) {
+                    hintEl.textContent = 'Selected room is vacant — tenant field disabled.';
+                }
+            } else {
+                // Occupied Room State:
+                // Re-enable Tenant dropdown and pre-select occupant for unit
+                if (tenantSelect) {
+                    tenantSelect.disabled = false;
+                    tenantSelect.value = lease;
+                }
+                if (hintEl) {
+                    hintEl.textContent = 'Filled in from the room. Needed to charge the tenant.';
+                }
+            }
+        }
+
+        function handleCreateTenantChange(select) {
+            if (!select) return;
+            const roomSelect = document.getElementById('create_room_id');
+            const tenantField = document.getElementById('create_lease_id_field');
+            const mismatchErr = document.getElementById('create_tenant_mismatch_err');
+            const serverErr = tenantField ? tenantField.querySelector('.server-err') : null;
+            if (serverErr) serverErr.style.display = 'none';
+
+            const roomVal = roomSelect ? roomSelect.value : '';
+            const tenantVal = select.value;
+
+            if (!tenantVal) {
+                if (tenantField) tenantField.classList.remove('has-err');
+                if (mismatchErr) mismatchErr.style.display = 'none';
+                return;
+            }
+
+            const selectedOpt = select.options[select.selectedIndex];
+            const tenantRoom = selectedOpt ? selectedOpt.dataset.room : null;
+
+            if (roomVal === 'shared' || !roomVal || (tenantRoom && String(tenantRoom) !== String(roomVal))) {
+                // Mismatched room/tenant: flag immediately with inline error & red border
+                if (tenantField) tenantField.classList.add('has-err');
+                if (mismatchErr) {
+                    mismatchErr.textContent = 'This tenant does not rent the chosen room.';
+                    mismatchErr.style.display = 'block';
+                }
+            } else {
+                if (tenantField) tenantField.classList.remove('has-err');
+                if (mismatchErr) mismatchErr.style.display = 'none';
             }
         }
 
@@ -825,6 +906,11 @@
 
         // Auto-open modal if redirected with concern ID or validation errors
         document.addEventListener('DOMContentLoaded', function () {
+            const createRoomSel = document.getElementById('create_room_id');
+            if (createRoomSel) {
+                handleCreateRoomChange(createRoomSel);
+            }
+
             @if ($errors->any() && old('from_index'))
                 @if (old('concern_id'))
                     openUpdateModal({{ (int) old('concern_id') }}, true);
@@ -844,6 +930,8 @@
                 const errorAlert = document.getElementById('createConcernErrorAlert');
                 const roomSelect = document.getElementById('create_room_id');
                 const roomField = document.getElementById('create_room_id_field');
+                const tenantSelect = document.getElementById('create_lease_id');
+                const tenantField = document.getElementById('create_lease_id_field');
                 const descTextarea = document.getElementById('create_description');
                 const descField = document.getElementById('create_description_field');
 
@@ -866,6 +954,15 @@
                         roomField.classList.remove('has-err');
                         const errEl = roomField.querySelector('.client-err');
                         if (errEl) errEl.style.display = 'none';
+                    }
+                }
+
+                // Check tenant mismatch
+                if (tenantSelect && !tenantSelect.disabled && tenantSelect.value) {
+                    handleCreateTenantChange(tenantSelect);
+                    const mismatchErr = document.getElementById('create_tenant_mismatch_err');
+                    if (mismatchErr && mismatchErr.style.display === 'block') {
+                        hasErrors = true;
                     }
                 }
 
@@ -897,21 +994,23 @@
                         errorAlert.textContent = 'Please check the highlighted fields.';
                         errorAlert.style.display = 'block';
                     }
-                    const firstErrField = document.querySelector('#createConcernModal .has-err input, #createConcernModal .has-err select, #createConcernModal .has-err textarea');
+                    const firstErrField = document.querySelector('#createConcernModal .has-err input:not([disabled]), #createConcernModal .has-err select:not([disabled]), #createConcernModal .has-err textarea:not([disabled])');
                     if (firstErrField) firstErrField.focus();
                 }
             });
 
             // Clear highlights as user interacts
-            ['create_room_id', 'create_description'].forEach(id => {
+            ['create_room_id', 'create_lease_id', 'create_description'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
                     const clearFn = function () {
                         const field = el.closest('.f');
                         if (field && el.value.trim()) {
-                            field.classList.remove('has-err');
-                            const errEl = field.querySelector('.client-err');
-                            if (errEl) errEl.style.display = 'none';
+                            if (id !== 'create_lease_id') {
+                                field.classList.remove('has-err');
+                                const errEl = field.querySelector('.client-err');
+                                if (errEl) errEl.style.display = 'none';
+                            }
                         }
                     };
                     el.addEventListener('input', clearFn);

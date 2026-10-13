@@ -42,25 +42,25 @@
             @csrf
             <div class="row">
                 <div class="f {{ $bag->has('visitor_name') ? 'has-err' : '' }}">
-                    <label for="visitor_name">Visitor's name</label>
-                    <input id="visitor_name" name="visitor_name" type="text" maxlength="255" value="{{ old('visitor_name') }}">
+                    <label for="visitor_name">Visitor's name <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+                    <input id="visitor_name" name="visitor_name" type="text" maxlength="255" value="{{ old('visitor_name') }}" required>
                     @if ($bag->has('visitor_name'))<div class="err">{{ $bag->first('visitor_name') }}</div>@endif
                 </div>
                 <div class="f {{ $bag->has('relationship') ? 'has-err' : '' }}">
-                    <label for="relationship">Relationship to tenant</label>
-                    <select id="relationship" name="relationship">
+                    <label for="relationship">Relationship to tenant <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+                    <select id="relationship" name="relationship" required>
                         @foreach (\App\Models\Visitor::RELATIONSHIPS as $rel)
                             <option value="{{ $rel }}" @selected(old('relationship') === $rel)>{{ $rel }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="f {{ $bag->has('arrival_date') ? 'has-err' : '' }}">
-                    <label for="arrival_date">Arrived</label>
-                    <input id="arrival_date" name="arrival_date" type="date" max="{{ today()->toDateString() }}" value="{{ old('arrival_date', today()->toDateString()) }}">
+                    <label for="arrival_date">Arrived <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+                    <input id="arrival_date" name="arrival_date" type="date" max="{{ today()->toDateString() }}" value="{{ old('arrival_date', today()->toDateString()) }}" required>
                     @if ($bag->has('arrival_date'))<div class="err">{{ $bag->first('arrival_date') }}</div>@endif
                 </div>
                 <div class="f {{ $bag->has('departure_date') ? 'has-err' : '' }}">
-                    <label for="departure_date">Left (if already gone)</label>
+                    <label for="departure_date">Left (if already gone) <span class="text-muted" style="font-weight: normal; font-size: 0.85em;">(optional)</span></label>
                     <input id="departure_date" name="departure_date" type="date" max="{{ today()->toDateString() }}" value="{{ old('departure_date') }}">
                     @if ($bag->has('departure_date'))<div class="err">{{ $bag->first('departure_date') }}</div>@endif
                 </div>

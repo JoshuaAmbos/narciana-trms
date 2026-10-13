@@ -14,7 +14,7 @@
                 <input type="hidden" name="bill" value="{{ $bill->bill_id }}">
                 <input type="hidden" name="mode" value="{{ $input['mode'] }}">
                 <div class="f {{ $dateOk ? '' : 'has-err' }}">
-                    <label for="check_date">Payment date</label>
+                    <label for="check_date">Payment date <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                     <input id="check_date" name="payment_date" type="date" max="{{ today()->toDateString() }}" value="{{ $input['payment_date'] }}">
                     @unless ($dateOk)<div class="err">Choose a date that is not in the future.</div>@endunless
                 </div>
@@ -43,7 +43,7 @@
 
                 <div class="row">
                     <div class="f @error('mode') has-err @enderror">
-                        <label for="mode">Mode</label>
+                        <label for="mode">Mode <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                         <select id="mode" name="mode">
                             @foreach ($modes as $mode)
                                 <option value="{{ $mode }}" @selected(old('mode', $input['mode']) === $mode)>{{ $mode }}</option>
@@ -52,15 +52,15 @@
                     </div>
                     <div class="f @error('gcash_ref_no') has-err @enderror" id="gcash-ref"
                          @if (old('mode', $input['mode']) !== 'GCash') hidden @endif>
-                        <label for="gcash_ref_no">GCash reference no. (13 digits)</label>
-                        <input id="gcash_ref_no" name="gcash_ref_no" type="text" inputmode="numeric" maxlength="20" value="{{ old('gcash_ref_no', $input['gcash_ref_no']) }}">
+                        <label for="gcash_ref_no">GCash reference no. (13 digits) <span class="req-star" id="gcash_ref_star" style="color: #dc2626; font-weight: 700; margin-left: 2px; {{ old('mode', $input['mode']) === 'GCash' ? '' : 'display: none;' }}" aria-hidden="true">*</span></label>
+                        <input id="gcash_ref_no" name="gcash_ref_no" type="text" inputmode="numeric" maxlength="20" value="{{ old('gcash_ref_no', $input['gcash_ref_no']) }}" {{ old('mode', $input['mode']) === 'GCash' ? 'required' : 'disabled' }}>
                         @error('gcash_ref_no') <div class="err">{{ $message }}</div> @enderror
                     </div>
                 </div>
 
                 <div class="f @error('amount') has-err @enderror">
-                    <label for="amount">Amount received (₱)</label>
-                    <input id="amount" name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" value="{{ old('amount') }}" autocomplete="off">
+                    <label for="amount">Amount received (₱) <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+                    <input id="amount" name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" value="{{ old('amount') }}" autocomplete="off" required>
                     <div class="hint">Type the amount actually received. It must be exactly @peso($due['total']) — no partial payments.</div>
                     @error('amount') <div class="err">{{ $message }}</div> @enderror
                     @error('payment_date') <div class="err">{{ $message }}</div> @enderror
@@ -82,9 +82,29 @@
 
     @push('scripts')
         <script>
-            document.getElementById('mode').addEventListener('change', function () {
-                document.getElementById('gcash-ref').hidden = this.value !== 'GCash';
-            });
+            function updatePaymentMode(mode) {
+                const gcashRef = document.getElementById('gcash-ref');
+                const gcashInput = document.getElementById('gcash_ref_no');
+                const gcashStar = document.getElementById('gcash_ref_star');
+                const isGcash = (mode === 'GCash');
+
+                if (gcashRef) gcashRef.hidden = !isGcash;
+                if (gcashInput) {
+                    gcashInput.disabled = !isGcash;
+                    gcashInput.required = isGcash;
+                }
+                if (gcashStar) {
+                    gcashStar.style.display = isGcash ? 'inline' : 'none';
+                }
+            }
+
+            const modeSelect = document.getElementById('mode');
+            if (modeSelect) {
+                modeSelect.addEventListener('change', function () {
+                    updatePaymentMode(this.value);
+                });
+                updatePaymentMode(modeSelect.value);
+            }
         </script>
     @endpush
 @endsection

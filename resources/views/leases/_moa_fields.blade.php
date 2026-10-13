@@ -1,17 +1,17 @@
 {{-- MOA dates, rent, advance and the 4 deposit parts (new MOA and edit). Needs: $lease --}}
 <div class="row">
     <div class="f @error('moa_date') has-err @enderror">
-        <label for="moa_date">MOA signed on</label>
-        <input id="moa_date" name="moa_date" type="date" value="{{ old('moa_date', $lease->moa_date?->toDateString()) }}">
+        <label for="moa_date">MOA signed on <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+        <input id="moa_date" name="moa_date" type="date" value="{{ old('moa_date', $lease->moa_date?->toDateString()) }}" required>
         @error('moa_date') <div class="err">{{ $message }}</div> @enderror
     </div>
     <div class="f @error('move_in_date') has-err @enderror">
-        <label for="move_in_date">Move-in date</label>
-        <input id="move_in_date" name="move_in_date" type="date" value="{{ old('move_in_date', $lease->move_in_date?->toDateString()) }}">
+        <label for="move_in_date">Move-in date <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+        <input id="move_in_date" name="move_in_date" type="date" value="{{ old('move_in_date', $lease->move_in_date?->toDateString()) }}" required>
         @error('move_in_date') <div class="err">{{ $message }}</div> @enderror
     </div>
     <div class="f @error('due_day') has-err @enderror">
-        <label for="due_day">Contractual due day</label>
+        <label for="due_day">Contractual due day <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
         <select id="due_day" name="due_day" required>
             @foreach ([10, 15, 20, 25, 30] as $staggeredDay)
                 <option value="{{ $staggeredDay }}" @selected((int) old('due_day', $lease->due_day) === $staggeredDay)>
@@ -47,16 +47,16 @@
 </style>
 <div class="row">
     <div class="f @error('monthly_rent') has-err @enderror">
-        <label for="monthly_rent">Monthly Rent (₱)</label>
-        <input id="monthly_rent" name="monthly_rent" type="number" min="0.01" step="0.01" inputmode="decimal" value="{{ old('monthly_rent', $lease->monthly_rent) }}">
+        <label for="monthly_rent">Monthly Rent (₱) <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+        <input id="monthly_rent" name="monthly_rent" type="number" min="0.01" step="0.01" inputmode="decimal" value="{{ old('monthly_rent', $lease->monthly_rent) }}" required>
         @error('monthly_rent') <div class="err">{{ $message }}</div> @enderror
     </div>
     <div class="f @error('advance_amount') has-err @enderror">
-        <label for="advance_amount">One-Month Advance Paid (₱)</label>
+        <label for="advance_amount">One-Month Advance Paid (₱) <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
         <input id="advance_amount" name="advance_amount" type="number" min="0" step="0.01" inputmode="decimal" readonly
                class="no-spin"
                style="background-color: #f8fafc; cursor: not-allowed; -moz-appearance: textfield; appearance: textfield;"
-               value="{{ old('advance_amount', $lease->advance_amount ?: $lease->monthly_rent) }}">
+               value="{{ old('advance_amount', $lease->advance_amount ?: $lease->monthly_rent) }}" required>
         @error('advance_amount') <div class="err">{{ $message }}</div> @enderror
     </div>
 </div>
@@ -75,9 +75,9 @@
         'deposit_keys' => 'Door knob and keys',
     ] as $field => $label)
         <div class="f @error($field) has-err @enderror">
-            <label for="{{ $field }}">{{ $label }}</label>
+            <label for="{{ $field }}">{{ $label }} <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
             <input id="{{ $field }}" name="{{ $field }}" type="number" min="0" step="0.01" inputmode="decimal" class="deposit-part"
-                   value="{{ old($field, $lease->$field) }}">
+                   value="{{ old($field, $lease->$field) }}" required>
             @error($field) <div class="err">{{ $message }}</div> @enderror
         </div>
     @endforeach

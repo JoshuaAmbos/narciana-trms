@@ -429,11 +429,11 @@
 
                 <div class="row">
                     <div class="f">
-                        <label for="rpm_payment_date">Payment date <span class="req">*</span></label>
+                        <label for="rpm_payment_date">Payment date <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                         <input id="rpm_payment_date" name="payment_date" type="date" max="{{ today()->toDateString() }}" value="{{ today()->toDateString() }}" required>
                     </div>
                     <div class="f">
-                        <label for="rpm_mode">Payment mode <span class="req">*</span></label>
+                        <label for="rpm_mode">Payment mode <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                         <select id="rpm_mode" name="mode" onchange="toggleRpmMode(this.value)">
                             <option value="Cash">Cash</option>
                             <option value="GCash">GCash</option>
@@ -442,13 +442,13 @@
                 </div>
 
                 <div class="f" id="rpm_gcash_wrap" style="display: none;">
-                    <label for="rpm_gcash_ref_no">GCash Reference No. (13 digits) <span class="req">*</span></label>
+                    <label for="rpm_gcash_ref_no">GCash Reference No. (13 digits) <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                     <input id="rpm_gcash_ref_no" name="gcash_ref_no" type="text" inputmode="numeric" maxlength="20" placeholder="e.g. 1001234567890">
                     <div class="hint">Exactly 13 digits from the GCash transaction receipt.</div>
                 </div>
 
                 <div class="f">
-                    <label for="rpm_amount">Amount received (₱) <span class="req">*</span></label>
+                    <label for="rpm_amount">Amount received (₱) <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                     <input id="rpm_amount" name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" required autocomplete="off">
                     <div class="hint" id="rpm_amount_hint">Full payment required: exactly <b id="rpm_hint_amount">₱0.00</b> (no partial payments).</div>
                 </div>
@@ -572,10 +572,12 @@
             if (!gcashWrap || !gcashInput) return;
             if (mode === 'GCash') {
                 gcashWrap.style.display = 'block';
+                gcashInput.disabled = false;
                 gcashInput.required = true;
                 setTimeout(() => gcashInput.focus(), 50);
             } else {
                 gcashWrap.style.display = 'none';
+                gcashInput.disabled = true;
                 gcashInput.required = false;
                 gcashInput.value = '';
             }

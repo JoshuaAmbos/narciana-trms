@@ -128,10 +128,10 @@
             @if ($lease->status === 'Active' && $lease->occupants->whereNull('date_removed')->count() < $maxOccupants)
                 <form method="POST" action="{{ route('leases.occupants.store', $lease) }}" class="add-row" novalidate>
                     @csrf
-                    <div class="f"><label for="occ_name">Add co-tenant</label>
-                        <input id="occ_name" name="full_name" type="text" maxlength="255" value="{{ old('full_name') }}"></div>
-                    <div class="f"><label for="occ_date">Staying since</label>
-                        <input id="occ_date" name="date_added" type="date" max="{{ today()->toDateString() }}" value="{{ old('date_added', today()->toDateString()) }}"></div>
+                    <div class="f"><label for="occ_name">Add co-tenant <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+                        <input id="occ_name" name="full_name" type="text" maxlength="255" value="{{ old('full_name') }}" required></div>
+                    <div class="f"><label for="occ_date">Staying since <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+                        <input id="occ_date" name="date_added" type="date" max="{{ today()->toDateString() }}" value="{{ old('date_added', today()->toDateString()) }}" required></div>
                     <button type="submit" class="btn sec">+ Add occupant</button>
                 </form>
             @elseif ($lease->status === 'Active')

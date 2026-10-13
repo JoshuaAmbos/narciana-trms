@@ -5,7 +5,7 @@
     </h3>
     <div class="row" style="display: flex; gap: 12px; flex-wrap: wrap;">
         <div class="f @error('first_name') has-err @enderror" style="flex: 1 1 200px; min-height: 44px;">
-            <label for="first_name">First Name <span style="color: #ef4444;">*</span></label>
+            <label for="first_name">First Name <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
             <input id="first_name" name="first_name" type="text" maxlength="100" required
                    value="{{ old('first_name', $tenant->first_name) }}"
                    placeholder="e.g. Maria Clara" style="min-height: 44px;">
@@ -21,7 +21,7 @@
         </div>
 
         <div class="f @error('last_name') has-err @enderror" style="flex: 1 1 200px; min-height: 44px;">
-            <label for="last_name">Last Name <span style="color: #ef4444;">*</span></label>
+            <label for="last_name">Last Name <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
             <input id="last_name" name="last_name" type="text" maxlength="100" required
                    value="{{ old('last_name', $tenant->last_name) }}"
                    placeholder="e.g. Dela Cruz" style="min-height: 44px;">
@@ -44,7 +44,7 @@
     </h3>
     <div class="row" style="display: flex; gap: 12px; flex-wrap: wrap;">
         <div class="f @error('contact_no') has-err @enderror" style="flex: 1 1 260px; min-height: 44px;">
-            <label for="contact_no">Philippine Mobile Number <span style="color: #ef4444;">*</span></label>
+            <label for="contact_no">Philippine Mobile Number <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
             <input id="contact_no" name="contact_no" type="tel" maxlength="15" required
                    value="{{ old('contact_no', $tenant->contact_no) }}"
                    placeholder="09XXXXXXXXX or +639XXXXXXXXX" style="min-height: 44px;">
@@ -52,7 +52,7 @@
         </div>
 
         <div class="f @error('valid_id_type') has-err @enderror" style="flex: 1 1 260px; min-height: 44px;">
-            <label for="valid_id_type">Valid Government ID Type <span style="color: #ef4444;">*</span></label>
+            <label for="valid_id_type">Valid Government ID Type <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
             <select id="valid_id_type" name="valid_id_type" required style="min-height: 44px;"
                     onchange="updateIdFieldConfig(this.value)">
                 @php
@@ -75,7 +75,7 @@
 
         <div id="other-id-container" class="f @error('other_id_type') has-err @enderror"
              style="flex: 1 1 260px; min-height: 44px; display: {{ $selectedIdType === 'Other' ? 'block' : 'none' }};">
-            <label for="other_id_type">Specify Other ID Type <span style="color: #ef4444;">*</span></label>
+            <label for="other_id_type">Specify Other ID Type <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
             <input id="other_id_type" name="other_id_type" type="text" maxlength="100"
                    value="{{ old('other_id_type', $tenant->other_id_type) }}"
                    placeholder="e.g. Senior Citizen ID, Barangay ID" style="min-height: 44px;">
@@ -83,7 +83,7 @@
         </div>
 
         <div class="f @error('valid_id_no') has-err @enderror" style="flex: 1 1 260px; min-height: 44px;">
-            <label for="valid_id_no">Valid ID Number / Card No. <span style="color: #ef4444;">*</span></label>
+            <label for="valid_id_no">Valid ID Number / Card No. <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
             <input id="valid_id_no" name="valid_id_no" type="text"
                    maxlength="{{ $activeConfig['maxlength'] ?? 50 }}" required
                    value="{{ old('valid_id_no', $tenant->valid_id_no) }}"
@@ -112,16 +112,16 @@
     </h3>
     <div class="row" style="display: flex; gap: 12px; flex-wrap: wrap;">
         <div class="f @error('provincial_address') has-err @enderror" style="flex: 2 1 300px; min-height: 44px;">
-            <label for="provincial_address">Provincial / Home Address</label>
-            <input id="provincial_address" name="provincial_address" type="text" maxlength="255"
+            <label for="provincial_address">Provincial / Home Address <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+            <input id="provincial_address" name="provincial_address" type="text" maxlength="255" required
                    value="{{ old('provincial_address', $tenant->provincial_address) }}"
                    placeholder="Barangay, Municipality/City, Province" style="min-height: 44px;">
             @error('provincial_address') <div class="err">{{ $message }}</div> @enderror
         </div>
 
         <div class="f @error('occupation') has-err @enderror" style="flex: 1 1 200px; min-height: 44px;">
-            <label for="occupation">Occupation / Source of Livelihood</label>
-            <input id="occupation" name="occupation" type="text" maxlength="100"
+            <label for="occupation">Occupation / Source of Livelihood <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+            <input id="occupation" name="occupation" type="text" maxlength="100" required
                    value="{{ old('occupation', $tenant->occupation) }}"
                    placeholder="e.g. Call Center Agent, Nurse" style="min-height: 44px;">
             @error('occupation') <div class="err">{{ $message }}</div> @enderror

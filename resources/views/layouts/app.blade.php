@@ -158,6 +158,54 @@
             data-login-url="{{ route('login', ['timeout' => 1]) }}"></script>
 @endif
 <script src="{{ asset('js/sidebar.js') }}?v={{ filemtime(public_path('js/sidebar.js')) }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Zero-Jump Error Anchoring & Scroll Position Preservation
+        setTimeout(() => {
+            const activeModal = document.querySelector('.modal.open, .modal:not(.hidden), .modal-backdrop:not([hidden]), .modal-backdrop.open');
+            if (activeModal) {
+                const firstError = activeModal.querySelector('.is-invalid, .has-err, .has-error, [aria-invalid="true"], .text-red-500, .err:not([style*="display: none"])');
+                if (firstError) {
+                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    const inputToFocus = firstError.matches('input, select, textarea')
+                        ? firstError
+                        : (firstError.querySelector('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])') || firstError);
+                    if (inputToFocus && typeof inputToFocus.focus === 'function') {
+                        inputToFocus.focus({ preventScroll: true });
+                    }
+                }
+            } else {
+                @if ($errors->any())
+                    const savedScrollPos = sessionStorage.getItem('form_scroll_pos');
+                    if (savedScrollPos !== null) {
+                        window.scrollTo({ top: parseInt(savedScrollPos, 10), behavior: 'smooth' });
+                        sessionStorage.removeItem('form_scroll_pos');
+                    } else {
+                        const firstError = document.querySelector('.is-invalid, .has-err, .has-error, [aria-invalid="true"], .text-red-500, .err:not([style*="display: none"])');
+                        if (firstError) {
+                            firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            const inputToFocus = firstError.matches('input, select, textarea')
+                                ? firstError
+                                : (firstError.querySelector('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])') || firstError);
+                            if (inputToFocus && typeof inputToFocus.focus === 'function') {
+                                inputToFocus.focus({ preventScroll: true });
+                            }
+                        }
+                    }
+                @else
+                    sessionStorage.removeItem('form_scroll_pos');
+                @endif
+            }
+        }, 60);
+
+        // Capture scroll state before form submission
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', () => {
+                sessionStorage.setItem('form_scroll_pos', window.scrollY);
+            });
+        });
+    });
+</script>
 @stack('scripts')
 </body>
 </html>

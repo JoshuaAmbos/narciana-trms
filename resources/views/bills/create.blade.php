@@ -22,9 +22,9 @@
             @if ($metered)
                     <div class="row">
                         <div class="f {{ $readingErrors?->has('previous_reading') || $errors->has('previous_reading') ? 'has-err' : '' }}">
-                            <label for="previous_reading">Previous reading (kWh)</label>
+                            <label for="previous_reading">Previous reading (kWh) <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                             <input id="previous_reading" name="previous_reading" type="number" min="0" step="0.01" inputmode="decimal"
-                                   value="{{ $input['previous_reading'] }}" oninput="updateLiveMeterCalc()">
+                                   value="{{ $input['previous_reading'] }}" oninput="updateLiveMeterCalc()" required>
                             <div class="hint">
                                 @if ($lastReading)
                                     Last reading: {{ number_format((float) $lastReading->current_reading, 2) }} on {{ $lastReading->reading_date->format('j M Y') }}.
@@ -35,23 +35,23 @@
                             @if ($readingErrors?->has('previous_reading'))<div class="err">{{ $readingErrors->first('previous_reading') }}</div>@endif
                         </div>
                         <div class="f {{ $readingErrors?->has('current_reading') || $errors->has('current_reading') ? 'has-err' : '' }}">
-                            <label for="current_reading">Current reading (kWh)</label>
+                            <label for="current_reading">Current reading (kWh) <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                             <input id="current_reading" name="current_reading" type="number" min="0" step="0.01" inputmode="decimal"
-                                   value="{{ $input['current_reading'] }}" autofocus oninput="updateLiveMeterCalc()">
+                                   value="{{ $input['current_reading'] }}" autofocus oninput="updateLiveMeterCalc()" required>
                             @if ($readingErrors?->has('current_reading'))<div class="err">{{ $readingErrors->first('current_reading') }}</div>@endif
                             @error('current_reading')<div class="err">{{ $message }}</div>@enderror
                         </div>
                     </div>
                     <div class="row">
                         <div class="f {{ $readingErrors?->has('reading_date') ? 'has-err' : '' }}">
-                            <label for="reading_date">Reading date</label>
+                            <label for="reading_date">Reading date <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                             <input id="reading_date" name="reading_date" type="date" max="{{ today()->toDateString() }}"
-                                   value="{{ $input['reading_date'] }}" onchange="syncPostInputs()">
+                                   value="{{ $input['reading_date'] }}" onchange="syncPostInputs()" required>
                             @if ($readingErrors?->has('reading_date'))<div class="err">{{ $readingErrors->first('reading_date') }}</div>@endif
                         </div>
                         <div class="f">
-                            <label for="source">Source</label>
-                            <select id="source" name="source" onchange="syncPostInputs()">
+                            <label for="source">Source <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+                            <select id="source" name="source" onchange="syncPostInputs()" required>
                                 @foreach ($sources as $source)
                                     <option value="{{ $source }}" @selected($input['source'] === $source)>{{ $source }}</option>
                                 @endforeach
@@ -201,9 +201,17 @@
 
             if (currVal < prevVal) {
                 if (warningEl) warningEl.style.display = 'block';
+                if (currInput) {
+                    currInput.style.borderColor = '#dc2626';
+                    currInput.closest('.f')?.classList.add('has-err');
+                }
                 if (saveBillBtn) saveBillBtn.disabled = true;
             } else {
                 if (warningEl) warningEl.style.display = 'none';
+                if (currInput) {
+                    currInput.style.borderColor = '';
+                    currInput.closest('.f')?.classList.remove('has-err');
+                }
                 if (saveBillBtn) saveBillBtn.disabled = false;
             }
 

@@ -305,7 +305,7 @@
 
                     <div class="row">
                         <div class="f @error('room_no') has-err @enderror" id="create_room_no_field">
-                            <label for="create_room_no">Room Number</label>
+                            <label for="create_room_no">Room Number <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                             <input id="create_room_no" name="room_no" type="text" maxlength="10" required autofocus value="{{ old('is_modal_create') ? old('room_no') : '' }}" placeholder="Room number" autocomplete="off">
                             <div id="create_room_no_feedback" class="err" style="display: none; margin-top: 4px;"></div>
                             @if (old('is_modal_create'))
@@ -313,7 +313,7 @@
                             @endif
                         </div>
                         <div class="f @error('room_type') has-err @enderror">
-                            <label for="create_room_type">Room Type</label>
+                            <label for="create_room_type">Room Type <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                             <select id="create_room_type" name="room_type" required>
                                 @foreach (['Basic', 'Aircon'] as $typeOption)
                                     <option value="{{ $typeOption }}" @selected(old('room_type', 'Basic') === $typeOption)>{{ $typeOption }}</option>
@@ -334,7 +334,7 @@
                     </div>
 
                     <div class="f @error('monthly_rent') has-err @enderror" style="margin-top: 10px;">
-                        <label for="create_monthly_rent">Monthly Rent (₱)</label>
+                        <label for="create_monthly_rent">Monthly Rent (₱) <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                         <input id="create_monthly_rent" name="monthly_rent" type="number" min="0.01" step="0.01" inputmode="decimal" required
                                value="{{ old('is_modal_create') ? old('monthly_rent') : number_format((float) ($setting->standard_basic_rent ?? 3000), 2, '.', '') }}">
                         <div class="hint">Applies to new MOAs. Existing tenants retain their contracted rate.</div>
@@ -353,7 +353,7 @@
                     </div>
 
                     <div class="f @error('disabled_reason') has-err @enderror" id="create_disabled_reason_group" style="display: none; margin-top: 8px;">
-                        <label for="create_disabled_reason">Reason If Out / Disabled</label>
+                        <label for="create_disabled_reason">Reason If Out / Disabled <span class="text-muted" style="font-weight: normal; font-size: 0.85em;">(optional)</span></label>
                         <input id="create_disabled_reason" name="disabled_reason" type="text" maxlength="255" placeholder="e.g. Under maintenance, renovations..." value="{{ old('disabled_reason') }}">
                     </div>
 
@@ -391,7 +391,7 @@
 
                     <div class="row">
                         <div class="f @error('room_no') has-err @enderror" id="edit_room_no_field">
-                            <label for="edit_room_no">Room Number</label>
+                            <label for="edit_room_no">Room Number <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                             <input id="edit_room_no" name="room_no" type="text" maxlength="10" required value="{{ old('is_modal_edit') ? old('room_no') : '' }}" autocomplete="off">
                             <div id="edit_room_no_feedback" class="err" style="display: none; margin-top: 4px;"></div>
                             @if (old('is_modal_edit'))
@@ -399,7 +399,7 @@
                             @endif
                         </div>
                         <div class="f @error('room_type') has-err @enderror">
-                            <label for="edit_room_type">Room Type</label>
+                            <label for="edit_room_type">Room Type <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                             <select id="edit_room_type" name="room_type" required>
                                 @foreach (['Basic', 'Aircon'] as $typeOption)
                                     <option value="{{ $typeOption }}">{{ $typeOption }}</option>
@@ -421,7 +421,7 @@
 
                     <div class="row" style="margin-top: 10px;">
                         <div class="f @error('max_occupants') has-err @enderror">
-                            <label for="edit_max_occupants">Maximum Occupants</label>
+                            <label for="edit_max_occupants">Maximum Occupants <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                             <select id="edit_max_occupants" name="max_occupants" required>
                                 @foreach (range(1, (int) ($setting->default_room_capacity ?? 2)) as $n)
                                     <option value="{{ $n }}">{{ $n }} {{ Str::plural('Occupant', $n) }}</option>
@@ -429,7 +429,7 @@
                             </select>
                         </div>
                         <div class="f @error('monthly_rent') has-err @enderror">
-                            <label for="edit_monthly_rent">Monthly Rent (₱)</label>
+                            <label for="edit_monthly_rent">Monthly Rent (₱) <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                             <input id="edit_monthly_rent" name="monthly_rent" type="number" min="0.01" step="0.01" inputmode="decimal" required
                                    value="{{ old('is_modal_edit') ? old('monthly_rent') : '' }}">
                             <div class="hint">Applies to future MOAs. Active leases maintain their signed rate.</div>
@@ -453,7 +453,7 @@
                         </div>
 
                         <div class="f @error('disabled_reason') has-err @enderror" id="edit_disabled_reason_group" style="display: none; margin-top: 8px;">
-                            <label for="edit_disabled_reason">Reason If Out / Disabled</label>
+                            <label for="edit_disabled_reason">Reason If Out / Disabled <span class="text-muted" style="font-weight: normal; font-size: 0.85em;">(optional)</span></label>
                             <input id="edit_disabled_reason" name="disabled_reason" type="text" maxlength="255" placeholder="e.g. Under maintenance, repairs..." value="{{ old('disabled_reason') }}">
                             <div class="hint">Optional note describing why the room is disabled.</div>
                         </div>

@@ -3,13 +3,13 @@
 
 <div class="row">
     <div class="f @error('room_no') has-err @enderror" id="standalone_room_no_field">
-        <label for="room_no">Room number</label>
+        <label for="room_no">Room number <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
         <input id="room_no" name="room_no" type="text" maxlength="10" required autofocus value="{{ old('room_no', $room->room_no) }}" autocomplete="off">
         <div id="standalone_room_no_feedback" class="err" style="display: none; margin-top: 4px;"></div>
         @error('room_no') <div class="err server-err">{{ $message }}</div> @enderror
     </div>
     <div class="f @error('room_type') has-err @enderror">
-        <label for="room_type">Room type</label>
+        <label for="room_type">Room type <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
         <select id="room_type" name="room_type" required>
             @foreach ($types as $type)
                 <option value="{{ $type }}" @selected(old('room_type', $room->room_type) === $type)>{{ $type }}</option>
@@ -32,7 +32,7 @@
 <div class="row">
     @if ($room->exists)
         <div class="f @error('max_occupants') has-err @enderror">
-            <label for="max_occupants">Maximum occupants</label>
+            <label for="max_occupants">Maximum occupants <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
             <select id="max_occupants" name="max_occupants" required>
                 @foreach (range(1, max((int) ($setting->default_room_capacity ?? 2), (int) $room->max_occupants)) as $n)
                     <option value="{{ $n }}" @selected((int) old('max_occupants', $room->max_occupants) === $n)>{{ $n }}</option>
@@ -42,7 +42,7 @@
         </div>
     @endif
     <div class="f @error('monthly_rent') has-err @enderror">
-        <label for="monthly_rent">Monthly rent (₱)</label>
+        <label for="monthly_rent">Monthly rent (₱) <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
         <input id="monthly_rent" name="monthly_rent" type="number" min="0.01" step="0.01" inputmode="decimal" required
                value="{{ old('monthly_rent', $room->monthly_rent) }}">
         <div class="hint">Applies to new MOAs. Existing tenants keep the rent written in their MOA.</div>
@@ -73,7 +73,7 @@
     </div>
 
     <div class="f @error('disabled_reason') has-err @enderror" id="disabled_reason_group" style="{{ old('is_rentable', $room->isRentable()) ? 'display: none;' : '' }}">
-        <label for="disabled_reason">Reason If Out / Disabled</label>
+        <label for="disabled_reason">Reason If Out / Disabled <span class="text-muted" style="font-weight: normal; font-size: 0.85em;">(optional)</span></label>
         <input id="disabled_reason" name="disabled_reason" type="text" maxlength="255" placeholder="e.g. Under maintenance, repairs in progress..." value="{{ old('disabled_reason', $room->disabled_reason) }}">
         <div class="hint">Optional note explaining why this room is out or unavailable for rent.</div>
         @error('disabled_reason') <div class="err">{{ $message }}</div> @enderror

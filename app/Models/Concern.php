@@ -61,8 +61,11 @@ class Concern extends Model
         'status',
         'resolution',
         'cost',
+        'repair_cost',
         'charged_to_tenant',
+        'charge_to_tenant',
         'bill_id',
+        'billed_in_bill_id',
         'resolved_at',
         'resolved_by',
     ];
@@ -72,7 +75,11 @@ class Concern extends Model
         return [
             'reported_at' => 'datetime',
             'cost' => 'decimal:2',
+            'repair_cost' => 'decimal:2',
             'charged_to_tenant' => 'boolean',
+            'charge_to_tenant' => 'boolean',
+            'bill_id' => 'integer',
+            'billed_in_bill_id' => 'integer',
             'resolved_at' => 'datetime',
             'started_at' => 'datetime',
         ];
@@ -84,6 +91,102 @@ class Concern extends Model
         static::creating(function (Concern $concern) {
             $concern->reported_by ??= Auth::id() ?? $concern->assigned_to;
         });
+
+        static::saving(function (Concern $concern) {
+            if ($concern->repair_cost !== null && $concern->cost === null) {
+                $concern->cost = $concern->repair_cost;
+            } elseif ($concern->cost !== null && $concern->repair_cost === null) {
+                $concern->repair_cost = $concern->cost;
+            }
+
+            if ($concern->charge_to_tenant !== null && $concern->charged_to_tenant === null) {
+                $concern->charged_to_tenant = (bool) $concern->charge_to_tenant;
+            } elseif ($concern->charged_to_tenant !== null && $concern->charge_to_tenant === null) {
+                $concern->charge_to_tenant = (bool) $concern->charged_to_tenant;
+            }
+
+            if ($concern->billed_in_bill_id !== null && $concern->bill_id === null) {
+                $concern->bill_id = $concern->billed_in_bill_id;
+            } elseif ($concern->bill_id !== null && $concern->billed_in_bill_id === null) {
+                $concern->billed_in_bill_id = $concern->bill_id;
+            }
+        });
+    }
+
+    public function getBilledInBillIdAttribute(): ?int
+    {
+        $val = $this->attributes['billed_in_bill_id'] ?? $this->attributes['bill_id'] ?? null;
+
+        return $val !== null ? (int) $val : null;
+    }
+
+    public function setBilledInBillIdAttribute($value): void
+    {
+        $this->attributes['billed_in_bill_id'] = $value;
+        $this->attributes['bill_id'] = $value;
+    }
+
+    public function getBillIdAttribute(): ?int
+    {
+        $val = $this->attributes['bill_id'] ?? $this->attributes['billed_in_bill_id'] ?? null;
+
+        return $val !== null ? (int) $val : null;
+    }
+
+    public function setBillIdAttribute($value): void
+    {
+        $this->attributes['bill_id'] = $value;
+        $this->attributes['billed_in_bill_id'] = $value;
+    }
+
+    public function getRepairCostAttribute(): ?string
+    {
+        $val = $this->attributes['repair_cost'] ?? $this->attributes['cost'] ?? null;
+
+        return $val !== null ? number_format((float) $val, 2, '.', '') : null;
+    }
+
+    public function setRepairCostAttribute($value): void
+    {
+        $this->attributes['repair_cost'] = $value;
+        $this->attributes['cost'] = $value;
+    }
+
+    public function getCostAttribute(): ?string
+    {
+        $val = $this->attributes['cost'] ?? $this->attributes['repair_cost'] ?? null;
+
+        return $val !== null ? number_format((float) $val, 2, '.', '') : null;
+    }
+
+    public function setCostAttribute($value): void
+    {
+        $this->attributes['cost'] = $value;
+        $this->attributes['repair_cost'] = $value;
+    }
+
+    public function getChargeToTenantAttribute(): bool
+    {
+        return (bool) ($this->attributes['charge_to_tenant'] ?? $this->attributes['charged_to_tenant'] ?? false);
+    }
+
+    public function setChargeToTenantAttribute($value): void
+    {
+        $bool = (bool) $value;
+        $this->attributes['charge_to_tenant'] = $bool;
+        $this->attributes['charged_to_tenant'] = $bool;
+    }
+
+    public function getChargedToTenantAttribute(): bool
+    {
+        return (bool) ($this->attributes['charged_to_tenant'] ?? $this->attributes['charge_to_tenant'] ?? false);
+    }
+
+    public function setChargedToTenantAttribute($value): void
+    {
+        $bool = (bool) $value;
+        $this->attributes['charged_to_tenant'] = $bool;
+        $this->attributes['charge_to_tenant'] = $bool;
     }
 
     /** "Room 206" or "Shared area" (room_id is empty only for shared-area concerns). */
@@ -116,12 +219,12 @@ class Concern extends Model
 
     public function isBilled(): bool
     {
-        return $this->bill_id !== null;
+        return $this->billed_in_bill_id !== null || $this->bill_id !== null;
     }
 
     public function bill(): BelongsTo
     {
-        return $this->belongsTo(Bill::class, 'bill_id');
+        return $this->belongsTo(Bill::class, 'billed_in_bill_id');
     }
 
     public function room(): BelongsTo

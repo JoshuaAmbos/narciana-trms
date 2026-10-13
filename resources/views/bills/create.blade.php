@@ -88,11 +88,11 @@
                     @foreach ($chargeable as $c)
                         <label>
                             <input type="checkbox" name="concerns[]" value="{{ $c->concern_id }}" @checked(in_array($c->concern_id, $ticked, true)) onchange="updateLiveMeterCalc()">
-                            <span>{{ $c->description }} <span class="sub">{{ $c->category }} · resolved {{ $c->resolved_at->format('j M Y') }}</span></span>
-                            <b class="money">@peso($c->cost)</b>
+                            <span>Tenant Repair: {{ $c->description }} <span class="sub">{{ $c->category }} · resolved {{ $c->resolved_at->format('j M Y') }}</span></span>
+                            <b class="money">@peso($c->cost ?? $c->repair_cost)</b>
                         </label>
                     @endforeach
-                    <p class="muted">Tick the ones to add to this bill, then press "Show statement". Nothing is added automatically.</p>
+                    <p class="muted">Unbilled tenant repairs are selected automatically. Deselect any to postpone to the next billing cycle, then press "Show statement".</p>
                 </fieldset>
             @endif
 
@@ -119,6 +119,7 @@
                         <input type="hidden" name="reading_date" id="post_reading_date" value="{{ $statement['reading']['reading_date'] ?? $input['reading_date'] }}">
                         <input type="hidden" name="source" id="post_source" value="{{ $statement['reading']['source'] ?? $input['source'] }}">
                     @endif
+                    <input type="hidden" name="concerns_submitted" value="1">
                     @foreach ($statement['charges'] as $c)
                         <input type="hidden" name="concerns[]" value="{{ $c->concern_id }}">
                     @endforeach
@@ -137,6 +138,7 @@
                             <input type="hidden" name="reading_date" id="post_reading_date" value="{{ $input['reading_date'] }}">
                             <input type="hidden" name="source" id="post_source" value="{{ $input['source'] }}">
                         @endif
+                        <input type="hidden" name="concerns_submitted" value="1">
                         @foreach ($statement['charges'] as $c)
                             <input type="hidden" name="concerns[]" value="{{ $c->concern_id }}">
                         @endforeach

@@ -195,7 +195,7 @@ class EndToEndTest extends TestCase
         // ---------- Regular bills for Aug–Oct, paid in cash (the repair is kept for the final bill) ----------
         $monthly = function (string $month, float $prev, float $cur) use ($leaseA): void {
             $this->on("{$month}-24 17:00");
-            $this->actingAs($this->manager)->post(route('bills.store'), ['lease_id' => $leaseA->lease_id, 'due_date' => "{$month}-25"]
+            $this->actingAs($this->manager)->post(route('bills.store'), ['lease_id' => $leaseA->lease_id, 'due_date' => "{$month}-25", 'concerns' => []]
                 + $this->reading($prev, $cur, "{$month}-24"))->assertSessionHasNoErrors();
             $bill = Bill::where('lease_id', $leaseA->lease_id)->latest('due_date')->first();
             $this->assertSame('5900.00', $bill->total_amount);

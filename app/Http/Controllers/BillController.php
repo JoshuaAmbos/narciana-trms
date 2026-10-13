@@ -251,9 +251,11 @@ class BillController extends Controller
             }
         }
 
-        // Chargeable concerns: offered as checkboxes, never ticked automatically (decision 15).
+        // Chargeable concerns: offered as checkboxes, checked by default
         $chargeable = $concerns->chargeable($lease);
-        $ticked = array_map('intval', (array) $request->input('concerns', []));
+        $ticked = $request->has('concerns')
+            ? array_map('intval', (array) $request->input('concerns', []))
+            : $chargeable->pluck('concern_id')->all();
 
         return view('bills.create', [
             'lease' => $lease,
@@ -272,8 +274,15 @@ class BillController extends Controller
     public function store(BillRequest $request): RedirectResponse
     {
         $lease = Lease::findOrFail($request->validated('lease_id'));
+        $concerns = null;
+        if ($request->has('concerns')) {
+            $concerns = (array) $request->validated('concerns');
+        } elseif ($request->boolean('concerns_submitted')) {
+            $concerns = [];
+        }
+
         $bill = $this->billing->generate($lease, $request->reading(), $request->validated('due_date'), $request->user(),
-            null, (array) $request->validated('concerns', []));
+            null, $concerns);
 
         return redirect()->route('bills.index', ['month' => $bill->due_date->format('Y-m'), 'statement' => $bill->bill_id])
             ->with('status', 'Bill generated: ₱'.number_format((float) $bill->total_amount, 2).' due on '.$bill->due_date->format('j M Y').'.');

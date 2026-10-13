@@ -86,7 +86,7 @@ class Bill extends Model
     /** Concerns charged to the tenant on this bill (they make up other_charges). */
     public function concerns(): HasMany
     {
-        return $this->hasMany(Concern::class, 'bill_id');
+        return $this->hasMany(Concern::class, 'billed_in_bill_id');
     }
 
     public function payments(): HasMany

@@ -127,10 +127,31 @@ class BillingService
     }
 
     /**
+     * Consolidate bill charges: Base Rent + Water + Electricity/Appliances + Other Charges (Tenant Repairs).
+     * Automatically queries unbilled tenant-chargeable repairs for this lease.
+     */
+    public function calculateBillCharges(Lease $lease, ?array $reading = null): array
+    {
+        $preview = $this->preview($lease, $reading);
+
+        return [
+            'rent_amount' => $preview['amounts']['rent_amount'],
+            'water_amount' => $preview['amounts']['water_amount'],
+            'electricity_amount' => $preview['amounts']['electricity_amount'],
+            'appliance_amount' => $preview['amounts']['appliance_amount'],
+            'penalty_amount' => $preview['amounts']['penalty_amount'],
+            'other_charges' => $preview['amounts']['other_charges'],
+            'total_amount' => $preview['amounts']['total_amount'],
+            'unbilled_concerns' => $preview['charges'],
+        ];
+    }
+
+    /**
      * Everything the statement shows, without saving. $reading = ['previous_reading', 'current_reading',
      * 'reading_date', 'source'] for metered rooms (may be null before the reading is entered).
+     * If $concernIds is null, all unbilled chargeable concerns are included.
      */
-    public function preview(Lease $lease, ?array $reading = null, array $concernIds = []): array
+    public function preview(Lease $lease, ?array $reading = null, ?array $concernIds = null): array
     {
         $dueDate = $this->nextDueDate($lease);
         [$start, $end] = $this->periodFor($lease->move_in_date, $lease->due_day, $dueDate);
@@ -140,10 +161,19 @@ class BillingService
 
     /**
      * Generate the next bill of the lease in one transaction (reading + bill + audit).
-     * $expectedDueDate guards against a double submit or a stale form.
+     * Supports both generate(Lease, ?array $reading, string $expectedDueDate, User $by, ?Carbon $today, ?array $concernIds)
+     * and generate(Lease, array $data, User $by).
      */
-    public function generate(Lease $lease, ?array $reading, string $expectedDueDate, User $by, ?Carbon $today = null, array $concernIds = []): Bill
+    public function generate(Lease $lease, $reading = null, $expectedDueDate = null, ?User $by = null, ?Carbon $today = null, ?array $concernIds = null): Bill
     {
+        if ($expectedDueDate instanceof User) {
+            $by = $expectedDueDate;
+            $data = (array) $reading;
+            $reading = $data['reading'] ?? null;
+            $expectedDueDate = (string) ($data['due_date'] ?? $this->nextDueDate($lease)->toDateString());
+            $concernIds = $data['concerns'] ?? null;
+        }
+
         return DB::transaction(function () use ($lease, $reading, $expectedDueDate, $by, $today, $concernIds) {
             $lease = Lease::whereKey($lease->lease_id)->lockForUpdate()->firstOrFail();
 
@@ -157,7 +187,7 @@ class BillingService
                 throw ValidationException::withMessages(['lease' => 'This bill can be generated from '.self::DAYS_AHEAD.' days before its due date (and not after the tenant moved out).']);
             }
 
-            return $this->createBill($lease, fn (?array $r, array $ids) => $this->preview($lease, $r, $ids),
+            return $this->createBill($lease, fn (?array $r, ?array $ids) => $this->preview($lease, $r, $ids),
                 $reading, $concernIds, $by, 'Bill generated');
         });
     }
@@ -165,7 +195,7 @@ class BillingService
     // ---------- Shared building blocks ----------
 
     /** Statement figures for one period. A final bill charges no rent (rent was charged ahead). */
-    private function statement(Lease $lease, Carbon $dueDate, Carbon $start, Carbon $end, bool $final, ?array $reading, array $concernIds): array
+    private function statement(Lease $lease, Carbon $dueDate, Carbon $start, Carbon $end, bool $final, ?array $reading, ?array $concernIds): array
     {
         $lease->loadMissing('room');
         $settings = Setting::current();
@@ -174,8 +204,13 @@ class BillingService
         $occupants = $this->occupantCount($lease, $start, $end);
         $appliances = $metered ? 0 : $this->applianceCount($lease, $start, $end);
         $kwh = ($metered && $reading) ? round((float) $reading['current_reading'] - (float) $reading['previous_reading'], 2) : 0.0;
-        // Only this lease's chargeable concerns count, whatever ids were sent.
-        $charges = app(ConcernService::class)->chargeable($lease)->whereIn('concern_id', array_map('intval', $concernIds))->values();
+        
+        $allChargeable = app(ConcernService::class)->chargeable($lease);
+        $charges = ($concernIds === null)
+            ? $allChargeable
+            : $allChargeable->whereIn('concern_id', array_map('intval', $concernIds))->values();
+
+        $repairCharges = (float) $charges->sum(fn (Concern $c) => (float) ($c->cost ?? $c->repair_cost));
 
         return [
             'final' => $final,
@@ -197,25 +232,32 @@ class BillingService
             'amounts' => $this->computeAmounts(
                 $final ? 0.0 : (float) $lease->monthly_rent, (float) $settings->water_rate, $occupants, $metered,
                 $kwh, (float) $settings->kwh_rate, (float) $settings->appliance_fee, $appliances,
-                (float) $charges->sum(fn (Concern $c) => (float) $c->cost),
+                $repairCharges,
             ),
         ];
     }
 
     /**
      * Save a bill (inside the caller's transaction): check and lock ticked concerns, save the meter reading,
-     * the bill, link the concerns, write the audit row. $build(?reading, concernIds) returns the statement.
+     * the bill, link the concerns, write the audit row. $build(?reading, ?concernIds) returns the statement.
      */
-    private function createBill(Lease $lease, callable $build, ?array $reading, array $concernIds, User $by, string $auditAction): Bill
+    private function createBill(Lease $lease, callable $build, ?array $reading, ?array $concernIds, User $by, string $auditAction): Bill
     {
         $metered = (bool) $lease->room->is_metered;
         if ($metered && ! $reading) {
             throw ValidationException::withMessages(['current_reading' => 'This room has its own meter: enter the meter reading.']);
         }
 
-        // Lock the ticked concerns and check each one is still chargeable for this lease.
-        $concernIds = array_values(array_unique(array_map('intval', $concernIds)));
-        if ($concernIds) {
+        // If no explicit concern IDs passed, default to all unbilled chargeable concerns for this lease
+        if ($concernIds === null) {
+            $unbilled = app(ConcernService::class)->chargeable($lease);
+            $concernIds = $unbilled->pluck('concern_id')->all();
+        } else {
+            $concernIds = array_values(array_unique(array_map('intval', $concernIds)));
+        }
+
+        // Lock the concerns and check each one is still chargeable for this lease.
+        if (! empty($concernIds)) {
             $locked = Concern::whereKey($concernIds)->lockForUpdate()->get();
             $ok = app(ConcernService::class)->chargeable($lease)->pluck('concern_id')->all();
             if ($locked->count() !== count($concernIds) || array_diff($concernIds, $ok)) {
@@ -249,8 +291,11 @@ class BillingService
             'user_id' => $by->user_id,
         ]);
 
-        if ($concernIds) {
-            Concern::whereKey($concernIds)->update(['bill_id' => $bill->bill_id]);
+        if (! empty($concernIds)) {
+            Concern::whereKey($concernIds)->update([
+                'bill_id' => $bill->bill_id,
+                'billed_in_bill_id' => $bill->bill_id,
+            ]);
         }
 
         AuditLog::record($auditAction, 'tbl_bill', $bill->bill_id, $by->user_id);
@@ -322,7 +367,12 @@ class BillingService
 
             $readingId = $bill->reading_id;
             $billId = $bill->bill_id;
-            Concern::where('bill_id', $billId)->update(['bill_id' => null]); // released: can be charged on the next bill
+            Concern::where(function ($q) use ($billId) {
+                $q->where('bill_id', $billId)->orWhere('billed_in_bill_id', $billId);
+            })->update([
+                'bill_id' => null,
+                'billed_in_bill_id' => null,
+            ]); // released: can be charged on the next bill
             $bill->delete();
             if ($readingId && ! Bill::where('reading_id', $readingId)->exists()) {
                 MeterReading::whereKey($readingId)->delete();

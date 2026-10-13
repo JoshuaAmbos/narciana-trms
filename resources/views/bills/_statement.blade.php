@@ -63,7 +63,7 @@
         <tr>
             <td>Other charges
                 @foreach ($statement['charges'] ?? [] as $charge)
-                    <span class="sub">{{ $charge->description }} ({{ $charge->category }}): @peso($charge->cost)</span>
+                    <span class="sub">Tenant Repair: {{ $charge->description }} ({{ $charge->category }}): @peso($charge->cost ?? $charge->repair_cost)</span>
                 @endforeach
             </td>
             <td class="money">@peso($a['other_charges'])</td>

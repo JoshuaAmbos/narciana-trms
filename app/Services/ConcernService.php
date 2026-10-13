@@ -28,7 +28,7 @@ class ConcernService
     public const PHOTO_MAX_SIDE = 1600;
 
     /** Fields only the Owner/Manager may set. */
-    private const MONEY_FIELDS = ['cost', 'charged_to_tenant'];
+    private const MONEY_FIELDS = ['cost', 'repair_cost', 'charged_to_tenant', 'charge_to_tenant'];
 
     /** Private disk for concern photos (storage/app/private/concerns, decision 18). */
     public const PHOTO_DISK = 'local';
@@ -41,7 +41,14 @@ class ConcernService
     {
         return DB::transaction(function () use ($data, $by, $photos) {
             $data = $this->onlyAllowed($data, $by);
-            $data['charged_to_tenant'] = (bool) ($data['charged_to_tenant'] ?? false);
+            $cost = $data['repair_cost'] ?? $data['cost'] ?? null;
+            $charged = (bool) ($data['charge_to_tenant'] ?? $data['charged_to_tenant'] ?? false);
+            if (array_key_exists('cost', $data) || array_key_exists('repair_cost', $data)) {
+                $data['cost'] = $cost;
+                $data['repair_cost'] = $cost;
+            }
+            $data['charged_to_tenant'] = $charged;
+            $data['charge_to_tenant'] = $charged;
             $data['reported_by'] = $by->user_id;
             $data = $this->withProgress($data, null, $by);
 
@@ -80,16 +87,23 @@ class ConcernService
 
             if ($concern->isBilled()) {
                 // Billed: the charge on the bill must keep matching the concern.
-                foreach (['status', 'cost', 'charged_to_tenant', 'lease_id'] as $field) {
+                foreach (['status', 'cost', 'repair_cost', 'charged_to_tenant', 'charge_to_tenant', 'lease_id'] as $field) {
                     unset($data[$field]);
                 }
             }
-            if (array_key_exists('charged_to_tenant', $data)) {
-                $data['charged_to_tenant'] = (bool) $data['charged_to_tenant'];
+            if (array_key_exists('cost', $data) || array_key_exists('repair_cost', $data)) {
+                $cost = $data['repair_cost'] ?? $data['cost'] ?? null;
+                $data['cost'] = $cost;
+                $data['repair_cost'] = $cost;
+            }
+            if (array_key_exists('charged_to_tenant', $data) || array_key_exists('charge_to_tenant', $data)) {
+                $charged = (bool) ($data['charge_to_tenant'] ?? $data['charged_to_tenant'] ?? false);
+                $data['charged_to_tenant'] = $charged;
+                $data['charge_to_tenant'] = $charged;
             }
 
             $statusBefore = $concern->status;
-            $moneyBefore = [(string) $concern->cost, (bool) $concern->charged_to_tenant];
+            $moneyBefore = [(string) ($concern->cost ?? $concern->repair_cost), (bool) ($concern->charged_to_tenant || $concern->charge_to_tenant)];
             $data = $this->withProgress($data, $concern, $by);
 
             $oldPhotos = [];
@@ -118,7 +132,7 @@ class ConcernService
             if ($statusBefore !== 'Resolved' && $concern->status === 'Resolved') {
                 AuditLog::record('Concern resolved', 'tbl_concern', $concern->concern_id, $by->user_id);
             }
-            if ($moneyBefore !== [(string) $concern->cost, (bool) $concern->charged_to_tenant]) {
+            if ($moneyBefore !== [(string) ($concern->cost ?? $concern->repair_cost), (bool) ($concern->charged_to_tenant || $concern->charge_to_tenant)]) {
                 AuditLog::record('Concern charged', 'tbl_concern', $concern->concern_id, $by->user_id);
             }
 
@@ -129,11 +143,31 @@ class ConcernService
     /** Resolved, charged to the tenant, cost > 0 and not billed yet: can be picked for this lease's next bill. */
     public function chargeable(Lease $lease): Collection
     {
-        return Concern::where('lease_id', $lease->lease_id)
+        return Concern::where(function ($q) use ($lease) {
+                $q->where('lease_id', $lease->lease_id);
+                if ($lease->room_id) {
+                    $q->orWhere(function ($sub) use ($lease) {
+                        $sub->where('room_id', $lease->room_id)
+                            ->where(function ($lq) use ($lease) {
+                                $lq->whereNull('lease_id')
+                                   ->orWhere('lease_id', $lease->lease_id);
+                            });
+                    });
+                }
+            })
             ->where('status', 'Resolved')
-            ->where('charged_to_tenant', true)
-            ->where('cost', '>', 0)
-            ->whereNull('bill_id')
+            ->where(function ($q) {
+                $q->where('charged_to_tenant', true)
+                  ->orWhere('charge_to_tenant', true);
+            })
+            ->where(function ($q) {
+                $q->where('cost', '>', 0)
+                  ->orWhere('repair_cost', '>', 0);
+            })
+            ->where(function ($q) {
+                $q->whereNull('bill_id')
+                  ->whereNull('billed_in_bill_id');
+            })
             ->orderBy('resolved_at')
             ->get();
     }

@@ -21,16 +21,24 @@ class ConcernRequest extends FormRequest
         // The Room list's "No room (shared area)" choice sends room_id=shared.
         $shared = $this->input('room_id') === 'shared';
 
+        $cost = $this->has('repair_cost') ? $this->input('repair_cost') : $this->input('cost');
+        $charged = $this->has('charge_to_tenant')
+            ? $this->boolean('charge_to_tenant')
+            : $this->boolean('charged_to_tenant');
+        $costVal = ($cost === '' || $cost === null) ? null : $cost;
+
         $this->merge([
             'shared' => $shared,
             'room_id' => $shared ? null : $this->input('room_id'),
             'description' => trim((string) $this->input('description')),
             'resolution' => $this->input('resolution') !== null ? trim((string) $this->input('resolution')) : null,
             'resolved_at' => $this->input('resolved_at') === '' ? null : $this->input('resolved_at'),
-            'charged_to_tenant' => $this->boolean('charged_to_tenant'),
+            'charged_to_tenant' => $charged,
+            'charge_to_tenant' => $charged,
             'remove_photo' => $this->boolean('remove_photo'),
             'remove_resolution_photo' => $this->boolean('remove_resolution_photo'),
-            'cost' => $this->input('cost') === '' ? null : $this->input('cost'),
+            'cost' => $costVal,
+            'repair_cost' => $costVal,
         ]);
     }
 
@@ -51,7 +59,9 @@ class ConcernRequest extends FormRequest
             'resolution' => ['nullable', 'required_if:status,Resolved', 'string', 'max:500'],
             'resolved_at' => ['nullable', 'date_format:Y-m-d\TH:i', 'before_or_equal:now', 'after_or_equal:reported_at'],
             'cost' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
+            'repair_cost' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
             'charged_to_tenant' => ['boolean'],
+            'charge_to_tenant' => ['boolean'],
             // Proof of the problem / proof it was fixed: JPG or PNG, max 5 MB (decision 18).
             'photo' => ['nullable', 'file', 'mimes:jpg,jpeg,png', 'mimetypes:image/jpeg,image/png', 'max:5120'],
             'remove_photo' => ['boolean'],
@@ -79,11 +89,13 @@ class ConcernRequest extends FormRequest
                 if ($lease && (int) $lease->room_id !== (int) $this->input('room_id')) {
                     $validator->errors()->add('lease_id', 'This tenant does not rent the chosen room.');
                 }
-                if ($this->user()->hasRole('Owner', 'Manager') && $this->boolean('charged_to_tenant')) {
+                $isCharged = $this->boolean('charged_to_tenant') || $this->boolean('charge_to_tenant');
+                $costVal = (float) ($this->input('repair_cost') ?? $this->input('cost'));
+                if ($this->user()->hasRole('Owner', 'Manager') && $isCharged) {
                     if (! $lease) {
                         $validator->errors()->add('charged_to_tenant', 'Only a concern linked to a tenant (lease) can be charged to the tenant.');
                     }
-                    if ((float) $this->input('cost') <= 0) {
+                    if ($costVal <= 0) {
                         $validator->errors()->add('cost', 'Enter the cost to charge to the tenant.');
                     }
                 }

@@ -25,6 +25,7 @@ class BillRequest extends FormRequest
             // Concerns ticked as other charges (checked again in BillingService::generate).
             'concerns' => ['nullable', 'array'],
             'concerns.*' => ['integer', 'distinct'],
+            'concerns_submitted' => ['nullable', 'boolean'],
         ] + ($lease?->room->is_metered ? self::readingRules() : []);
     }
 

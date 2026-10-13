@@ -7,6 +7,7 @@ use App\Models\Concern;
 use App\Models\Lease;
 use App\Models\Payment;
 use App\Models\User;
+use App\Services\BillingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Testing\TestResponse;
@@ -54,14 +55,19 @@ class ConcernBillingTest extends TestCase
         ]);
     }
 
-    private function generate(array $concernIds = []): TestResponse
+    private function generate(?array $concernIds = null): TestResponse
     {
-        return $this->actingAs($this->manager)->post(route('bills.store'), [
-            'lease_id' => $this->lease->lease_id, 'due_date' => '2026-07-25', 'concerns' => $concernIds,
-        ]);
+        $payload = [
+            'lease_id' => $this->lease->lease_id, 'due_date' => '2026-07-25',
+        ];
+        if ($concernIds !== null) {
+            $payload['concerns'] = $concernIds;
+        }
+
+        return $this->actingAs($this->manager)->post(route('bills.store'), $payload);
     }
 
-    public function test_chargeable_concerns_are_offered_but_never_ticked(): void
+    public function test_chargeable_concerns_are_offered_and_checked_by_default(): void
     {
         $this->concern(['description' => 'Not charged', 'cost' => 100, 'charged_to_tenant' => false]);
         $this->concern(['description' => 'Still open', 'cost' => 100, 'status' => 'Open', 'resolved_at' => null]);
@@ -70,14 +76,29 @@ class ConcernBillingTest extends TestCase
             ->assertOk()
             ->assertSee('Broken door knob')->assertSee('Stained wall')
             ->assertDontSee('Not charged')->assertDontSee('Still open')
-            ->assertDontSee('checked', false);
+            ->assertSee('checked');
 
+        // Generating the bill without explicit concern IDs automatically recovers all unbilled chargeable concerns
         $this->generate()->assertSessionHasNoErrors();
 
         $bill = Bill::firstOrFail();
-        $this->assertSame('0.00', $bill->other_charges, 'Never added automatically');
+        $this->assertSame('950.00', $bill->other_charges, 'Automatically rolled into other_charges');
+        $this->assertSame('4650.00', $bill->total_amount);
+        $this->assertSame($bill->bill_id, $this->knob->refresh()->billed_in_bill_id);
+        $this->assertSame($bill->bill_id, $this->knob->bill_id);
+        $this->assertSame($bill->bill_id, $this->wall->refresh()->billed_in_bill_id);
+        $this->assertSame($bill->bill_id, $this->wall->bill_id);
+    }
+
+    public function test_deselected_concerns_are_not_billed_when_explicitly_excluded(): void
+    {
+        $this->generate([])->assertSessionHasNoErrors();
+
+        $bill = Bill::firstOrFail();
+        $this->assertSame('0.00', $bill->other_charges);
         $this->assertSame('3700.00', $bill->total_amount);
-        $this->assertNull($this->knob->refresh()->bill_id);
+        $this->assertNull($this->knob->refresh()->billed_in_bill_id);
+        $this->assertNull($this->knob->bill_id);
     }
 
     public function test_ticked_concerns_become_other_charges_and_statement_lines(): void
@@ -90,8 +111,8 @@ class ConcernBillingTest extends TestCase
         $bill = Bill::firstOrFail();
         $this->assertSame('950.00', $bill->other_charges);
         $this->assertSame('4650.00', $bill->total_amount);
-        $this->assertSame($bill->bill_id, $this->knob->refresh()->bill_id);
-        $this->assertSame($bill->bill_id, $this->wall->refresh()->bill_id);
+        $this->assertSame($bill->bill_id, $this->knob->refresh()->billed_in_bill_id);
+        $this->assertSame($bill->bill_id, $this->wall->refresh()->billed_in_bill_id);
 
         $this->actingAs($this->manager)->get(route('bills.show', $bill))
             ->assertSee('Broken door knob (Damage to room or furniture): ₱350.00')->assertSee('Stained wall (Damage to room or furniture): ₱600.00')->assertSee('₱950.00');
@@ -127,7 +148,8 @@ class ConcernBillingTest extends TestCase
 
         $this->actingAs($this->manager)->delete(route('bills.destroy', $bill))->assertSessionHasNoErrors();
 
-        $this->assertNull($this->knob->refresh()->bill_id);
+        $this->assertNull($this->knob->refresh()->billed_in_bill_id);
+        $this->assertNull($this->knob->bill_id);
         $this->actingAs($this->manager)->get(route('bills.create', ['lease' => $this->lease->lease_id]))->assertSee('Broken door knob');
     }
 
@@ -147,6 +169,86 @@ class ConcernBillingTest extends TestCase
         $bill->refresh();
         $this->assertSame('Unpaid', $bill->status);
         $this->assertSame('350.00', $bill->other_charges);
-        $this->assertSame($bill->bill_id, $this->knob->refresh()->bill_id);
+        $this->assertSame($bill->bill_id, $this->knob->refresh()->billed_in_bill_id);
+        $this->assertSame($bill->bill_id, $this->knob->bill_id);
+    }
+
+    public function test_acceptance_criteria_end_to_end_tenant_chargeable_concern_cost_recovery(): void
+    {
+        // 1. Intake & Resolution: Resolve a concern ticket with repair_cost = 350.00 and charge_to_tenant = true
+        $newRoom = $this->makeRoom('208');
+        $newLease = $this->makeLease($newRoom, $this->manager, null, 'Test Tenant Repair');
+
+        $response = $this->actingAs($this->manager)->post(route('concerns.store'), [
+            'room_id' => $newRoom->room_id,
+            'lease_id' => $newLease->lease_id,
+            'category' => 'Damage to room or furniture',
+            'reported_at' => '2026-07-10T10:00',
+            'channel' => 'Verbal',
+            'priority' => 'Routine',
+            'description' => 'Window glass crack repair',
+            'status' => 'Resolved',
+            'resolution' => 'Replaced glass pane',
+            'repair_cost' => '350.00',
+            'charge_to_tenant' => '1',
+            'assigned_to' => $this->manager->user_id,
+        ]);
+        $response->assertSessionHasNoErrors();
+
+        $concern = Concern::where('description', 'Window glass crack repair')->firstOrFail();
+        $this->assertSame('350.00', $concern->repair_cost);
+        $this->assertSame('350.00', $concern->cost);
+        $this->assertTrue((bool) $concern->charge_to_tenant);
+        $this->assertTrue((bool) $concern->charged_to_tenant);
+        $this->assertNull($concern->billed_in_bill_id);
+        $this->assertNull($concern->bill_id);
+
+        // 2. BillingService::calculateBillCharges consolidates rent + water + electricity + other_charges
+        $billingService = app(BillingService::class);
+        $calc = $billingService->calculateBillCharges($newLease);
+        $this->assertEquals(350.00, $calc['other_charges']);
+        $this->assertEquals(4050.00, $calc['total_amount']); // 3500 rent + 200 water + 350 repairs
+        $this->assertTrue($calc['unbilled_concerns']->contains('concern_id', $concern->concern_id));
+
+        // 3. BillingService::generate rolls the 350.00 into other_charges and locks billed_in_bill_id
+        $bill = $billingService->generate($newLease, [
+            'period_start' => '2026-06-25',
+            'due_date' => '2026-07-25',
+        ], $this->manager);
+
+        $this->assertSame('350.00', $bill->other_charges);
+        $this->assertSame('4050.00', $bill->total_amount);
+
+        $concern->refresh();
+        $this->assertSame($bill->bill_id, $concern->billed_in_bill_id);
+        $this->assertSame($bill->bill_id, $concern->bill_id);
+
+        // 4. Double billing prevention: subsequent check shows zero unbilled concerns
+        $nextCalc = $billingService->calculateBillCharges($newLease);
+        $this->assertEquals(0.00, $nextCalc['other_charges']);
+        $this->assertTrue($nextCalc['unbilled_concerns']->isEmpty());
+
+        // 5. Statement view displays the itemized repair description and amount
+        $this->actingAs($this->manager)->get(route('bills.show', $bill))
+            ->assertOk()
+            ->assertSee('Tenant Repair: Window glass crack repair')
+            ->assertSee('350.00');
+
+        // 6. Payment recording requires full balance including the repair fee
+        $this->actingAs($this->manager)->post(route('payments.store'), [
+            'bill_id' => $bill->bill_id,
+            'payment_date' => '2026-07-20',
+            'mode' => 'Cash',
+            'amount' => '3700.00', // Omitting repair cost
+        ])->assertSessionHasErrors('amount');
+
+        $this->actingAs($this->manager)->post(route('payments.store'), [
+            'bill_id' => $bill->bill_id,
+            'payment_date' => '2026-07-20',
+            'mode' => 'Cash',
+            'amount' => '4050.00', // Full balance
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('Paid', $bill->refresh()->status);
     }
 }

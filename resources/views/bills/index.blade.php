@@ -329,6 +329,7 @@
                 @csrf
                 <input type="hidden" name="lease_id" id="gbm_lease_id">
                 <input type="hidden" name="due_date" id="gbm_due_date">
+                <input type="hidden" name="concerns_submitted" value="1">
 
                 {{-- Lease Overview --}}
                 <div class="modal-summary-grid">
@@ -721,8 +722,8 @@
                     label.style.padding = '6px 0';
                     label.innerHTML = `
                         <span style="display: flex; align-items: center; gap: 8px;">
-                            <input type="checkbox" name="concerns[]" value="${c.id}" onchange="recalcGenerateBillModal()">
-                            <span>${c.desc} <span class="sub">${c.category} · resolved ${c.resolved}</span></span>
+                            <input type="checkbox" name="concerns[]" value="${c.id}" checked onchange="recalcGenerateBillModal()">
+                            <span>Tenant Repair: ${c.desc} <span class="sub">${c.category} · resolved ${c.resolved}</span></span>
                         </span>
                         <b class="money">${peso(c.cost)}</b>
                     `;
@@ -870,8 +871,15 @@
                 concernsRows = `
                     <tr>
                         <td>Other charges
-                            ${bill.concerns.map(c => `<span class="sub">${c.desc} (${c.category}): ${peso(c.cost)}</span>`).join('')}
+                            ${bill.concerns.map(c => `<span class="sub">Tenant Repair: ${c.category ? c.category + ' — ' : ''}${c.desc} — ${peso(c.cost)}</span>`).join('')}
                         </td>
+                        <td class="money">${peso(bill.other_charges)}</td>
+                    </tr>
+                `;
+            } else if (bill.other_charges > 0) {
+                concernsRows = `
+                    <tr>
+                        <td>Other charges</td>
                         <td class="money">${peso(bill.other_charges)}</td>
                     </tr>
                 `;

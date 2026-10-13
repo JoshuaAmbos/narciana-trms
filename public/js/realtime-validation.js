@@ -22,31 +22,60 @@ document.addEventListener('DOMContentLoaded', () => {
         return box;
     }
 
-    function setFieldError(input, box, msg) {
-        if (!msg) {
-            clearFieldError(input, box);
-            return;
-        }
-        input.classList.add('is-invalid');
-        input.style.borderColor = '#dc2626';
+    function setValidationState(input, box, msg, state) {
+        if (!box) return;
         const field = input.closest('.f');
         if (field) {
-            field.classList.add('has-err');
+            const serverErr = field.querySelector('.err:not(.realtime-feedback-msg)');
+            if (serverErr) serverErr.style.display = 'none';
         }
-        box.style.color = '#dc2626';
-        box.textContent = msg;
-        box.style.display = 'block';
+        if (state === 'error') {
+            input.classList.add('is-invalid');
+            input.classList.remove('is-valid');
+            input.style.borderColor = '#dc2626';
+            if (field) {
+                field.classList.add('has-err');
+            }
+            box.style.color = '#dc2626';
+            box.textContent = msg;
+            box.style.display = 'block';
+        } else if (state === 'success') {
+            input.classList.remove('is-invalid');
+            input.classList.add('is-valid');
+            input.style.borderColor = '';
+            if (field && !field.querySelector('.is-invalid')) {
+                field.classList.remove('has-err');
+            }
+            box.style.color = '#16a34a';
+            box.textContent = msg;
+            box.style.display = 'block';
+        }
     }
 
-    function clearFieldError(input, box) {
+    function clearValidationState(input, box) {
         input.classList.remove('is-invalid');
+        input.classList.remove('is-valid');
         input.style.borderColor = '';
         const field = input.closest('.f');
         if (field && !field.querySelector('.is-invalid')) {
             field.classList.remove('has-err');
         }
-        box.textContent = '';
-        box.style.display = 'none';
+        if (box) {
+            box.textContent = '';
+            box.style.display = 'none';
+        }
+    }
+
+    function setFieldError(input, box, msg) {
+        if (!msg) {
+            clearFieldError(input, box);
+            return;
+        }
+        setValidationState(input, box, msg, 'error');
+    }
+
+    function clearFieldError(input, box) {
+        clearValidationState(input, box);
     }
 
     function updateSubmitButton(form) {
@@ -60,6 +89,8 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.style.opacity = hasErrors ? '0.5' : '1';
         submitBtn.style.cursor = hasErrors ? 'not-allowed' : 'pointer';
     }
+
+    const toggleSubmitButton = updateSubmitButton;
 
     // --- 1. Philippine Contact Numbers ---
     document.querySelectorAll('input[type="tel"], input[name*="contact"], input[name*="phone"]').forEach(input => {
@@ -208,6 +239,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- 5. Password Confirmation Matching ---
+    document.querySelectorAll('input[name="password_confirmation"]').forEach(pwdConfirmInput => {
+        const form = pwdConfirmInput.closest('form') || document;
+        const pwdInput = form.querySelector('input[name="password"]');
+
+        if (pwdInput && pwdConfirmInput) {
+            const feedbackBox = getOrCreateFeedbackBox(pwdConfirmInput);
+
+            const validatePasswordMatch = () => {
+                const pwd = pwdInput.value;
+                const confirm = pwdConfirmInput.value;
+
+                if (confirm.length === 0) {
+                    clearValidationState(pwdConfirmInput, feedbackBox);
+                } else if (pwd !== confirm) {
+                    setValidationState(pwdConfirmInput, feedbackBox, 'Passwords do not match.', 'error');
+                } else {
+                    setValidationState(pwdConfirmInput, feedbackBox, 'Passwords match.', 'success');
+                }
+
+                toggleSubmitButton(pwdConfirmInput.closest('form'));
+            };
+
+            pwdConfirmInput.addEventListener('input', validatePasswordMatch);
+            pwdInput.addEventListener('input', () => {
+                if (pwdConfirmInput.value.length > 0) {
+                    validatePasswordMatch();
+                }
+            });
+
+            pwdConfirmInput.addEventListener('blur', () => {
+                if (pwdConfirmInput.value === '' && pwdConfirmInput.hasAttribute('required')) {
+                    setValidationState(pwdConfirmInput, feedbackBox, 'Please confirm your password.', 'error');
+                    toggleSubmitButton(pwdConfirmInput.closest('form'));
+                }
+            });
+        }
+    });
+
     // Guard form submissions against invalid or empty required fields
     document.querySelectorAll('form').forEach(form => {
         form.addEventListener('submit', (e) => {
@@ -224,11 +294,30 @@ document.addEventListener('DOMContentLoaded', () => {
                         msg = 'The contact number field is required.';
                     } else if (name.includes('name')) {
                         msg = 'This name field is required.';
+                    } else if (name === 'password_confirmation') {
+                        msg = 'Please confirm your password.';
                     }
                     setFieldError(input, box, msg);
                     hasEmptyRequired = true;
                 }
             });
+
+            // Check password confirmation match
+            const pwd = form.querySelector('input[name="password"]');
+            const pwdConf = form.querySelector('input[name="password_confirmation"]');
+            if (pwd && pwdConf) {
+                if (pwdConf.value.trim() === '' && pwdConf.hasAttribute('required')) {
+                    const box = getOrCreateFeedbackBox(pwdConf);
+                    setValidationState(pwdConf, box, 'Please confirm your password.', 'error');
+                    hasEmptyRequired = true;
+                } else if (pwdConf.value.length > 0 || pwd.value.length > 0) {
+                    if (pwd.value !== pwdConf.value) {
+                        const box = getOrCreateFeedbackBox(pwdConf);
+                        setValidationState(pwdConf, box, 'Passwords do not match.', 'error');
+                        hasEmptyRequired = true;
+                    }
+                }
+            }
 
             if (hasEmptyRequired || form.querySelectorAll('.is-invalid').length > 0) {
                 e.preventDefault();

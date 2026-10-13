@@ -22,9 +22,10 @@
                 @error('password') <div class="err">{{ $message }}</div> @enderror
             </div>
 
-            <div class="f">
-                <label for="password_confirmation">Type the new password again <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+            <div class="f @error('password_confirmation') has-err @enderror">
+                <label for="password_confirmation">Confirm Password <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                 <input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" required>
+                @error('password_confirmation') <div class="err">{{ $message }}</div> @enderror
             </div>
 
             <div class="form-actions">

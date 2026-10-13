@@ -18,7 +18,7 @@ class StoreUserRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'username' => strtolower(trim((string) $this->input('username'))),
+            'username' => trim((string) $this->input('username')),
             'full_name' => trim((string) $this->input('full_name')),
             'contact_no' => trim((string) $this->input('contact_no')),
         ]);
@@ -28,7 +28,7 @@ class StoreUserRequest extends FormRequest
     {
         return [
             'full_name' => ['required', 'string', 'max:255'],
-            'username' => ['required', 'string', 'max:50', 'regex:/^[a-z0-9._-]+$/', Rule::unique('tbl_user', 'username')],
+            'username' => ['required', 'string', 'max:50', 'regex:/^[a-zA-Z0-9._-]+$/', Rule::unique('tbl_user', 'username')],
             'role' => ['required', Rule::in(User::ROLES)],
             'contact_no' => ['required', 'string', 'max:15', 'regex:/^[0-9+\- ]+$/'],
             'password' => ['required', 'confirmed', Password::min(8)],

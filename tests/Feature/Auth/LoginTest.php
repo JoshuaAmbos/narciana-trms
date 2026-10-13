@@ -14,7 +14,7 @@ class LoginTest extends TestCase
 
     private function makeUser(array $attributes = []): User
     {
-        return User::factory()->create(['username' => 'manager1', 'password_hash' => 'secret-pass'] + $attributes);
+        return User::factory()->create(array_merge(['username' => 'manager1', 'password_hash' => 'secret-pass'], $attributes));
     }
 
     public function test_login_page_is_shown(): void
@@ -41,11 +41,20 @@ class LoginTest extends TestCase
         ]);
     }
 
-    public function test_username_is_not_case_sensitive(): void
+    public function test_username_is_case_sensitive(): void
     {
-        $this->makeUser();
+        $this->makeUser(['username' => 'Josh']);
 
-        $this->post('/login', ['username' => 'Manager1', 'password' => 'secret-pass'])->assertRedirect('/');
+        $this->from('/login')
+            ->post('/login', ['username' => 'josh', 'password' => 'secret-pass'])
+            ->assertRedirect('/login')
+            ->assertSessionHasErrors(['username' => 'Wrong username or password.']);
+
+        $this->assertGuest();
+
+        $this->post('/login', ['username' => 'Josh', 'password' => 'secret-pass'])
+            ->assertRedirect('/');
+
         $this->assertAuthenticated();
     }
 

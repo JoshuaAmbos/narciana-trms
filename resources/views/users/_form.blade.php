@@ -41,7 +41,7 @@
     <div class="f @error('password') has-err @enderror">
         <label for="password">
             @if ($passwordRequired)
-                Password <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span>
+                Password <span class="req-star" style="color: #dc2626; font-weight: 700;" aria-hidden="true">*</span>
             @else
                 New password <span class="text-muted" style="font-weight: normal; font-size: 0.85em;">(leave blank to keep current)</span>
             @endif
@@ -50,14 +50,15 @@
         <div class="hint">At least 8 characters.</div>
         @error('password') <div class="err">{{ $message }}</div> @enderror
     </div>
-    <div class="f">
+    <div class="f @error('password_confirmation') has-err @enderror">
         <label for="password_confirmation">
             @if ($passwordRequired)
-                Type the password again <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span>
+                Confirm Password <span class="req-star" style="color: #dc2626; font-weight: 700;" aria-hidden="true">*</span>
             @else
-                Type the new password again <span class="text-muted" style="font-weight: normal; font-size: 0.85em;">(optional)</span>
+                Confirm New Password <span class="text-muted" style="font-weight: normal; font-size: 0.85em;">(optional)</span>
             @endif
         </label>
         <input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" @required($passwordRequired)>
+        @error('password_confirmation') <div class="err">{{ $message }}</div> @enderror
     </div>
 </div>

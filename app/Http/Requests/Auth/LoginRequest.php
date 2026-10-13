@@ -6,6 +6,8 @@ use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -36,18 +38,24 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        $credentials = $this->only('username', 'password');
+        $username = (string) $this->input('username');
+        $password = (string) $this->input('password');
 
-        if (! Auth::validate($credentials)) {
+        $driver = DB::connection()->getDriverName();
+        $query = $driver === 'mysql'
+            ? User::whereRaw('BINARY username = ?', [$username])
+            : User::whereRaw('username = ? COLLATE BINARY', [$username]);
+
+        /** @var User|null $user */
+        $user = $query->first();
+
+        if (! $user || ! Hash::check($password, $user->password_hash ?? $user->password)) {
             RateLimiter::hit($this->throttleKey(), 60);
 
             throw ValidationException::withMessages(['username' => 'Wrong username or password.']);
         }
 
         RateLimiter::clear($this->throttleKey());
-
-        /** @var User $user */
-        $user = Auth::getLastAttempted();
 
         if (! $user->is_active) {
             throw ValidationException::withMessages(['username' => 'This account is deactivated. Please contact the Owner.']);

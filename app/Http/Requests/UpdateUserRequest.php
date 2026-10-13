@@ -17,7 +17,7 @@ class UpdateUserRequest extends StoreUserRequest
 
         return [
             'full_name' => ['required', 'string', 'max:255'],
-            'username' => ['required', 'string', 'max:50', 'regex:/^[a-z0-9._-]+$/',
+            'username' => ['required', 'string', 'max:50', 'regex:/^[a-zA-Z0-9._-]+$/',
                 Rule::unique('tbl_user', 'username')->ignore($target->user_id, 'user_id')],
             // The Owner cannot change their own role (decision 9); the form does not send it for them.
             'role' => $editingSelf ? ['prohibited'] : ['required', Rule::in(User::ROLES)],

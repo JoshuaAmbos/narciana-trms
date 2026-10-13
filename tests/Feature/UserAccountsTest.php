@@ -73,7 +73,7 @@ class UserAccountsTest extends TestCase
         $this->actingAs($this->owner)->post('/users', $this->validUser(['username' => '  Caretaker2 ']))
             ->assertRedirect('/users')->assertSessionHas('status');
 
-        $user = User::where('username', 'caretaker2')->firstOrFail(); // trimmed and lower-cased
+        $user = User::where('username', 'Caretaker2')->firstOrFail(); // trimmed and case-preserved
         $this->assertSame('Caretaker', $user->role);
         $this->assertTrue($user->is_active);
         $this->assertNotSame('long-enough', $user->password_hash);
@@ -96,6 +96,20 @@ class UserAccountsTest extends TestCase
             ->assertSessionHasErrors(['username']);
 
         $this->assertSame(1, User::count());
+    }
+
+    public function test_add_user_password_confirmation_validation(): void
+    {
+        $this->actingAs($this->owner)->get('/users/create')
+            ->assertOk()
+            ->assertSee('Confirm Password')
+            ->assertSee('name="password"', false)
+            ->assertSee('name="password_confirmation"', false);
+
+        $this->actingAs($this->owner)->post('/users', $this->validUser([
+            'password' => 'secret-pass-123',
+            'password_confirmation' => 'mismatch-pass',
+        ]))->assertSessionHasErrors(['password']);
     }
 
     // ---------- Edit ----------
@@ -183,5 +197,38 @@ class UserAccountsTest extends TestCase
             ->assertSee('Deactivated')
             ->assertSee(route('users.activate', $inactive), false)
             ->assertDontSee(route('users.deactivate', $this->owner), false);
+    }
+
+    public function test_creating_user_with_capitalized_username_preserves_exact_casing(): void
+    {
+        $this->actingAs($this->owner)->post('/users', $this->validUser([
+            'username' => 'Josh',
+            'full_name' => 'Josh Ambos',
+            'password' => 'secret-pass-123',
+            'password_confirmation' => 'secret-pass-123',
+        ]))->assertRedirect('/users');
+
+        $user = User::whereRaw('BINARY username = ?', ['Josh'])->first();
+        $this->assertNotNull($user, 'Account Josh was not found with exact casing');
+        $this->assertSame('Josh', $user->username);
+
+        // Rendered unchanged on User Accounts index
+        $this->actingAs($this->owner)->get('/users')
+            ->assertOk()
+            ->assertSee('Josh');
+
+        // Logging in with exact casing succeeds
+        $this->post('/logout');
+        $this->post('/login', ['username' => 'Josh', 'password' => 'secret-pass-123'])
+            ->assertRedirect('/');
+        $this->assertAuthenticatedAs($user);
+
+        // Attempting to log into Josh using lowercase josh fails authentication
+        $this->post('/logout');
+        $this->from('/login')
+            ->post('/login', ['username' => 'josh', 'password' => 'secret-pass-123'])
+            ->assertRedirect('/login')
+            ->assertSessionHasErrors(['username' => 'Wrong username or password.']);
+        $this->assertGuest();
     }
 }

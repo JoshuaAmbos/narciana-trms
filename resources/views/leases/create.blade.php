@@ -31,9 +31,11 @@
                 {{-- Section 1: Principal Renter --}}
                 <div class="panel p-6 sm:p-8 space-y-5 sm:space-y-6">
                     <h2>1. Principal Renter</h2>
-                    @php($defaultMode = ($selectedTenantId ?? false) ? 'existing' : 'new')
-                    @php($mode = old('tenant_mode', $defaultMode))
-                    @php($availableTenants = $eligibleTenants ?? $returningTenants ?? collect())
+                    @php
+                        $defaultMode = ($selectedTenantId ?? false) ? 'existing' : 'new';
+                        $mode = old('tenant_mode', $defaultMode);
+                        $availableTenants = $eligibleTenants ?? $returningTenants ?? collect();
+                    @endphp
                     <div class="filters" role="radiogroup">
                         <label class="chip {{ $mode === 'existing' ? 'on' : '' }} {{ $availableTenants->isEmpty() ? 'disabled' : '' }}">
                             <input type="radio" name="tenant_mode" value="existing" @checked($mode === 'existing') @disabled($availableTenants->isEmpty()) class="sr-only"> Select registered tenant
@@ -58,6 +60,14 @@
                         </div>
                     </div>
                     <div id="tenant-new" @if ($mode !== 'new') hidden @endif>
+                        @php
+                            if ($inquiry && empty($tenant->first_name) && empty($tenant->last_name)) {
+                                $tenant->first_name = $inquiry->first_name;
+                                $tenant->middle_name = $inquiry->middle_name;
+                                $tenant->last_name = $inquiry->last_name;
+                                $tenant->contact_no = $inquiry->contact_no;
+                            }
+                        @endphp
                         @include('tenants._fields', ['tenant' => $tenant])
                     </div>
                 </div>

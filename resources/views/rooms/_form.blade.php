@@ -126,7 +126,7 @@
                 if (roomNoField) roomNoField.classList.add('has-err');
                 roomNoFeedback.style.display = 'block';
                 roomNoFeedback.className = 'err text-red';
-                roomNoFeedback.innerHTML = 'Room "' + val + '" already exists. Please choose a different number.';
+                roomNoFeedback.innerHTML = 'Room "' + val + '" already exists. Please choose a different room number.';
                 if (submitBtn) { submitBtn.disabled = true; submitBtn.style.opacity = '0.55'; }
             } else {
                 if (roomNoField) roomNoField.classList.remove('has-err');

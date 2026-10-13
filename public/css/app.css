@@ -345,6 +345,23 @@ td.r, th.r { text-align: right; }
 .f .err { color: var(--red); font-size: 13px; margin-top: 3px; }
 .f.has-err input, .f.has-err select, .f.has-err textarea { border-color: var(--red); }
 
+/* Remove spin buttons from all number inputs across the entire application */
+input[type="number"],
+input[type="number"].no-spin,
+input[inputmode="numeric"],
+input[inputmode="decimal"] {
+    -moz-appearance: textfield !important;
+    appearance: textfield !important;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"].no-spin::-webkit-outer-spin-button,
+input[type="number"].no-spin::-webkit-inner-spin-button {
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+}
+
 .alert { padding: 12px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 14px; }
 .alert-ok { background: #e8f6ee; color: var(--green); border: 1px solid #bfe3cc; }
 .alert-err { background: #fdecea; color: var(--red); border: 1px solid #f3c3bd; }

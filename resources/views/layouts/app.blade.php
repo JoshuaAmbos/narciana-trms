@@ -158,6 +158,7 @@
             data-login-url="{{ route('login', ['timeout' => 1]) }}"></script>
 @endif
 <script src="{{ asset('js/sidebar.js') }}?v={{ filemtime(public_path('js/sidebar.js')) }}"></script>
+<script src="{{ asset('js/realtime-validation.js') }}?v={{ filemtime(public_path('js/realtime-validation.js')) }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         // Zero-Jump Error Anchoring & Scroll Position Preservation

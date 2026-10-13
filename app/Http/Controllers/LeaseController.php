@@ -91,6 +91,9 @@ class LeaseController extends Controller
         $tenantToForm = $selectedTenant;
         if (! $tenantToForm && $inquiry) {
             $tenantToForm = new Tenant([
+                'first_name' => $inquiry->first_name,
+                'middle_name' => $inquiry->middle_name,
+                'last_name' => $inquiry->last_name,
                 'full_name' => $inquiry->prospect_name,
                 'contact_no' => $inquiry->contact_no,
                 'status' => 'Active',

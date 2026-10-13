@@ -31,6 +31,9 @@ class Inquiry extends Model
     public $timestamps = true;
 
     protected $fillable = [
+        'first_name',
+        'middle_name',
+        'last_name',
         'prospect_name',
         'contact_no',
         'preferred_type',
@@ -46,6 +49,40 @@ class Inquiry extends Model
         'created_at',
         'updated_at',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Inquiry $inquiry) {
+            $name = $inquiry->prospect_name;
+            if ($name !== '') {
+                $inquiry->attributes['prospect_name'] = $name;
+            }
+        });
+    }
+
+    public function getProspectNameAttribute(): string
+    {
+        $computed = trim("{$this->first_name} " . ($this->middle_name ? "{$this->middle_name} " : '') . "{$this->last_name}");
+        if ($computed !== '') {
+            return $computed;
+        }
+
+        return (string) ($this->attributes['prospect_name'] ?? '');
+    }
+
+    public function setProspectNameAttribute(?string $value): void
+    {
+        $this->attributes['prospect_name'] = $value;
+        if ($value !== null && $value !== '') {
+            $parts = preg_split('/\s+/', trim($value), 2);
+            if (empty($this->attributes['first_name'])) {
+                $this->attributes['first_name'] = $parts[0] ?? 'Prospect';
+            }
+            if (empty($this->attributes['last_name'])) {
+                $this->attributes['last_name'] = $parts[1] ?? ($parts[0] ?? 'Inquirer');
+            }
+        }
+    }
 
     protected function casts(): array
     {

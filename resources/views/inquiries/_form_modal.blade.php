@@ -7,13 +7,28 @@
         </h2>
         <form method="POST" action="{{ route('inquiries.store') }}" novalidate>
             @csrf
-            <div class="row">
-                <div class="f @error('prospect_name') has-err @enderror">
-                    <label for="prospect_name">Name <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
-                    <input id="prospect_name" name="prospect_name" type="text" maxlength="255" required
-                           value="{{ old('prospect_name') }}">
-                    @error('prospect_name') <div class="err">{{ $message }}</div> @enderror
+            <div class="row" style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <div class="f @error('first_name') has-err @enderror" style="flex: 1 1 180px;">
+                    <label for="first_name">First Name <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+                    <input id="first_name" name="first_name" type="text" maxlength="100" required
+                           value="{{ old('first_name') }}" placeholder="First name">
+                    @error('first_name') <div class="err">{{ $message }}</div> @enderror
                 </div>
+                <div class="f @error('middle_name') has-err @enderror" style="flex: 1 1 140px;">
+                    <label for="middle_name">Middle Name <span class="text-muted" style="font-weight: normal; font-size: 0.85em;">(optional)</span></label>
+                    <input id="middle_name" name="middle_name" type="text" maxlength="100"
+                           value="{{ old('middle_name') }}" placeholder="e.g. Santos">
+                    @error('middle_name') <div class="err">{{ $message }}</div> @enderror
+                </div>
+                <div class="f @error('last_name') has-err @enderror" style="flex: 1 1 180px;">
+                    <label for="last_name">Last Name <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+                    <input id="last_name" name="last_name" type="text" maxlength="100" required
+                           value="{{ old('last_name') }}" placeholder="e.g. Dela Cruz">
+                    @error('last_name') <div class="err">{{ $message }}</div> @enderror
+                </div>
+            </div>
+
+            <div class="row">
                 <div class="f @error('contact_no') has-err @enderror">
                     <label for="contact_no">Contact number <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
                     <input id="contact_no" name="contact_no" type="tel" maxlength="15" placeholder="09XXXXXXXXX" required

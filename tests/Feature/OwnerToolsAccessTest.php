@@ -43,7 +43,7 @@ class OwnerToolsAccessTest extends TestCase
             ['post', route('backups.store'), []],
             ['get', route('backups.download', $backup), []],
             ['delete', route('backups.destroy', $backup), []],
-            ['post', route('backups.restore'), ['backup' => $backup, 'confirm' => 'RESTORE']],
+            ['post', route('backups.restore'), ['backup_file' => $backup, 'password' => 'password']],
             ['get', route('audit-log.index'), []],
         ];
     }

@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\RestoreBackupRequest;
+use App\Models\AuditLog;
+use App\Models\User;
 use App\Services\BackupService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -54,18 +58,63 @@ class BackupController extends Controller
     }
 
     /** Safety backup, restore, then log out (the logged-in account may not even exist in the older copy). */
-    public function restore(RestoreBackupRequest $request): RedirectResponse
+    public function restore(Request $request): RedirectResponse
     {
-        $name = $request->validated('backup');
+        if (! $request->has('backup_file') && $request->has('backup')) {
+            $request->merge(['backup_file' => $request->input('backup')]);
+        }
+        if (! $request->has('backup') && $request->has('backup_file')) {
+            $request->merge(['backup' => $request->input('backup_file')]);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'backup_file' => ['required', 'string'],
+            'password' => ['required', 'string'],
+        ], [
+            'backup_file.required' => 'Choose the backup to restore.',
+            'password.required' => 'Enter your account password to authorize database restoration.',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        $user = $request->user();
+        if (! Hash::check($request->input('password'), $user->getAuthPassword())) {
+            AuditLog::record(
+                'Database restoration failed: Invalid password authorization',
+                'backup',
+                null,
+                $user->user_id
+            );
+
+            return back()
+                ->withErrors(['password' => 'The provided password does not match your account password.'])
+                ->withInput()
+                ->with('warning', 'The provided password does not match your account password.');
+        }
+
+        $name = $request->input('backup_file');
         $this->backups->path($name); // 404 for unknown names, before anything is touched
 
         try {
-            $safety = $this->backups->restore($name, $request->user());
+            $safety = $this->backups->restore($name, $user);
         } catch (\Throwable $e) {
             report($e);
 
             return back()->with('error', $e->getMessage());
         }
+
+        $auditUserId = User::whereKey($user->user_id)->exists()
+            ? $user->user_id
+            : (User::where('role', 'Owner')->value('user_id') ?? $user->user_id);
+
+        AuditLog::record(
+            "Database restored from {$name} via password authorization",
+            'backup',
+            null,
+            $auditUserId
+        );
 
         Auth::logout();
         $request->session()->invalidate();

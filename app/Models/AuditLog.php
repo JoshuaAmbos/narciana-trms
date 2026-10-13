@@ -53,13 +53,13 @@ class AuditLog extends Model
      * Example: AuditLog::record('User created', 'tbl_user', $user->user_id);
      *          AuditLog::record('Settings changed', 'tbl_setting', 1, details: 'Water rate: ₱200.00 → ₱250.00');
      */
-    public static function record(string $action, string $table, int $recordId, ?int $userId = null, ?string $details = null): self
+    public static function record(string $action, string $table, ?int $recordId = 0, ?int $userId = null, ?string $details = null): self
     {
         return self::create([
             'user_id' => $userId ?? Auth::id(),
             'action' => $action,
             'table_name' => $table,
-            'record_id' => $recordId,
+            'record_id' => $recordId ?? 0,
             'details' => $details === null ? null : Str::limit($details, 497),
             'logged_at' => now(),
         ]);

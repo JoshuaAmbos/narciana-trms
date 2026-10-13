@@ -76,7 +76,8 @@ class BackupTest extends TestCase
             ->assertSee('bytes')
             ->assertSee('Test Owner (Owner)')
             ->assertSee(route('backups.download', 'backup-2026-10-02_143000.sql'), false)
-            ->assertSee('Type RESTORE to confirm');
+            ->assertSee('Confirm Account Password')
+            ->assertDontSee('Type RESTORE to confirm');
     }
 
     public function test_a_failed_backup_leaves_no_file_and_shows_the_error(): void
@@ -153,25 +154,36 @@ class BackupTest extends TestCase
         $this->assertSame('Asia/Manila', $event->timezone);
     }
 
-    public function test_restore_requires_typing_restore(): void
+    public function test_restore_requires_account_password(): void
     {
         $name = $this->backups()->create('Manual', $this->owner)['name'];
 
-        foreach (['', 'restore', 'yes'] as $typed) {
-            $this->actingAs($this->owner)->post(route('backups.restore'), ['backup' => $name, 'confirm' => $typed])
-                ->assertSessionHasErrors('confirm');
-        }
-        $this->actingAs($this->owner)->post(route('backups.restore'), ['backup' => '', 'confirm' => 'RESTORE'])
-            ->assertSessionHasErrors('backup');
+        // Missing password
+        $this->actingAs($this->owner)->post(route('backups.restore'), ['backup_file' => $name, 'password' => ''])
+            ->assertSessionHasErrors('password');
+
+        // Incorrect password
+        $this->actingAs($this->owner)->post(route('backups.restore'), ['backup_file' => $name, 'password' => 'wrong-password'])
+            ->assertSessionHasErrors('password')
+            ->assertSessionHas('warning', 'The provided password does not match your account password.');
 
         $this->assertSame([], $this->runner->imported);
         $this->assertCount(1, $this->backups()->list()); // no safety backup either
         $this->assertAuthenticatedAs($this->owner);
+
+        // Security event recorded in tbl_audit_log
+        $failedLog = AuditLog::where('action', 'Database restoration failed: Invalid password authorization')->first();
+        $this->assertNotNull($failedLog);
+        $this->assertSame($this->owner->user_id, $failedLog->user_id);
+
+        // Missing backup file
+        $this->actingAs($this->owner)->post(route('backups.restore'), ['backup_file' => '', 'password' => 'password'])
+            ->assertSessionHasErrors('backup_file');
     }
 
     public function test_restore_of_an_unknown_backup_is_refused_before_anything_happens(): void
     {
-        $this->actingAs($this->owner)->post(route('backups.restore'), ['backup' => '../.env', 'confirm' => 'RESTORE'])->assertNotFound();
+        $this->actingAs($this->owner)->post(route('backups.restore'), ['backup_file' => '../.env', 'password' => 'password'])->assertNotFound();
 
         $this->assertSame([], $this->runner->imported);
         $this->assertCount(0, $this->backups()->list());
@@ -182,7 +194,7 @@ class BackupTest extends TestCase
         $name = $this->backups()->create('Manual', $this->owner)['name'];
         $this->travel(5)->minutes();
 
-        $this->actingAs($this->owner)->post(route('backups.restore'), ['backup' => $name, 'confirm' => 'RESTORE'])
+        $this->actingAs($this->owner)->post(route('backups.restore'), ['backup_file' => $name, 'password' => 'password'])
             ->assertRedirect(route('login'))
             ->assertSessionHas('status', fn ($s) => str_contains($s, 'backup-2026-10-02_143500.sql'));
 
@@ -195,6 +207,9 @@ class BackupTest extends TestCase
         $log = AuditLog::where('action', 'Backup restored')->sole();
         $this->assertSame($this->owner->user_id, $log->user_id);
         $this->assertSame("Restored {$name}; safety backup backup-2026-10-02_143500.sql", $log->details);
+
+        $authLog = AuditLog::where('action', "Database restored from {$name} via password authorization")->first();
+        $this->assertNotNull($authLog);
     }
 
     public function test_restore_is_not_attempted_when_the_safety_backup_fails(): void
@@ -203,7 +218,7 @@ class BackupTest extends TestCase
         $this->runner->failDump = true;
 
         $this->actingAs($this->owner)->from(route('backups.index'))
-            ->post(route('backups.restore'), ['backup' => $name, 'confirm' => 'RESTORE'])
+            ->post(route('backups.restore'), ['backup_file' => $name, 'password' => 'password'])
             ->assertRedirect(route('backups.index'))->assertSessionHas('error');
 
         $this->assertSame([], $this->runner->imported);

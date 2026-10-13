@@ -53,32 +53,67 @@
                 Anything recorded after that backup will be gone. A safety backup of the current data is made first, and
                 you must log in again afterwards.
             </div>
-            <form method="POST" action="{{ route('backups.restore') }}" novalidate
+            <form method="POST" action="{{ route('backups.restore') }}" id="restore_form" novalidate
                   onsubmit="return confirm('Restore this backup now? All current data will be replaced.')">
                 @csrf
                 <div class="row">
-                    <div class="f @error('backup') has-err @enderror">
-                        <label for="backup">Backup to restore</label>
-                        <select id="backup" name="backup">
+                    <div class="f @error('backup_file') has-err @enderror @error('backup') has-err @enderror">
+                        <label for="restore_backup_file">Backup to restore <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span></label>
+                        <select id="restore_backup_file" name="backup_file" required>
                             <option value="">Choose a backup…</option>
                             @foreach ($backups as $b)
-                                <option value="{{ $b['name'] }}" @selected(old('backup') === $b['name'])>
+                                <option value="{{ $b['name'] }}" @selected((old('backup_file') ?? old('backup')) === $b['name'])>
                                     {{ $b['created_at']->format('j M Y, g:i A') }} ({{ $b['type'] }})
                                 </option>
                             @endforeach
                         </select>
+                        @error('backup_file') <div class="err">{{ $message }}</div> @enderror
                         @error('backup') <div class="err">{{ $message }}</div> @enderror
                     </div>
-                    <div class="f @error('confirm') has-err @enderror">
-                        <label for="confirm">Type RESTORE to confirm</label>
-                        <input id="confirm" name="confirm" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false">
-                        @error('confirm') <div class="err">{{ $message }}</div> @enderror
+                    <div class="f form-group @error('password') has-err @enderror">
+                        <label for="restore_password" class="form-label text-sm font-semibold text-danger">
+                            Confirm Account Password <span class="req-star" style="color: #dc2626; font-weight: 700; margin-left: 2px;" aria-hidden="true">*</span>
+                        </label>
+                        <input 
+                            type="password" 
+                            id="restore_password" 
+                            name="password" 
+                            class="input-field @error('password') is-invalid @enderror" 
+                            placeholder="Enter your current password" 
+                            autocomplete="current-password" 
+                            required
+                        >
+                        @error('password')
+                            <span class="text-xs text-danger mt-1 block err">{{ $message }}</span>
+                        @enderror
                     </div>
                 </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn danger">Restore</button>
+                <div class="form-actions" style="margin-top: 18px; display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn danger" id="restore_submit_btn" disabled>Authorize &amp; Restore</button>
                 </div>
             </form>
         </div>
     @endif
+
+    @push('scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const pwdInput = document.getElementById('restore_password');
+                const submitBtn = document.getElementById('restore_submit_btn');
+
+                if (pwdInput && submitBtn) {
+                    const updateBtnState = function () {
+                        submitBtn.disabled = pwdInput.value.trim().length === 0;
+                    };
+
+                    pwdInput.addEventListener('input', updateBtnState);
+                    updateBtnState();
+
+                    window.addEventListener('pagehide', function () {
+                        pwdInput.value = '';
+                    });
+                }
+            });
+        </script>
+    @endpush
 @endsection

@@ -94,54 +94,70 @@
         @else
             <div class="table-wrap leases-table-wrap">
                 <table>
-                    <tr>
-                        <th>Contract Ref</th>
-                        <th>Room</th>
-                        <th>Tenant</th>
-                        <th>Move-in Date</th>
-                        <th>Due Day</th>
-                        <th class="r">Monthly Rent</th>
-                        <th>Occupants</th>
-                        <th>Status</th>
-                    </tr>
-                    @foreach ($leases as $lease)
-                        @php($coTenant = $lease->coTenant())
-                        <tr class="lease-row"
-                            data-search="{{ strtolower('MOA-' . str_pad($lease->lease_id, 4, '0', STR_PAD_LEFT) . ' ' . $lease->room->room_no . ' ' . $lease->room->room_type . ' ' . $lease->tenant->full_name . ' ' . ($coTenant ? $coTenant->full_name : '') . ' ' . $lease->tenant->contact_no) }}"
-                            tabindex="0"
-                            role="button"
-                            aria-label="View details and actions for MOA-{{ str_pad($lease->lease_id, 4, '0', STR_PAD_LEFT) }}"
-                            onclick="openLeaseModal({{ $lease->lease_id }})"
-                            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openLeaseModal({{ $lease->lease_id }});}">
-                            <td class="nowrap"><b>MOA-{{ str_pad($lease->lease_id, 4, '0', STR_PAD_LEFT) }}</b></td>
-                            <td>
-                                <b>Room {{ $lease->room->room_no }}</b>
-                                <div class="sub nowrap muted">{{ $lease->room->room_type }}</div>
-                            </td>
-                            <td>
-                                <div>
-                                    <a href="{{ route('tenants.show', $lease->tenant) }}" style="font-weight: 600; text-decoration: none; color: inherit;" onclick="event.stopPropagation()">
-                                        {{ $lease->tenant->full_name }}
-                                    </a>
-                                    @if ($coTenant)
-                                        <span class="muted font-normal"> &amp; </span><b>{{ $coTenant->full_name }}</b>
-                                    @endif
-                                </div>
-                                <div class="sub nowrap muted">{{ $lease->tenant->contact_no }}</div>
-                            </td>
-                            <td class="nowrap">{{ $lease->move_in_date->format('j M Y') }}</td>
-                            <td>
-                                <span class="tag t-amber" style="font-size: 11px;">Every {{ $lease->dueDayLabel() }}</span>
-                            </td>
-                            <td class="money">@peso($lease->monthly_rent)</td>
-                            <td>
-                                <b>{{ $lease->active_occupants_count }}</b> <span class="muted">/ {{ min($lease->room->max_occupants, \App\Models\Room::maxCapacity()) }}</span>
-                            </td>
-                            <td class="nowrap">
-                                <x-lease-status :lease="$lease" />
-                            </td>
+                    <thead>
+                        <tr>
+                            <th>Contract Ref</th>
+                            <th>Room</th>
+                            <th>Tenant</th>
+                            <th>Move-in Date</th>
+                            <th>Due Day</th>
+                            <th class="r">Monthly Rent</th>
+                            <th>Occupants</th>
+                            <th>Status</th>
+                            <th class="actions text-right">Actions</th>
                         </tr>
-                    @endforeach
+                    </thead>
+                    <tbody>
+                        @foreach ($leases as $lease)
+                            @php($coTenant = $lease->coTenant())
+                            <tr class="lease-row"
+                                data-search="{{ strtolower('MOA-' . str_pad($lease->lease_id, 4, '0', STR_PAD_LEFT) . ' ' . $lease->room->room_no . ' ' . $lease->room->room_type . ' ' . $lease->tenant->full_name . ' ' . ($coTenant ? $coTenant->full_name : '') . ' ' . $lease->tenant->contact_no) }}">
+                                <td class="nowrap">
+                                    <a href="{{ route('leases.show', $lease) }}" class="font-semibold text-blue-600 hover:underline">
+                                        MOA-{{ str_pad($lease->lease_id, 4, '0', STR_PAD_LEFT) }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <b>Room {{ $lease->room->room_no }}</b>
+                                    <div class="sub nowrap muted">{{ $lease->room->room_type }}</div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <a href="{{ route('tenants.show', $lease->tenant) }}" style="font-weight: 600; text-decoration: none; color: inherit;">
+                                            {{ $lease->tenant->full_name }}
+                                        </a>
+                                        @if ($coTenant)
+                                            <span class="muted font-normal"> &amp; </span><b>{{ $coTenant->full_name }}</b>
+                                        @endif
+                                    </div>
+                                    <div class="sub nowrap muted">{{ $lease->tenant->contact_no }}</div>
+                                </td>
+                                <td class="nowrap">{{ $lease->move_in_date->format('j M Y') }}</td>
+                                <td>
+                                    <span class="tag t-amber" style="font-size: 11px;">Every {{ $lease->dueDayLabel() }}</span>
+                                </td>
+                                <td class="money">@peso($lease->monthly_rent)</td>
+                                <td>
+                                    <b>{{ $lease->active_occupants_count }}</b> <span class="muted">/ {{ min($lease->room->max_occupants, \App\Models\Room::maxCapacity()) }}</span>
+                                </td>
+                                <td class="nowrap">
+                                    <x-lease-status :lease="$lease" />
+                                </td>
+                                <td class="actions">
+                                    <div class="table-action-group">
+                                        <a href="{{ route('leases.show', $lease) }}" class="btn sec" title="View MOA details">View MOA</a>
+                                        @if (!auth()->user()->can('manage-leases'))
+                                            <button type="button" class="btn danger disabled" disabled title="Caretakers cannot terminate leases." aria-disabled="true">End Tenancy</button>
+                                        @elseif ($lease->status !== 'Active')
+                                            <button type="button" class="btn danger disabled" disabled title="This tenancy has already ended or been cancelled." aria-disabled="true">End Tenancy</button>
+                                        @else
+                                            <button type="button" class="btn danger" onclick="openEndLeaseModal({{ $lease->lease_id }}, '{{ addslashes($lease->tenant->full_name) }}', '{{ addslashes($lease->room->room_no) }}', '{{ addslashes($lease->room->room_type) }}')">End Tenancy</button>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
                 </table>
             </div>
 
@@ -149,15 +165,14 @@
             <div class="lease-cards">
                 @foreach ($leases as $lease)
                     @php($coTenant = $lease->coTenant())
-                    <div class="lease-card lease-card-clickable"
-                         data-search="{{ strtolower('MOA-' . str_pad($lease->lease_id, 4, '0', STR_PAD_LEFT) . ' ' . $lease->room->room_no . ' ' . $lease->room->room_type . ' ' . $lease->tenant->full_name . ' ' . ($coTenant ? $coTenant->full_name : '') . ' ' . $lease->tenant->contact_no) }}"
-                         tabindex="0"
-                         role="button"
-                         aria-label="View details and actions for MOA-{{ str_pad($lease->lease_id, 4, '0', STR_PAD_LEFT) }}"
-                         onclick="openLeaseModal({{ $lease->lease_id }})"
-                         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openLeaseModal({{ $lease->lease_id }});}">
+                    <div class="lease-card"
+                         data-search="{{ strtolower('MOA-' . str_pad($lease->lease_id, 4, '0', STR_PAD_LEFT) . ' ' . $lease->room->room_no . ' ' . $lease->room->room_type . ' ' . $lease->tenant->full_name . ' ' . ($coTenant ? $coTenant->full_name : '') . ' ' . $lease->tenant->contact_no) }}">
                         <div class="lease-card-head">
-                            <span class="lease-card-title">Room {{ $lease->room->room_no }}</span>
+                            <span class="lease-card-title">
+                                <a href="{{ route('leases.show', $lease) }}" class="font-semibold text-blue-600 hover:underline">
+                                    Room {{ $lease->room->room_no }}
+                                </a>
+                            </span>
                             <x-lease-status :lease="$lease" />
                         </div>
                         <div class="lease-card-specs">
@@ -166,7 +181,7 @@
                         <div class="lease-card-body">
                             <div>
                                 @php($coTenant = $lease->coTenant())
-                                <a href="{{ route('tenants.show', $lease->tenant) }}" class="font-bold text-slate-900" style="text-decoration: none; color: inherit;" onclick="event.stopPropagation()">
+                                <a href="{{ route('tenants.show', $lease->tenant) }}" class="font-bold text-slate-900" style="text-decoration: none; color: inherit;">
                                     {{ $lease->tenant->full_name }}
                                 </a>
                                 @if ($coTenant)
@@ -180,6 +195,16 @@
                                 <span class="font-bold">@peso($lease->monthly_rent)</span> <span class="sub muted">/ mo</span>
                                 <div class="sub muted">Due every {{ $lease->dueDayLabel() }}</div>
                             </div>
+                        </div>
+                        <div class="lease-card-actions">
+                            <a href="{{ route('leases.show', $lease) }}" class="btn sec" title="View MOA details">View MOA</a>
+                            @if (!auth()->user()->can('manage-leases'))
+                                <button type="button" class="btn danger disabled" disabled title="Caretakers cannot terminate leases." aria-disabled="true">End Tenancy</button>
+                            @elseif ($lease->status !== 'Active')
+                                <button type="button" class="btn danger disabled" disabled title="This tenancy has already ended or been cancelled." aria-disabled="true">End Tenancy</button>
+                            @else
+                                <button type="button" class="btn danger" onclick="openEndLeaseModal({{ $lease->lease_id }}, '{{ addslashes($lease->tenant->full_name) }}', '{{ addslashes($lease->room->room_no) }}', '{{ addslashes($lease->room->room_type) }}')">End Tenancy</button>
+                            @endif
                         </div>
                     </div>
                 @endforeach

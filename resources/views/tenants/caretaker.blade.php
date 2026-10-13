@@ -12,13 +12,15 @@
         @else
             <div class="table-wrap">
                 <table>
-                    <tr><th>Room</th><th>Tenant</th><th></th></tr>
+                    <tr><th>Room</th><th>Tenant</th><th class="actions text-right">Actions</th></tr>
                     @foreach ($rows as $row)
                         <tr>
                             <td><b>{{ $row['room_no'] }}</b></td>
                             <td>{{ $row['tenant_name'] }}</td>
                             <td class="actions">
-                                <a href="{{ route('leases.household', $row['lease_id']) }}" class="btn sec">Appliances &amp; visitors</a>
+                                <div class="table-action-group">
+                                    <a href="{{ route('leases.household', $row['lease_id']) }}" class="btn sec">Appliances &amp; visitors</a>
+                                </div>
                             </td>
                         </tr>
                     @endforeach

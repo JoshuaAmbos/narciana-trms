@@ -135,20 +135,16 @@
                         <th>Valid ID Type</th>
                         <th>Masked ID Number</th>
                         <th>Status</th>
+                        <th class="actions text-right">Actions</th>
                     </tr>
                     @foreach ($tenants as $tenant)
                         @php($active = $tenant->activeLease)
                         <tr class="tenant-row"
-                            data-search="{{ strtolower($tenant->full_name . ' ' . $tenant->contact_no . ' ' . ($active ? $active->room->room_no : '') . ' ' . $tenant->valid_id_type . ' ' . $tenant->masked_id_number . ' ' . $tenant->status) }}"
-                            tabindex="0"
-                            role="button"
-                            aria-label="View details and actions for {{ $tenant->full_name }}"
-                            onclick="openTenantModal({{ $tenant->tenant_id }})"
-                            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openTenantModal({{ $tenant->tenant_id }});}">
+                            data-search="{{ strtolower($tenant->full_name . ' ' . $tenant->contact_no . ' ' . ($active ? $active->room->room_no : '') . ' ' . $tenant->valid_id_type . ' ' . $tenant->masked_id_number . ' ' . $tenant->status) }}">
                             <td>
-                                <span style="font-weight: 600; color: inherit;">
+                                <a href="javascript:void(0)" onclick="openTenantModal({{ $tenant->tenant_id }})" class="font-semibold text-blue-600 hover:underline">
                                     {{ $tenant->full_name }}
-                                </span>
+                                </a>
                                 @if ($tenant->occupation)
                                     <div class="sub nowrap muted">{{ $tenant->occupation }}</div>
                                 @endif
@@ -177,10 +173,20 @@
                                     {{ $tenant->status }}
                                 </span>
                             </td>
+                            <td class="actions">
+                                <div class="table-action-group">
+                                    <button type="button" class="btn sec" onclick="openTenantModal({{ $tenant->tenant_id }})" title="View tenant details">Details</button>
+                                    @if (auth()->user()->hasRole('Caretaker'))
+                                        <button type="button" class="btn disabled" disabled title="Caretakers cannot edit tenant profiles." aria-disabled="true">Edit</button>
+                                    @else
+                                        <a href="{{ route('tenants.edit', $tenant) }}" class="btn sec" title="Edit tenant profile">Edit</a>
+                                    @endif
+                                </div>
+                            </td>
                         </tr>
                     @endforeach
                     <tr id="tenants-table-empty" class="empty-filter-row" data-filter-id="tenant-search-input" style="display: none;">
-                        <td colspan="6" class="muted" style="text-align: center; padding: 24px;">No matching tenants found.</td>
+                        <td colspan="7" class="muted" style="text-align: center; padding: 24px;">No matching tenants found.</td>
                     </tr>
                 </table>
             </div>
@@ -189,15 +195,12 @@
             <div class="tenant-cards">
                 @foreach ($tenants as $tenant)
                     @php($active = $tenant->activeLease)
-                    <div class="tenant-card tenant-card-clickable"
-                         data-search="{{ strtolower($tenant->full_name . ' ' . $tenant->contact_no . ' ' . ($active ? $active->room->room_no : '') . ' ' . $tenant->valid_id_type . ' ' . $tenant->masked_id_number . ' ' . $tenant->status) }}"
-                         tabindex="0"
-                         role="button"
-                         aria-label="View details and actions for {{ $tenant->full_name }}"
-                         onclick="openTenantModal({{ $tenant->tenant_id }})"
-                         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openTenantModal({{ $tenant->tenant_id }});}">
+                    <div class="tenant-card"
+                         data-search="{{ strtolower($tenant->full_name . ' ' . $tenant->contact_no . ' ' . ($active ? $active->room->room_no : '') . ' ' . $tenant->valid_id_type . ' ' . $tenant->masked_id_number . ' ' . $tenant->status) }}">
                         <div class="tenant-card-head">
-                            <span class="tenant-card-title">{{ $tenant->full_name }}</span>
+                            <span class="tenant-card-title">
+                                <a href="javascript:void(0)" onclick="openTenantModal({{ $tenant->tenant_id }})" class="font-semibold text-blue-600 hover:underline">{{ $tenant->full_name }}</a>
+                            </span>
                             <span class="tag {{ $tenant->status === 'Active' ? 't-green' : ($tenant->status === 'Blacklisted' ? 't-red' : 't-amber') }}" style="font-size: 11px;">
                                 {{ $tenant->status }}
                             </span>
@@ -221,6 +224,14 @@
                                     <span class="muted" style="font-size: 12.5px;">No Active Lease</span>
                                 @endif
                             </div>
+                        </div>
+                        <div class="card-actions tenant-card-actions">
+                            <button type="button" class="btn sec" onclick="openTenantModal({{ $tenant->tenant_id }})" title="View tenant details">Details</button>
+                            @if (auth()->user()->hasRole('Caretaker'))
+                                <button type="button" class="btn disabled" disabled title="Caretakers cannot edit tenant profiles." aria-disabled="true">Edit</button>
+                            @else
+                                <a href="{{ route('tenants.edit', $tenant) }}" class="btn sec" title="Edit tenant profile">Edit</a>
+                            @endif
                         </div>
                     </div>
                 @endforeach

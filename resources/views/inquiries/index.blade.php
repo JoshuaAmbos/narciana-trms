@@ -81,34 +81,55 @@
                             <th>Occupants</th>
                             <th>Status</th>
                             <th>Logged by</th>
+                            <th class="actions text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($inquiries as $inquiry)
                             <tr class="inquiry-row"
-                                data-search="{{ strtolower($inquiry->prospect_name . ' ' . $inquiry->contact_no . ' ' . $inquiry->channel . ' ' . $inquiry->preferred_type . ' ' . $inquiry->status . ' ' . ($inquiry->remarks ?? '') . ' ' . $inquiry->user->role) }}"
-                                tabindex="0"
-                                role="button"
-                                aria-label="View details and actions for {{ $inquiry->prospect_name }}"
-                                onclick="openInquiryModal({{ $inquiry->inquiry_id }})"
-                                onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openInquiryModal({{ $inquiry->inquiry_id }});}">
+                                data-search="{{ strtolower($inquiry->prospect_name . ' ' . $inquiry->contact_no . ' ' . $inquiry->channel . ' ' . $inquiry->preferred_type . ' ' . $inquiry->status . ' ' . ($inquiry->remarks ?? '') . ' ' . $inquiry->user->role) }}">
                                 <td>{{ $inquiry->inquiry_date->format('j M Y') }}</td>
                                 <td>
-                                    <b>{{ $inquiry->prospect_name }}</b>
+                                    <a href="javascript:void(0)" onclick="openInquiryModal({{ $inquiry->inquiry_id }})" class="font-semibold text-blue-600 hover:underline">
+                                        {{ $inquiry->prospect_name }}
+                                    </a>
                                     @if ($inquiry->remarks)<div class="sub">{{ $inquiry->remarks }}</div>@endif
                                 </td>
                                 <td>
-                                    <a href="{{ $inquiry->telHref() }}" class="font-medium" onclick="event.stopPropagation()">{{ $inquiry->contact_no }}</a>
+                                    <a href="{{ $inquiry->telHref() }}" class="font-medium">{{ $inquiry->contact_no }}</a>
                                     <div class="sub nowrap">{{ $inquiry->channel }}@if ($inquiry->wants_contact) · wants contact @endif</div>
                                 </td>
                                 <td>{{ $inquiry->preferred_type }}</td>
                                 <td>{{ $inquiry->no_of_occupants }}</td>
                                 <td><x-inquiry-status :status="$inquiry->status" /></td>
                                 <td>{{ $inquiry->user->role }}</td>
+                                <td class="actions">
+                                    <div class="table-action-group">
+                                        <button type="button" class="btn" onclick="openInquiryModal({{ $inquiry->inquiry_id }})">View / Edit</button>
+
+                                        @if (!$inquiry->wants_contact)
+                                            <button type="button" class="btn sec disabled" disabled title="Prospect opted out of phone contact." aria-disabled="true">📞 Call</button>
+                                        @else
+                                            <a href="{{ $inquiry->telHref() }}" class="btn sec" title="Call {{ $inquiry->prospect_name }}">📞 Call</a>
+                                        @endif
+
+                                        @if (!auth()->user()->can('encodeMoa', $inquiry) && auth()->user()->hasRole('Caretaker'))
+                                            <button type="button" class="btn disabled" disabled title="Caretakers cannot encode legal lease agreements." aria-disabled="true">Encode MOA</button>
+                                        @elseif ($inquiry->status !== 'Waiting')
+                                            <button type="button" class="btn disabled" disabled title="MOA can only be encoded for Waiting prospects." aria-disabled="true">Encode MOA</button>
+                                        @elseif (!$inquiry->hasMatchingVacantRoom($vacantRooms))
+                                            <button type="button" class="btn disabled" disabled title="No vacant rooms match preferred type." aria-disabled="true">Encode MOA</button>
+                                        @elseif (!auth()->user()->can('encodeMoa', $inquiry))
+                                            <button type="button" class="btn disabled" disabled title="Caretakers cannot encode legal lease agreements." aria-disabled="true">Encode MOA</button>
+                                        @else
+                                            <a href="{{ route('leases.create', ['inquiry_id' => $inquiry->inquiry_id]) }}" class="btn" title="Encode MOA for {{ $inquiry->prospect_name }}">Encode MOA</a>
+                                        @endif
+                                    </div>
+                                </td>
                             </tr>
                         @endforeach
                         <tr id="inquiries-table-empty" class="empty-filter-row" data-filter-id="inquiry-search-input" style="display: none;">
-                            <td colspan="7" class="muted" style="text-align: center; padding: 24px;">No matching inquiries found.</td>
+                            <td colspan="8" class="muted" style="text-align: center; padding: 24px;">No matching inquiries found.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -117,16 +138,15 @@
             {{-- Tablet Portrait (~712px-800px) & Mobile Stacked Cards View --}}
             <div class="inquiry-cards pb-24">
                 @foreach ($inquiries as $inquiry)
-                    <div class="inquiry-card inquiry-card-clickable"
-                         data-search="{{ strtolower($inquiry->prospect_name . ' ' . $inquiry->contact_no . ' ' . $inquiry->channel . ' ' . $inquiry->preferred_type . ' ' . $inquiry->status . ' ' . ($inquiry->remarks ?? '') . ' ' . $inquiry->user->role) }}"
-                         tabindex="0"
-                         role="button"
-                         aria-label="View details and actions for {{ $inquiry->prospect_name }}"
-                         onclick="openInquiryModal({{ $inquiry->inquiry_id }})"
-                         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openInquiryModal({{ $inquiry->inquiry_id }});}">
+                    <div class="inquiry-card"
+                         data-search="{{ strtolower($inquiry->prospect_name . ' ' . $inquiry->contact_no . ' ' . $inquiry->channel . ' ' . $inquiry->preferred_type . ' ' . $inquiry->status . ' ' . ($inquiry->remarks ?? '') . ' ' . $inquiry->user->role) }}">
                         <div class="inquiry-card-head">
                             <div>
-                                <div class="inquiry-card-name">{{ $inquiry->prospect_name }}</div>
+                                <div class="inquiry-card-name">
+                                    <a href="javascript:void(0)" onclick="openInquiryModal({{ $inquiry->inquiry_id }})" class="font-semibold text-blue-600 hover:underline">
+                                        {{ $inquiry->prospect_name }}
+                                    </a>
+                                </div>
                                 <div class="inquiry-card-date">{{ $inquiry->inquiry_date->format('j M Y') }} · logged by {{ $inquiry->user->role }}</div>
                             </div>
                             <x-inquiry-status :status="$inquiry->status" />
@@ -138,7 +158,7 @@
                         <div class="inquiry-card-body">
                             <div>
                                 <span>Contact: </span>
-                                <a href="{{ $inquiry->telHref() }}" class="font-medium" onclick="event.stopPropagation()">{{ $inquiry->contact_no }}</a>
+                                <a href="{{ $inquiry->telHref() }}" class="font-medium">{{ $inquiry->contact_no }}</a>
                                 @if ($inquiry->wants_contact)
                                     <span class="sub nowrap">· wants to be contacted</span>
                                 @else
@@ -147,6 +167,27 @@
                             </div>
                             @if ($inquiry->remarks)
                                 <div class="sub">Note: {{ $inquiry->remarks }}</div>
+                            @endif
+                        </div>
+                        <div class="inquiry-card-actions">
+                            <button type="button" class="btn" onclick="openInquiryModal({{ $inquiry->inquiry_id }})">View / Edit</button>
+
+                            @if (!$inquiry->wants_contact)
+                                <button type="button" class="btn sec disabled" disabled title="Prospect opted out of phone contact." aria-disabled="true">📞 Call</button>
+                            @else
+                                <a href="{{ $inquiry->telHref() }}" class="btn sec" title="Call {{ $inquiry->prospect_name }}">📞 Call</a>
+                            @endif
+
+                            @if (!auth()->user()->can('encodeMoa', $inquiry) && auth()->user()->hasRole('Caretaker'))
+                                <button type="button" class="btn disabled" disabled title="Caretakers cannot encode legal lease agreements." aria-disabled="true">Encode MOA</button>
+                            @elseif ($inquiry->status !== 'Waiting')
+                                <button type="button" class="btn disabled" disabled title="MOA can only be encoded for Waiting prospects." aria-disabled="true">Encode MOA</button>
+                            @elseif (!$inquiry->hasMatchingVacantRoom($vacantRooms))
+                                <button type="button" class="btn disabled" disabled title="No vacant rooms match preferred type." aria-disabled="true">Encode MOA</button>
+                            @elseif (!auth()->user()->can('encodeMoa', $inquiry))
+                                <button type="button" class="btn disabled" disabled title="Caretakers cannot encode legal lease agreements." aria-disabled="true">Encode MOA</button>
+                            @else
+                                <a href="{{ route('leases.create', ['inquiry_id' => $inquiry->inquiry_id]) }}" class="btn" title="Encode MOA for {{ $inquiry->prospect_name }}">Encode MOA</a>
                             @endif
                         </div>
                     </div>

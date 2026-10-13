@@ -44,12 +44,12 @@
                             <th>Room &amp; Setup</th>
                             <th>Tenant</th>
                             <th>Meter Status</th>
-                            <th class="r">Action</th>
+                            <th class="actions text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($toBill as $row)
-                            <tr class="to-bill-row" onclick="handleToBillRowClick(event, {{ $row['lease']->lease_id }})">
+                            <tr class="to-bill-row">
                                 <td class="nowrap">
                                     {{ $row['due_date']->format('j M Y') }}
                                     @if ($row['due_date']->lt(today()))
@@ -57,7 +57,9 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <b>{{ $row['lease']->room->room_no }}</b>
+                                    <a href="javascript:void(0)" onclick="openGenerateBillModal({{ $row['lease']->lease_id }})" class="font-semibold text-blue-600 hover:underline">
+                                        Room {{ $row['lease']->room->room_no }}
+                                    </a>
                                     <span class="sub nowrap">{{ $row['lease']->room->room_type }}</span>
                                 </td>
                                 <td>{{ $row['lease']->tenant->full_name }}</td>
@@ -75,14 +77,16 @@
                                         <div class="sub muted nowrap">Appliances tallied</div>
                                     @endif
                                 </td>
-                                <td class="r actions">
-                                    <a href="{{ route('bills.create', ['lease' => $row['lease']->lease_id]) }}"
-                                       class="btn btn-sm btn-generate"
-                                       data-lease-id="{{ $row['lease']->lease_id }}"
-                                       onclick="openGenerateBillModal({{ $row['lease']->lease_id }}); return false;">
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" x2="12" y1="18" y2="12"/><line x1="9" x2="15" y1="15" y2="15"/></svg>
-                                        Generate
-                                    </a>
+                                <td class="actions">
+                                    <div class="table-action-group">
+                                        <a href="{{ route('bills.create', ['lease' => $row['lease']->lease_id]) }}"
+                                           class="btn btn-sm btn-generate"
+                                           data-lease-id="{{ $row['lease']->lease_id }}"
+                                           onclick="openGenerateBillModal({{ $row['lease']->lease_id }}); return false;">
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" x2="12" y1="18" y2="12"/><line x1="9" x2="15" y1="15" y2="15"/></svg>
+                                            Generate
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -151,6 +155,7 @@
                             <th class="r">Electricity / Appliances</th>
                             <th class="r">Total</th>
                             <th>Status</th>
+                            <th class="actions text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -159,7 +164,7 @@
                                 $reading = $bill->meterReading;
                                 $kwhUsed = $reading ? max(0, (float) $reading->current_reading - (float) $reading->previous_reading) : 0;
                             @endphp
-                            <tr class="bill-row" onclick="handleBillRowClick(event, {{ $bill->bill_id }})" data-bill-id="{{ $bill->bill_id }}" data-search="{{ strtolower($bill->lease->room->room_no . ' ' . $bill->lease->tenant->full_name) }}" tabindex="0" role="button">
+                            <tr class="bill-row" data-bill-id="{{ $bill->bill_id }}" data-search="{{ strtolower($bill->lease->room->room_no . ' ' . $bill->lease->tenant->full_name) }}">
                                 <td class="nowrap">
                                     {{ $bill->due_date->format('j M') }}
                                     @if ($bill->status === 'Overdue' || ($bill->status === 'Unpaid' && $bill->due_date->lt(today())))
@@ -167,7 +172,9 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <b>{{ $bill->lease->room->room_no }}</b>
+                                    <a href="javascript:void(0)" onclick="openStatementModal({{ $bill->bill_id }})" class="font-semibold text-blue-600 hover:underline">
+                                        Room {{ $bill->lease->room->room_no }}
+                                    </a>
                                     <span class="sub nowrap">{{ $bill->lease->room->room_type }}</span>
                                 </td>
                                 <td>{{ $bill->lease->tenant->full_name }}</td>
@@ -189,10 +196,23 @@
                                 </td>
                                 <td class="money nowrap"><b>@peso($bill->total_amount)</b></td>
                                 <td><x-bill-status :status="$bill->status" /></td>
+                                <td class="actions">
+                                    <div class="table-action-group">
+                                        <button type="button" class="btn sec" onclick="openStatementModal({{ $bill->bill_id }})">Statement</button>
+
+                                        @if (!auth()->user()->can('manage-billing'))
+                                            <button type="button" class="btn disabled" disabled title="Caretakers cannot record collections." aria-disabled="true">Record Payment</button>
+                                        @elseif ($bill->status === 'Paid')
+                                            <button type="button" class="btn disabled" disabled title="Bill is already fully paid." aria-disabled="true">Record Payment</button>
+                                        @else
+                                            <button type="button" class="btn" onclick="openRecordPaymentModal({{ $bill->bill_id }})">Record Payment</button>
+                                        @endif
+                                    </div>
+                                </td>
                             </tr>
                         @endforeach
                         <tr id="bills-table-empty" class="empty-filter-row" data-filter-id="billing-search-input" style="display: none;">
-                            <td colspan="7" class="muted" style="text-align: center; padding: 24px;">No matching billing records found.</td>
+                            <td colspan="9" class="muted" style="text-align: center; padding: 24px;">No matching billing records found.</td>
                         </tr>
                     </tbody>
                     <tfoot>
@@ -208,6 +228,7 @@
                             </td>
                             <td class="money nowrap"><b>@peso($totals['amount'])</b></td>
                             <td></td>
+                            <td></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -221,14 +242,15 @@
                         $kwhUsed = $reading ? max(0, (float) $reading->current_reading - (float) $reading->previous_reading) : 0;
                     @endphp
                     <div class="bill-card" data-bill-id="{{ $bill->bill_id }}" data-search="{{ strtolower($bill->lease->room->room_no . ' ' . $bill->lease->tenant->full_name) }}">
-                        <div class="bill-card-head" onclick="openStatementModal({{ $bill->bill_id }})" role="button" tabindex="0">
+                        <div class="bill-card-head">
                             <div class="bill-card-title">
-                                <span class="bill-card-room">Room {{ $bill->lease->room->room_no }}</span>
+                                <span class="bill-card-room">
+                                    <a href="javascript:void(0)" onclick="openStatementModal({{ $bill->bill_id }})" class="font-semibold text-blue-600 hover:underline">
+                                        Room {{ $bill->lease->room->room_no }}
+                                    </a>
+                                </span>
                                 <span class="bill-card-tenant">{{ $bill->lease->tenant->full_name }}</span>
                                 <span class="bill-card-type sub">{{ $bill->lease->room->room_type }}</span>
-                            </div>
-                            <div class="bill-card-chevron">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                             </div>
                         </div>
 
@@ -270,14 +292,17 @@
                             </div>
                         </div>
 
-                        @if ($bill->status !== 'Paid' && ($bill->can_pay ?? true))
-                            <div class="bill-card-actions">
-                                <button type="button" class="btn btn-pay-action" onclick="openRecordPaymentModal({{ $bill->bill_id }})">
-                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-icon"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-                                    Record Payment
-                                </button>
-                            </div>
-                        @endif
+                        <div class="bill-card-actions">
+                            <button type="button" class="btn sec" onclick="openStatementModal({{ $bill->bill_id }})">Statement</button>
+
+                            @if (!auth()->user()->can('manage-billing'))
+                                <button type="button" class="btn disabled" disabled title="Caretakers cannot record collections." aria-disabled="true">Record Payment</button>
+                            @elseif ($bill->status === 'Paid')
+                                <button type="button" class="btn disabled" disabled title="Bill is already fully paid." aria-disabled="true">Record Payment</button>
+                            @else
+                                <button type="button" class="btn" onclick="openRecordPaymentModal({{ $bill->bill_id }})">Record Payment</button>
+                            @endif
+                        </div>
                     </div>
                 @endforeach
                 <div id="bills-cards-empty" class="empty-filter-card muted" data-filter-id="billing-search-input" style="display: none; text-align: center; padding: 24px; border: 1px dashed var(--border, #cbd5e1); border-radius: 8px;">

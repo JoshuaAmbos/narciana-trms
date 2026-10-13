@@ -46,21 +46,18 @@
                             <th class="r">Security Deposit</th>
                             <th class="r">Deductions</th>
                             <th class="r">Net Settlement</th>
+                            <th class="actions text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($rows as $r)
-                            <tr class="report-row-clickable"
-                                onclick="window.location='{{ route('reports.statement', ['lease' => $r['lease']->lease_id]) }}'"
-                                tabindex="0"
-                                role="button"
-                                aria-label="View billing statement for Room {{ $r['room_no'] }} — {{ $r['tenant_name'] }}">
+                            <tr class="report-row">
                                 <td class="nowrap">
                                     <b>{{ $r['move_out_date'] ? $r['move_out_date']->format('j M Y') : 'Ended' }}</b>
                                     <span class="sub">Moved In {{ $r['move_in_date']->format('j M Y') }}</span>
                                 </td>
                                 <td>
-                                    <b>Room {{ $r['room_no'] }}</b> ({{ $r['room_type'] }})
+                                    <a href="{{ route('reports.statement', ['lease' => $r['lease']->lease_id]) }}" class="font-semibold text-blue-600 hover:underline">Room {{ $r['room_no'] }}</a> ({{ $r['room_type'] }})
                                     <span class="sub">{{ $r['tenant_name'] }} · {{ $r['tenant_contact'] }}</span>
                                 </td>
                                 <td class="money">
@@ -95,6 +92,11 @@
                                         </span>
                                     @endif
                                 </td>
+                                <td class="actions">
+                                    <div class="table-action-group">
+                                        <a href="{{ route('reports.statement', ['lease' => $r['lease']->lease_id]) }}" class="btn sec" title="View billing statement">Statement</a>
+                                    </div>
+                                </td>
                             </tr>
                         @endforeach
                         <tr class="tot-row">
@@ -107,6 +109,7 @@
                                     <span class="tag t-red" style="margin-top: 4px;">Excess: @peso($total_excess)</span>
                                 @endif
                             </td>
+                            <td class="actions"></td>
                         </tr>
                     </tbody>
                 </table>
@@ -115,14 +118,12 @@
             {{-- Portrait Tablet (~712px - 800px) & Mobile Stacked Cards --}}
             <div class="report-cards">
                 @foreach ($rows as $r)
-                    <div class="report-card"
-                         onclick="window.location='{{ route('reports.statement', ['lease' => $r['lease']->lease_id]) }}'"
-                         tabindex="0"
-                         role="button"
-                         aria-label="View statement for Room {{ $r['room_no'] }} — {{ $r['tenant_name'] }}">
+                    <div class="report-card">
                         <div class="report-card-head">
                             <div>
-                                <div class="report-card-title">Room {{ $r['room_no'] }} — {{ $r['tenant_name'] }}</div>
+                                <div class="report-card-title">
+                                    <a href="{{ route('reports.statement', ['lease' => $r['lease']->lease_id]) }}" class="font-semibold text-blue-600 hover:underline">Room {{ $r['room_no'] }} — {{ $r['tenant_name'] }}</a>
+                                </div>
                                 <div class="report-card-sub">
                                     Out: {{ $r['move_out_date'] ? $r['move_out_date']->format('j M Y') : 'Ended' }}
                                     · In: {{ $r['move_in_date']->format('j M Y') }}
@@ -136,7 +137,6 @@
                                 @else
                                     <span class="tag t-sub">Settled</span>
                                 @endif
-                                <span class="report-chevron"><x-icon name="chevron-right" size="18" /></span>
                             </div>
                         </div>
                         <div class="report-card-grid">
@@ -159,7 +159,9 @@
                         </div>
                         <div class="report-card-foot">
                             <span>Total Deductions: <b>@peso($r['deductions']['total'])</b></span>
-                            <span class="report-card-link-text">View Statement &rsaquo;</span>
+                        </div>
+                        <div class="card-actions report-card-actions">
+                            <a href="{{ route('reports.statement', ['lease' => $r['lease']->lease_id]) }}" class="btn sec" title="View billing statement">View Statement</a>
                         </div>
                     </div>
                 @endforeach

@@ -157,14 +157,10 @@
                 <div style="display: flex; flex-direction: column;">
                     @foreach ($breachedLeases as $breach)
                         @php($bLease =$breach['lease'])
-                        <div class="breach-row cursor-pointer hover:bg-rose-50/60 transition-colors"
-                             style="min-height: 44px; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid #fecdd3; cursor: pointer;"
-                             onclick="openBreachModal({{ $bLease->lease_id }})"
-                             data-modal-target="breach-modal"
+                        <div class="breach-row"
+                             style="min-height: 44px; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid #fecdd3;"
                              data-lease-id="{{ $bLease->lease_id }}"
-                             data-search="{{ strtolower($bLease->room->room_no . ' ' . $bLease->tenant->full_name . ' breach deposit buffer exhausted') }}"
-                             role="button"
-                             tabindex="0">
+                             data-search="{{ strtolower($bLease->room->room_no . ' ' . $bLease->tenant->full_name . ' breach deposit buffer exhausted') }}">
                             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex: 1;">
                                 <span class="tag t-red" style="font-weight: 600; padding: 2px 8px; border-radius: 4px;">Room {{ $bLease->room->room_no }}</span>
                                 <b style="color: #0f172a;">{{ $bLease->tenant->full_name }}</b>
@@ -174,7 +170,7 @@
                             </div>
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <span class="text-xs font-medium text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200" style="background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;">Exhausted</span>
-                                <svg class="w-4 h-4 text-slate-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #94a3b8; flex-shrink: 0;"><path d="m9 18 6-6-6-6"/></svg>
+                                <button type="button" class="btn btn-sm sec" onclick="openBreachModal({{ $bLease->lease_id }})">View Details</button>
                             </div>
                         </div>
                     @endforeach
@@ -189,7 +185,7 @@
             <div class="table-wrap to-collect-table-wrap">
                 <table id="to-collect-table">
                     <thead>
-                        <tr><th>Due date</th><th>Room</th><th>Tenant</th><th class="r">Bill</th><th>Status</th><th class="r">Penalty so far</th><th class="r">Due if paid today</th></tr>
+                        <tr><th>Due date</th><th>Room</th><th>Tenant</th><th class="r">Bill</th><th>Status</th><th class="r">Penalty so far</th><th class="r">Due if paid today</th><th class="actions text-right">Actions</th></tr>
                     </thead>
                     <tbody>
                         @foreach ($toCollect as $row)
@@ -206,14 +202,9 @@
                                                                     <tr class="to-collect-row" 
                                                                         data-status="{{ $statusType }}" 
                                                                         data-search="{{ strtolower($b->lease->room->room_no . ' ' . $b->lease->tenant->full_name . ' ' . $statusType) }}"
-                                                                        onclick="openRecordPaymentModal({{ $b->bill_id }})"
-                                                                        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); openRecordPaymentModal({{ $b->bill_id }});}"
-                                                                        tabindex="0"
-                                                                        role="button"
-                                                                        aria-label="Record payment for Room {{ $b->lease->room->room_no }} - {{ $b->lease->tenant->full_name }}"
                                                                         @if (!empty($row['is_breached'])) style="background: #fff5f5;" @endif>
                                                                         <td class="nowrap">{{ $dueDate->format('j M Y') }}</td>
-                                                                        <td><b>{{ $b->lease->room->room_no }}</b></td>
+                                                                        <td><a href="{{ route('reports.statement', ['lease' => $b->lease_id]) }}" class="font-semibold text-blue-600 hover:underline">Room {{ $b->lease->room->room_no }}</a></td>
                                                                         <td>{{ $b->lease->tenant->full_name }}</td>
                                                                         <td class="money">@peso((float) $b->total_amount - (float) $b->penalty_amount)</td>
                                                                         <td>
@@ -241,6 +232,16 @@
                                                                         </td>
                                                                         <td class="money">@peso($row['today']['penalty'] ?? 0)</td>
                                                                         <td class="money"><b>@peso($row['today']['total'] ?? $b->total_amount)</b></td>
+                                                                        <td class="actions">
+                                                                            <div class="table-action-group">
+                                                                                <a href="{{ route('reports.statement', ['lease' => $b->lease_id]) }}" class="btn sec" title="View tenant ledger history">View Ledger</a>
+                                                                                @if (!auth()->user()->can('manage-billing'))
+                                                                                    <button type="button" class="btn disabled" disabled title="Caretakers cannot record collections." aria-disabled="true">Collect / Settle</button>
+                                                                                @else
+                                                                                    <button type="button" class="btn" onclick="openRecordPaymentModal({{ $b->bill_id }})" title="Record payment">Collect / Settle</button>
+                                                                                @endif
+                                                                            </div>
+                                                                        </td>
                                                                     </tr>
                                                                 @endforeach
                                                             @endforeach
@@ -273,15 +274,10 @@
                                                             <div class="to-collect-card"
                                                                  data-status="{{ $statusType }}"
                                                                  data-search="{{ strtolower($b->lease->room->room_no . ' ' . $b->lease->tenant->full_name . ' ' . $statusType) }}"
-                                                                 onclick="openRecordPaymentModal({{ $b->bill_id }})"
-                                                                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); openRecordPaymentModal({{ $b->bill_id }});}"
-                                                                 tabindex="0"
-                                                                 role="button"
-                                                                 aria-label="Record payment for Room {{ $b->lease->room->room_no }} - {{ $b->lease->tenant->full_name }}"
                                                                  @if (!empty($row['is_breached'])) style="background: #fff5f5;" @endif>
                                                                 <div class="to-collect-card-head">
                                                                     <div>
-                                                                        <span class="to-collect-card-room">Room {{ $b->lease->room->room_no }}</span>
+                                                                        <span class="to-collect-card-room"><a href="{{ route('reports.statement', ['lease' => $b->lease_id]) }}" class="font-semibold text-blue-600 hover:underline">Room {{ $b->lease->room->room_no }}</a></span>
                                                                         <div class="to-collect-card-tenant">{{ $b->lease->tenant->full_name }}</div>
                                                                     </div>
                                                                     <div>
@@ -311,6 +307,14 @@
                                                                         </span>
                                                                     </div>
                                                                 @endif
+                                                                <div class="card-actions to-collect-card-actions">
+                                                                    <a href="{{ route('reports.statement', ['lease' => $b->lease_id]) }}" class="btn sec" title="View tenant ledger history">View Ledger</a>
+                                                                    @if (!auth()->user()->can('manage-billing'))
+                                                                        <button type="button" class="btn disabled" disabled title="Caretakers cannot record collections." aria-disabled="true">Collect / Settle</button>
+                                                                    @else
+                                                                        <button type="button" class="btn" onclick="openRecordPaymentModal({{ $b->bill_id }})" title="Record payment">Collect / Settle</button>
+                                                                    @endif
+                                                                </div>
                                                             </div>
                                                         @endforeach
                                                     @endforeach

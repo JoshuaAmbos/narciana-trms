@@ -105,27 +105,25 @@
                             <th>Concern</th>
                             <th>Assigned</th>
                             <th>Status</th>
+                            <th class="actions text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="concernsTableBody">
                         @foreach ($concerns as $c)
                             <tr class="concern-row"
                                 data-concern-id="{{ $c->concern_id }}"
-                                data-search="{{ strtolower($c->location() . ' ' . ($c->lease?->tenant?->full_name ?? '') . ' ' . $c->category . ' ' . $c->description . ' ' . ($c->resolution ?? '')) }}"
-                                onclick="openDetailModal({{ $c->concern_id }})"
-                                onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openDetailModal({{ $c->concern_id }}); }"
-                                tabindex="0"
-                                role="button"
-                                aria-label="View concern details for {{ $c->location() }}">
+                                data-search="{{ strtolower($c->location() . ' ' . ($c->lease?->tenant?->full_name ?? '') . ' ' . $c->category . ' ' . $c->description . ' ' . ($c->resolution ?? '')) }}">
                                 <td class="nowrap" style="font-size: 13px;">{{ $c->reported_at->format('j M, g:i A') }}</td>
                                 <td>
-                                    @if ($c->room)
-                                        <b>{{ $c->room->room_no }}</b>
-                                    @else
-                                        <b>Shared area</b>
-                                    @endif
+                                    <a href="javascript:void(0)" onclick="openDetailModal({{ $c->concern_id }})" class="font-semibold text-blue-600 hover:underline">
+                                        @if ($c->room)
+                                            Room {{ $c->room->room_no }}
+                                        @else
+                                            Shared area
+                                        @endif
+                                    </a>
                                     @if ($c->lease)
-                                        <span class="sub">{{ $c->lease->tenant->full_name }}</span>
+                                        <div class="sub">{{ $c->lease->tenant->full_name }}</div>
                                     @endif
                                 </td>
                                 <td>
@@ -154,10 +152,20 @@
                                 <td class="nowrap">
                                     <x-concern-status :concern="$c" />
                                 </td>
+                                <td class="actions">
+                                    <div class="table-action-group">
+                                        <button type="button" class="btn sec" onclick="openDetailModal({{ $c->concern_id }})">View Details</button>
+                                        @if ($c->status === 'Resolved')
+                                            <button type="button" class="btn disabled" disabled title="This concern ticket has already been marked resolved." aria-disabled="true">Update Status</button>
+                                        @else
+                                            <button type="button" class="btn" onclick="openUpdateModal({{ $c->concern_id }})">Update Status</button>
+                                        @endif
+                                    </div>
+                                </td>
                             </tr>
                         @endforeach
                         <tr id="concerns-table-empty" style="display: none;">
-                            <td colspan="6" class="muted" style="text-align: center; padding: 24px;">No matching concerns found.</td>
+                            <td colspan="7" class="muted" style="text-align: center; padding: 24px;">No matching concerns found.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -168,20 +176,17 @@
                 @foreach ($concerns as $c)
                     <div class="concern-card"
                          data-concern-id="{{ $c->concern_id }}"
-                         data-search="{{ strtolower($c->location() . ' ' . ($c->lease?->tenant?->full_name ?? '') . ' ' . $c->category . ' ' . $c->description . ' ' . ($c->resolution ?? '')) }}"
-                         onclick="openDetailModal({{ $c->concern_id }})"
-                         onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openDetailModal({{ $c->concern_id }}); }"
-                         tabindex="0"
-                         role="button"
-                         aria-label="View concern details for {{ $c->location() }}">
+                         data-search="{{ strtolower($c->location() . ' ' . ($c->lease?->tenant?->full_name ?? '') . ' ' . $c->category . ' ' . $c->description . ' ' . ($c->resolution ?? '')) }}">
                         <div class="concern-card-head">
                             <div>
                                 <div class="concern-card-location">
-                                    @if ($c->room)
-                                        Room {{ $c->room->room_no }}
-                                    @else
-                                        Shared Area
-                                    @endif
+                                    <a href="javascript:void(0)" onclick="openDetailModal({{ $c->concern_id }})" class="font-semibold text-blue-600 hover:underline">
+                                        @if ($c->room)
+                                            Room {{ $c->room->room_no }}
+                                        @else
+                                            Shared Area
+                                        @endif
+                                    </a>
                                 </div>
                                 @if ($c->lease)
                                     <div class="concern-card-tenant">{{ $c->lease->tenant->full_name }}</div>
@@ -189,9 +194,6 @@
                             </div>
                             <div class="concern-card-badges">
                                 <x-concern-status :concern="$c" />
-                                <div class="concern-card-chevron">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                                </div>
                             </div>
                         </div>
 
@@ -220,6 +222,15 @@
                         <div class="concern-card-foot">
                             <span>{{ $c->reported_at->format('j M, g:i A') }} ({{ $c->channel }})</span>
                             <span>Assigned: <b>{{ $c->assignedTo->role }}</b></span>
+                        </div>
+
+                        <div class="concern-card-actions">
+                            <button type="button" class="btn sec" onclick="openDetailModal({{ $c->concern_id }})">View Details</button>
+                            @if ($c->status === 'Resolved')
+                                <button type="button" class="btn disabled" disabled title="This concern ticket has already been marked resolved." aria-disabled="true">Update Status</button>
+                            @else
+                                <button type="button" class="btn" onclick="openUpdateModal({{ $c->concern_id }})">Update Status</button>
+                            @endif
                         </div>
                     </div>
                 @endforeach

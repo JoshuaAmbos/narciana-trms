@@ -86,20 +86,15 @@
                             <th class="r">Monthly Rent</th>
                             <th>Unit Status</th>
                             <th>Waiting Demand</th>
+                            <th class="actions text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($rooms as $room)
-                            <tr class="room-row-clickable"
-                                data-search="{{ strtolower('room ' . $room->room_no . ' ' . $room->room_type . ' ' . ($room->is_metered ? 'metered own meter' : 'no meter unmetered') . ' ' . $room->status . ' ' . ($room->disabled_reason ?? '')) }}"
-                                onclick="openRoomModal({{ $room->room_id }})"
-                                onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRoomModal({{ $room->room_id }});}"
-                                tabindex="0"
-                                role="button"
-                                aria-label="View details and actions for Room {{ $room->room_no }}">
+                            <tr class="room-row"
+                                data-search="{{ strtolower('room ' . $room->room_no . ' ' . $room->room_type . ' ' . ($room->is_metered ? 'metered own meter' : 'no meter unmetered') . ' ' . $room->status . ' ' . ($room->disabled_reason ?? '')) }}">
                                 <td>
-                                    <b>Room {{ $room->room_no }}</b>
-                                    <div class="sub muted">Click to view actions</div>
+                                    <a href="javascript:void(0)" onclick="openRoomModal({{ $room->room_id }})" class="font-semibold text-blue-600 hover:underline">Room {{ $room->room_no }}</a>
                                 </td>
                                 <td>
                                     {{ $room->room_type }}
@@ -114,10 +109,22 @@
                                         <span class="sub text-muted">None</span>
                                     @endif
                                 </td>
+                                <td class="actions">
+                                    <div class="table-action-group">
+                                        <a href="{{ route('concerns.index', ['room' => $room->room_id]) }}" class="btn sec" title="Room maintenance & concern history">History</a>
+                                        @can('manage-leases')
+                                            @if ($room->status === 'Occupied' || !$room->isRentable())
+                                                <button type="button" class="btn disabled" disabled title="Room is currently occupied or undergoing maintenance." aria-disabled="true">Encode MOA</button>
+                                            @else
+                                                <a href="{{ route('leases.create', ['room_id' => $room->room_id]) }}" class="btn" title="Encode MOA for Room {{ $room->room_no }}">Encode MOA</a>
+                                            @endif
+                                        @endcan
+                                    </div>
+                                </td>
                             </tr>
                         @endforeach
                         <tr id="rooms-table-empty" class="empty-filter-row" data-filter-id="room-search-input" style="display: none;">
-                            <td colspan="5" class="muted" style="text-align: center; padding: 24px;">No matching rooms found.</td>
+                            <td colspan="6" class="muted" style="text-align: center; padding: 24px;">No matching rooms found.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -126,21 +133,15 @@
             {{-- Portrait Tablet & Mobile Cards View (Action buttons moved into popup modal) --}}
             <div class="room-cards">
                 @foreach ($rooms as $room)
-                    <div class="room-card room-card-clickable"
-                         data-search="{{ strtolower('room ' . $room->room_no . ' ' . $room->room_type . ' ' . ($room->is_metered ? 'metered own meter' : 'no meter unmetered') . ' ' . $room->status . ' ' . ($room->disabled_reason ?? '')) }}"
-                         onclick="openRoomModal({{ $room->room_id }})"
-                         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRoomModal({{ $room->room_id }});}"
-                         tabindex="0"
-                         role="button"
-                         aria-label="View details and actions for Room {{ $room->room_no }}">
+                    <div class="room-card"
+                         data-search="{{ strtolower('room ' . $room->room_no . ' ' . $room->room_type . ' ' . ($room->is_metered ? 'metered own meter' : 'no meter unmetered') . ' ' . $room->status . ' ' . ($room->disabled_reason ?? '')) }}">
                         <div class="room-card-head">
                             <div>
-                                <span class="room-card-no">Room {{ $room->room_no }}</span>
+                                <span class="room-card-no"><a href="javascript:void(0)" onclick="openRoomModal({{ $room->room_id }})" class="font-semibold text-blue-600 hover:underline">Room {{ $room->room_no }}</a></span>
                                 <span class="sub" style="margin-left: 8px;">{{ $room->room_type }} · {{ $room->is_metered ? 'Metered' : 'Unmetered' }}</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <x-room-status :room="$room" />
-                                <span class="room-chevron"><x-icon name="chevron-right" size="18" /></span>
                             </div>
                         </div>
                         <div class="room-card-specs">
@@ -160,6 +161,16 @@
                                     <span class="sub text-muted">No queue</span>
                                 @endif
                             </div>
+                        </div>
+                        <div class="card-actions room-card-actions">
+                            <a href="{{ route('concerns.index', ['room' => $room->room_id]) }}" class="btn sec" title="Room maintenance & concern history">History</a>
+                            @can('manage-leases')
+                                @if ($room->status === 'Occupied' || !$room->isRentable())
+                                    <button type="button" class="btn disabled" disabled title="Room is currently occupied or undergoing maintenance." aria-disabled="true">Encode MOA</button>
+                                @else
+                                    <a href="{{ route('leases.create', ['room_id' => $room->room_id]) }}" class="btn" title="Encode MOA for Room {{ $room->room_no }}">Encode MOA</a>
+                                @endif
+                            @endcan
                         </div>
                     </div>
                 @endforeach
@@ -942,7 +953,7 @@
 
         // Auto-reopen modal if validation errors exist
         document.addEventListener('DOMContentLoaded', function () {
-            initRealtimeFilter('room-search-input', 'room-search-clear', '.room-row-clickable, .room-card');
+            initRealtimeFilter('room-search-input', 'room-search-clear', '.room-row, .room-row-clickable, .room-card');
 
             @if ($errors->any())
                 @if (old('is_modal_edit'))

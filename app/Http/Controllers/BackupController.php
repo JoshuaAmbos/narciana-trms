@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\RestoreBackupRequest;
 use App\Models\AuditLog;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\BackupService;
 use Illuminate\Http\RedirectResponse;
@@ -24,6 +25,7 @@ class BackupController extends Controller
         return view('backups.index', [
             'backups' => $this->backups->list(),
             'keep' => config('narciana.backup.keep'),
+            'setting' => Setting::current(),
         ]);
     }
 

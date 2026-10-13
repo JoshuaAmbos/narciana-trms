@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AuditLog;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\BackupRunner;
 use App\Services\BackupService;
@@ -151,6 +152,22 @@ class BackupTest extends TestCase
 
         $this->assertNotNull($event, 'backup:run is not scheduled');
         $this->assertSame('0 2 * * *', $event->expression);
+        $this->assertSame('Asia/Manila', $event->timezone);
+    }
+
+    public function test_backup_run_schedule_uses_dynamic_time_from_settings(): void
+    {
+        Setting::current()->update(['backup_time' => '03:45']);
+
+        $schedule = new Schedule;
+        $this->app->instance(Schedule::class, $schedule);
+        \Illuminate\Support\Facades\Schedule::clearResolvedInstance(Schedule::class);
+        require base_path('routes/console.php');
+
+        $event = collect($schedule->events())->first(fn ($e) => str_contains($e->command ?? '', 'backup:run'));
+
+        $this->assertNotNull($event, 'backup:run is not scheduled');
+        $this->assertSame('45 3 * * *', $event->expression);
         $this->assertSame('Asia/Manila', $event->timezone);
     }
 

@@ -25,6 +25,7 @@ class SettingService
         'penalty_basis' => ['Penalty basis', 'text'],
         'penalty_rate' => ['Penalty rate', 'percent'],
         'refund_days' => ['Refund deposit within', 'days'],
+        'backup_time' => ['Automated daily backup time', 'time'],
     ];
 
     /**
@@ -63,6 +64,7 @@ class SettingService
             'percent' => number_format((float) $value, 2).'%',
             'days' => (int) $value.' '.((int) $value === 1 ? 'day' : 'days'),
             'occupants' => (int) $value.' '.((int) $value === 1 ? 'occupant' : 'occupants'),
+            'time' => $value ? \Carbon\Carbon::parse($value)->format('H:i') : '',
             default => (string) $value,
         };
     }

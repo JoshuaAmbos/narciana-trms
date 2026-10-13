@@ -21,6 +21,12 @@ class SettingRequest extends FormRequest
                 'default_room_capacity' => Setting::current()->default_room_capacity ?? 2,
             ]);
         }
+
+        if (! $this->has('backup_time') || $this->input('backup_time') === null || $this->input('backup_time') === '') {
+            $this->merge([
+                'backup_time' => Setting::current()->backup_time ? \Carbon\Carbon::parse(Setting::current()->backup_time)->format('H:i') : '02:00',
+            ]);
+        }
     }
 
     public function rules(): array
@@ -35,6 +41,7 @@ class SettingRequest extends FormRequest
             'default_room_capacity' => ['required', 'integer', 'between:1,10'],
             'kwh_rate' => $money(1000),
             'grace_days' => ['required', 'integer', 'between:0,31'],
+            'backup_time' => ['required', 'date_format:H:i'],
             'penalty_basis' => ['required', Rule::in(Setting::PENALTY_BASES)],
             'penalty_rate' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:100'],
             'refund_days' => ['required', 'integer', 'between:0,60'],
@@ -57,6 +64,7 @@ class SettingRequest extends FormRequest
             'kwh_rate.max' => 'The rate per kWh cannot be more than ₱1,000.00.',
             'penalty_rate.max' => 'The penalty rate cannot be more than 100%.',
             'grace_days.between' => 'Use 0 to 31 days.',
+            'backup_time.date_format' => 'Use the 24-hour time format (HH:MM).',
             'refund_days.between' => 'Use 0 to 60 days.',
             'penalty_basis.in' => 'Choose a penalty basis from the list.',
         ];

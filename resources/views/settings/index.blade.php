@@ -94,6 +94,28 @@
                     </div>
                 </div>
 
+                <h3 class="sub-head">Automated daily backup</h3>
+                <div class="row settings-grid-row">
+                    <div class="f @error('backup_time') has-err @enderror">
+                        <label for="setting_backup_time">
+                            Automated Daily Backup Time <span class="req-star" style="color: #dc2626; font-weight: 700;">*</span>
+                        </label>
+                        <input 
+                            type="time" 
+                            id="setting_backup_time" 
+                            name="backup_time" 
+                            value="{{ old('backup_time', \Carbon\Carbon::parse($setting->backup_time ?? '02:00')->format('H:i')) }}" 
+                            required
+                        >
+                        <div class="text-xs text-muted hint" style="margin-top: 4px;">
+                            Scheduled time in Philippine Standard Time (PST, UTC+8) for daily system backups.
+                        </div>
+                        @error('backup_time')
+                            <div class="err">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
+
                 <div class="form-actions" style="display: flex; justify-content: flex-end;">
                     <button type="submit" class="btn">Save settings</button>
                 </div>

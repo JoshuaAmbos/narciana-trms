@@ -32,6 +32,7 @@ class SettingsTest extends TestCase
             'water_rate' => '200.00', 'appliance_fee' => '200.00',
             'standard_basic_rent' => '3000.00', 'standard_aircon_rent' => '3600.00',
             'kwh_rate' => '15.00', 'grace_days' => '3',
+            'backup_time' => '02:00',
             'penalty_basis' => 'Per day of rent', 'penalty_rate' => '1.00', 'refund_days' => '7',
         ], $overrides);
     }
@@ -172,5 +173,45 @@ class SettingsTest extends TestCase
             $this->actingAs($user)->get(route('settings.index'))->assertForbidden();
             $this->actingAs($user)->put(route('settings.update'), $this->form())->assertForbidden();
         }
+    }
+
+    public function test_owner_updates_backup_time_and_change_is_audited(): void
+    {
+        $this->actingAs($this->owner)
+            ->put(route('settings.update'), $this->form(['backup_time' => '03:00']))
+            ->assertRedirect(route('settings.index'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertStringStartsWith('03:00', Setting::current()->backup_time);
+
+        $log = AuditLog::where('action', 'Settings changed')->sole();
+        $this->assertSame('Automated daily backup time: 02:00 → 03:00', $log->details);
+
+        // Verify dynamic copy on backups.index
+        $this->actingAs($this->owner)->get(route('backups.index'))
+            ->assertOk()
+            ->assertSee('3:00 AM');
+    }
+
+    public function test_cron_run_endpoint_authorizes_with_secret_token(): void
+    {
+        // 1. Without token or with invalid token when not configured
+        config(['app.cron_secret' => null]);
+        $this->get('/cron/run/invalid_token')->assertForbidden();
+
+        // 2. Configured secret token
+        config(['app.cron_secret' => 'secure-cron-secret-token-12345']);
+
+        // Invalid token returns 403
+        $this->get('/cron/run/wrong_token')->assertForbidden();
+
+        // Valid token executes scheduler and returns JSON
+        $res = $this->get('/cron/run/secure-cron-secret-token-12345');
+        $res->assertOk()
+            ->assertJson([
+                'status' => 'ok',
+                'message' => 'Scheduler executed successfully',
+            ])
+            ->assertJsonStructure(['status', 'message', 'output', 'timestamp']);
     }
 }

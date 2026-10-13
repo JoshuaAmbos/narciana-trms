@@ -126,6 +126,7 @@ class RealisticDataSeeder extends Seeder
                 'default_room_capacity' => 2,
                 'kwh_rate' => 12.00,
                 'grace_days' => 3,
+                'backup_time' => '02:00',
                 'penalty_basis' => 'Per day of rent',
                 'penalty_rate' => 1.00,
                 'refund_days' => 7,

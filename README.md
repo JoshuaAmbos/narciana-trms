@@ -156,9 +156,19 @@ Configure the following environment variables in your Render dashboard or via `r
 | `AWS_BUCKET` | `<bucket-name>` | S3 / R2 Bucket name |
 | `AWS_ENDPOINT` | `https://<account-id>.r2.cloudflarestorage.com` | Custom endpoint for Cloudflare R2 or MinIO |
 | `AWS_USE_PATH_STYLE_ENDPOINT` | `true` | Required for Cloudflare R2 and MinIO |
+| `CRON_SECRET` | `<secret-token>` | Secret token to authorize external HTTP scheduler execution |
 
 ### 3. Ephemeral Disk & Remote Services Architecture
 - **Stateless Web Tier**: Render web service containers are ephemeral. Any files written directly to local disk (outside `/tmp`) will be lost when the instance restarts or redeploys.
 - **Persistent Sessions & Cache**: Handled automatically by the database tables (`sessions`, `cache`), preventing users from being logged out during container restarts.
 - **Uploaded Assets**: Tenant MOAs, concern photos, and resolution proofs are stored on S3-compatible cloud storage (such as Cloudflare R2 or AWS S3) via Laravel's `s3` filesystem driver.
 - **Automated Build Pipeline**: `bin/render-build.sh` automatically installs non-dev Composer dependencies, caches configuration/routes/views, and executes database migrations safely (`migrate --force`) during each deployment.
+
+### 4. Automated Backups on Render (External HTTP Scheduler Trigger)
+Render web services do not natively provide persistent cron daemons on free/starter web tiers without running a separate background worker. The application includes a secure external HTTP scheduler trigger endpoint (`/cron/run/{token}`) to trigger Laravel's scheduler via an external monitor:
+
+1. Create a free account on [cron-job.org](https://cron-job.org) (or UptimeRobot).
+2. Create a new cronjob:
+   - **URL:** `https://<YOUR-RENDER-APP>.onrender.com/cron/run/<YOUR_CRON_SECRET>`
+   - **Execution Schedule:** Every 10 minutes (`*/10 * * * *`).
+3. Whenever the monitor fires at or right after the configured `backup_time`, `php artisan schedule:run` will evaluate true for `backup:run` and execute the snapshot.

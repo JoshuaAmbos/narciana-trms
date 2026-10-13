@@ -15,7 +15,8 @@
             </form>
         </h2>
         <p class="muted">
-            A backup is made automatically every day at 2:00 AM. The newest {{ $keep }} backups are kept; older ones are
+            A backup is made automatically every day at 
+            <b>{{ \Carbon\Carbon::parse($setting->backup_time ?? '02:00')->format('g:i A') }}</b>. The newest {{ $keep }} backups are kept; older ones are
             deleted automatically. Download a copy now and then and keep it somewhere safe (not only on the hosting).
         </p>
 

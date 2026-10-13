@@ -24,6 +24,7 @@ class Setting extends Model
         'default_room_capacity',
         'kwh_rate',
         'grace_days',
+        'backup_time',
         'penalty_basis',
         'penalty_rate',
         'refund_days',
@@ -40,6 +41,7 @@ class Setting extends Model
             'default_room_capacity' => 'integer',
             'kwh_rate' => 'decimal:2',
             'grace_days' => 'integer',
+            'backup_time' => 'string',
             'penalty_rate' => 'decimal:2',
             'refund_days' => 'integer',
         ];
@@ -53,6 +55,7 @@ class Setting extends Model
         'default_room_capacity' => 2,
         'kwh_rate' => 12.00,
         'grace_days' => 3,
+        'backup_time' => '02:00',
         'penalty_basis' => 'Per day of rent',
         'penalty_rate' => 1.00,
         'refund_days' => 7,

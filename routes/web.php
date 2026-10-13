@@ -21,6 +21,7 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VisitorController;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
 // ---------- Guests only (not logged in) ----------
@@ -114,3 +115,24 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/audit-log', [AuditLogController::class, 'index'])->name('audit-log.index');
     });
 });
+
+// External HTTP Webhook Trigger for scheduled tasks (cron-job.org / external monitors)
+Route::get('/cron/run/{token}', function ($token) {
+    $configuredSecret = config('app.cron_secret', env('CRON_SECRET'));
+
+    // Abort if CRON_SECRET is not configured or token does not match
+    if (empty($configuredSecret) || !hash_equals($configuredSecret, (string) $token)) {
+        abort(403, 'Unauthorized cron trigger');
+    }
+
+    // Execute the scheduled tasks
+    Artisan::call('schedule:run');
+    $output = trim(Artisan::output());
+
+    return response()->json([
+        'status'    => 'ok',
+        'message'   => 'Scheduler executed successfully',
+        'output'    => $output ?: 'No scheduled tasks were due.',
+        'timestamp' => now()->toIso8601String(),
+    ]);
+})->name('cron.run');

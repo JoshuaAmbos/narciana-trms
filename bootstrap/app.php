@@ -22,6 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => EnsureUserIsActive::class, // logs out users deactivated mid-session
         ]);
 
+        $middleware->validateCsrfTokens(except: [
+            'cron/run/*',
+        ]);
+
         // Not logged in: go to the login page. If this browser was logged in before (cookie set at login),
         // the session must have expired, so the login page explains the inactivity logout.
         $middleware->redirectGuestsTo(fn (Request $request) => $request->cookie(LoginController::SEEN_COOKIE)

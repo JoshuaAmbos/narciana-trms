@@ -421,7 +421,7 @@
             <div class="detail-description-box" id="detail_description_text"></div>
 
             {{-- Progress timeline --}}
-            <ol class="timeline" aria-label="Progress" id="detail_timeline_list"></ol>
+            <ol class="timeline concern-timeline" aria-label="Progress" id="detail_timeline_list"></ol>
 
             <dl class="facts">
                 <div><dt>Category</dt><dd id="detail_category_val">-</dd></div>

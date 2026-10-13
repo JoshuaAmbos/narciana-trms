@@ -339,11 +339,17 @@ class BillingTest extends TestCase
         // Generate the bill with meter reading
         $this->generate($lease, $this->reading(1200.00, 1350.00))->assertSessionHasNoErrors();
 
-        // After generation: monthly bills table displays the meter calculation
+        // After generation: monthly bills table displays only final charge, detailed calculation moved to statement/show
         $resAfter = $this->actingAs($this->manager)->get(route('bills.index', ['month' => '2026-07']));
         $resAfter->assertOk()
+            ->assertSee('₱2,250.00')
+            ->assertDontSee('1,200.00 → 1,350.00');
+
+        $bill = Bill::where('lease_id', $lease->lease_id)->first();
+        $resShow = $this->actingAs($this->manager)->get(route('bills.show', $bill));
+        $resShow->assertOk()
             ->assertSee('150.00 kWh')
-            ->assertSee('1,200.00 → 1,350.00');
+            ->assertSee('1,200.00');
     }
 
     public function test_meter_bill_amount_shown_in_meter_readings_index(): void

@@ -12,7 +12,7 @@
             <p class="concern-text">{{ $concern->description }}</p>
 
             {{-- Progress timeline: Reported -> In progress -> Resolved --}}
-            <ol class="timeline" aria-label="Progress">
+            <ol class="timeline concern-timeline" aria-label="Progress">
                 @foreach ($timeline as $step)
                     <li class="{{ $step['done'] ? 'done' : (($step['skipped'] ?? false) ? 'skipped' : 'todo') }}">
                         <b>{{ $step['label'] }}</b>

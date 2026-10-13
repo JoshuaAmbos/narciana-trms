@@ -20,15 +20,37 @@
             <div class="meter-calc-card no-print" style="margin-top: 14px;">
                 <h3>⚡ Electric Meter Calculation</h3>
                 <div class="calc-grid">
-                    <div><span class="muted">Previous reading:</span> <b>{{ number_format((float) $statement['reading']['previous_reading'], 2) }} kWh</b></div>
-                    <div><span class="muted">Current reading:</span> <b>{{ number_format((float) $statement['reading']['current_reading'], 2) }} kWh</b></div>
-                    <div><span class="muted">Consumption:</span> <b class="amber">{{ number_format($statement['kwh_used'], 2) }} kWh</b></div>
-                    <div><span class="muted">Rate:</span> <b>@peso($statement['kwh_rate']) / kWh</b></div>
+                    <div><span class="muted">Previous Reading (kWh):</span> <b>{{ number_format((float) $statement['reading']['previous_reading'], 2) }}</b></div>
+                    <div><span class="muted">Current Reading (kWh):</span> <b>{{ number_format((float) $statement['reading']['current_reading'], 2) }}</b></div>
+                    <div><span class="muted">Total Consumption:</span> <b class="amber">{{ number_format($statement['kwh_used'], 2) }} kWh</b></div>
+                    <div><span class="muted">Applied Rate:</span> <b>@peso($statement['kwh_rate']) / kWh</b></div>
                     <div class="calc-formula-row">
-                        <span class="muted">Formula:</span>
+                        <span class="muted">Line Formula Breakdown:</span>
                         {{ number_format($statement['kwh_used'], 2) }} kWh × @peso($statement['kwh_rate']) =
                         <b class="money red">@peso($statement['amounts']['electricity_amount'])</b>
                         <span class="sub muted">({{ $statement['reading']['source'] }} on {{ \Illuminate\Support\Carbon::parse($statement['reading']['reading_date'])->format('j M Y') }})</span>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        @if (!$statement['metered'] && (float) $statement['amounts']['appliance_amount'] > 0)
+            <div class="meter-calc-card no-print" style="margin-top: 14px;">
+                <h3>🔌 Appliance Surcharge Calculation</h3>
+                <div class="calc-grid">
+                    <div>
+                        <span class="muted">Active Registered Appliances:</span>
+                        @if (!empty($statement['appliance_items']))
+                            <b>{{ implode(', ', array_map(fn($item) => '1× ' . $item, $statement['appliance_items'])) }}</b>
+                        @else
+                            <b>{{ $statement['appliances'] }} unit{{ $statement['appliances'] == 1 ? '' : 's' }}</b>
+                        @endif
+                    </div>
+                    <div><span class="muted">Applied Rate:</span> <b>@peso($statement['appliance_fee']) / unit</b></div>
+                    <div class="calc-formula-row">
+                        <span class="muted">Formula Breakdown:</span>
+                        {{ $statement['appliances'] }} unit{{ $statement['appliances'] == 1 ? '' : 's' }} × @peso($statement['appliance_fee']) =
+                        <b class="money">@peso($statement['amounts']['appliance_amount'])</b>
                     </div>
                 </div>
             </div>

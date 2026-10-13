@@ -1528,12 +1528,80 @@ td.audit-details { min-width: 220px; font-size: 13.5px; overflow-wrap: anywhere;
 
 /* ---------- Instructor review: concern timeline, move-out steps ---------- */
 .category-help { min-height: 1.4em; }
-.timeline { list-style: none; display: flex; flex-wrap: wrap; gap: 0; margin: 0 0 14px; padding: 0; }
-.timeline li { flex: 1 1 150px; position: relative; padding: 8px 10px 8px 26px; border-top: 3px solid var(--border); }
-.timeline li::before { content: ""; position: absolute; left: 6px; top: 12px; width: 12px; height: 12px; border-radius: 50%; background: var(--border); }
-.timeline li.done { border-top-color: var(--green); }
-.timeline li.done::before { background: var(--green); }
-.timeline li.skipped, .timeline li.todo { color: var(--muted); }
+/* ==============================================================
+   CONCERN STATUS TIMELINE CONNECTOR LINE REPAIR
+   ============================================================== */
+
+.concern-timeline,
+.timeline {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    position: relative;
+    list-style: none;
+    margin: 0 0 20px 0;
+    padding: 0;
+    width: 100%;
+}
+
+.timeline li {
+    flex: 1;
+    position: relative;
+    text-align: left;
+    padding-top: 14px;
+    padding-left: 20px;
+    padding-right: 10px;
+    border-top: 3px solid var(--border, #e2e8f0);
+}
+
+/* Completed & active line coloring */
+.timeline li.done,
+.timeline li.active {
+    border-top-color: var(--green, #16a34a);
+}
+
+/* If the timeline uses absolute pseudo-element connectors instead of border-top */
+.timeline-track-container {
+    position: relative;
+    width: 100%;
+    height: 3px;
+    background: var(--border, #e2e8f0);
+    margin-bottom: 12px;
+}
+
+.timeline-track-fill {
+    height: 100%;
+    background: var(--green, #16a34a);
+    transition: width 0.3s ease;
+}
+
+/* Dot positioning directly on the connector line */
+.timeline li::before {
+    content: "";
+    position: absolute;
+    top: -6px; /* Centered over the 3px border-top */
+    left: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--muted, #94a3b8);
+    box-sizing: border-box;
+    z-index: 2;
+}
+
+.timeline li.done::before,
+.timeline li.active::before {
+    background: var(--green, #16a34a);
+}
+
+.timeline li.skipped::before {
+    background: #cbd5e1;
+}
+
+.timeline li.skipped,
+.timeline li.todo {
+    color: var(--muted);
+}
 .steps { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; padding: 0; }
 .steps li { flex: 1 1 128px; display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
 .steps .step-n { flex: 0 0 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; background: var(--border); color: var(--text); }

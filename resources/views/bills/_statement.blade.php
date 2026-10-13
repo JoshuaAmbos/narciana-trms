@@ -55,7 +55,12 @@
         @else
             <tr><td>Electricity <span class="sub">included in rent: room has no meter</span></td><td class="money">@peso(0)</td></tr>
             <tr>
-                <td>Appliance surcharges ({{ $statement['appliances'] }} × @peso($statement['appliance_fee']))</td>
+                <td>
+                    Appliance surcharges ({{ $statement['appliances'] }} × @peso($statement['appliance_fee']))
+                    @if (!empty($statement['appliance_items']))
+                        <span class="sub">{{ implode(', ', array_map(fn($item) => '1× ' . $item, $statement['appliance_items'])) }}</span>
+                    @endif
+                </td>
                 <td class="money">@peso($a['appliance_amount'])</td>
             </tr>
         @endif

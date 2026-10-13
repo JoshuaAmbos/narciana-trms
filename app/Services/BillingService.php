@@ -203,6 +203,14 @@ class BillingService
 
         $occupants = $this->occupantCount($lease, $start, $end);
         $appliances = $metered ? 0 : $this->applianceCount($lease, $start, $end);
+        $applianceItems = $metered ? [] : $lease->appliances()
+            ->where('date_added', '<=', $end)
+            ->where(function ($q) use ($start) {
+                $q->whereNull('date_removed')
+                    ->orWhere('date_removed', '>=', $start);
+            })
+            ->pluck('appliance_name')
+            ->all();
         $kwh = ($metered && $reading) ? round((float) $reading['current_reading'] - (float) $reading['previous_reading'], 2) : 0.0;
         
         $allChargeable = app(ConcernService::class)->chargeable($lease);
@@ -223,6 +231,7 @@ class BillingService
             'metered' => $metered,
             'occupants' => $occupants,
             'appliances' => $appliances,
+            'appliance_items' => $applianceItems,
             'water_rate' => (float) $settings->water_rate,
             'appliance_fee' => (float) $settings->appliance_fee,
             'kwh_rate' => (float) $settings->kwh_rate,
@@ -317,6 +326,14 @@ class BillingService
         $metered = $bill->reading_id !== null; // every metered bill is saved with its meter reading
         $occupants = $this->occupantCount($lease, $start, $end);
         $appliances = $metered ? 0 : $this->applianceCount($lease, $start, $end);
+        $applianceItems = $metered ? [] : $lease->appliances()
+            ->where('date_added', '<=', $end)
+            ->where(function ($q) use ($start) {
+                $q->whereNull('date_removed')
+                    ->orWhere('date_removed', '>=', $start);
+            })
+            ->pluck('appliance_name')
+            ->all();
         $reading = $bill->meterReading;
 
         return [
@@ -330,6 +347,7 @@ class BillingService
             'metered' => $metered,
             'occupants' => $occupants,
             'appliances' => $appliances,
+            'appliance_items' => $applianceItems,
             'water_rate' => $occupants ? round((float) $bill->water_amount / $occupants, 2) : 0.0,
             'appliance_fee' => $appliances ? round((float) $bill->appliance_amount / $appliances, 2) : 0.0,
             'kwh_rate' => $reading ? (float) $reading->rate_per_kwh : 0.0,

@@ -185,13 +185,9 @@
                                 <td class="money nowrap">
                                     @if ($reading)
                                         <b>@peso($bill->electricity_amount)</b>
-                                        <div class="sub nowrap" style="font-size: 11px; line-height: 1.3;">
-                                            <b>{{ number_format($kwhUsed, 2) }} kWh</b> × @peso($reading->rate_per_kwh)
-                                            <br><span class="muted">{{ number_format((float) $reading->previous_reading, 2) }} → {{ number_format((float) $reading->current_reading, 2) }}</span>
-                                        </div>
                                     @elseif ((float) $bill->appliance_amount > 0)
                                         @peso($bill->appliance_amount)
-                                        <div class="sub muted" style="font-size: 11px;">Appliances</div>
+                                        <span class="sub text-xs muted">Appliances</span>
                                     @else
                                         <span class="muted">₱0.00</span>
                                     @endif
@@ -270,7 +266,6 @@
                                 <span class="spec-value nowrap">
                                     @if ($reading)
                                         @peso($bill->electricity_amount)
-                                        <span class="spec-sub">({{ number_format($kwhUsed, 1) }} kWh)</span>
                                     @elseif ((float) $bill->appliance_amount > 0)
                                         @peso($bill->appliance_amount)
                                     @else
@@ -837,8 +832,15 @@
                     meterRows = `
                         <tr>
                             <td>
-                                Electricity (${bill.reading.kwh.toFixed(2)} kWh × ${peso(bill.reading.rate)})
-                                <span class="sub">Reading ${bill.reading.prev.toFixed(2)} → ${bill.reading.curr.toFixed(2)} kWh on ${bill.reading.date} (${bill.reading.source})</span>
+                                <b>Electricity</b>
+                                <div class="sub" style="margin-top: 4px; line-height: 1.4;">
+                                    Previous Reading (kWh): <b>${bill.reading.prev.toFixed(2)}</b><br>
+                                    Current Reading (kWh): <b>${bill.reading.curr.toFixed(2)}</b><br>
+                                    Total Consumption: <b>${bill.reading.kwh.toFixed(2)} kWh</b><br>
+                                    Applied Rate: <b>${peso(bill.reading.rate)} / kWh</b><br>
+                                    Line Formula Breakdown: <b>${bill.reading.kwh.toFixed(2)} kWh × ${peso(bill.reading.rate)} = ${peso(bill.electricity)}</b>
+                                    <span class="muted">(${bill.reading.source} on ${bill.reading.date})</span>
+                                </div>
                             </td>
                             <td class="money">${peso(bill.electricity)}</td>
                         </tr>
@@ -856,13 +858,29 @@
                     `;
                 }
             } else {
+                let applianceItemsList = '';
+                if (bill.appliance_items && bill.appliance_items.length > 0) {
+                    applianceItemsList = bill.appliance_items.map(name => `1× ${name}`).join(', ');
+                }
+                const applianceFormula = bill.appliance_count > 0
+                    ? `${bill.appliance_count} unit${bill.appliance_count === 1 ? '' : 's'} × ${peso(bill.appliance_fee)} = ${peso(bill.appliances)}`
+                    : '';
+
                 meterRows = `
                     <tr>
                         <td>Electricity <span class="sub">included in rent: room has no meter</span></td>
                         <td class="money">${peso(0)}</td>
                     </tr>
                     <tr>
-                        <td>Appliance surcharges</td>
+                        <td>
+                            <b>Appliance surcharges</b>
+                            ${bill.appliances > 0 ? `
+                                <div class="sub" style="margin-top: 4px; line-height: 1.4;">
+                                    Active Registered Appliances: <b>${applianceItemsList || (bill.appliance_count + ' unit' + (bill.appliance_count === 1 ? '' : 's'))}</b><br>
+                                    Formula Breakdown: <b>${applianceFormula}</b>
+                                </div>
+                            ` : `<span class="sub">no registered appliances</span>`}
+                        </td>
                         <td class="money">${peso(bill.appliances)}</td>
                     </tr>
                 `;

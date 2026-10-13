@@ -62,7 +62,7 @@ class BillController extends Controller
             ->sortBy(fn ($row) => $row['due_date']->toDateString().($row['lease']->room?->room_no ?? ''))
             ->values();
 
-        $billsQuery = Bill::with(['lease.room', 'lease.tenant', 'meterReading', 'concerns', 'payments.user', 'user'])
+        $billsQuery = Bill::with(['lease.room', 'lease.tenant', 'lease.appliances', 'meterReading', 'concerns', 'payments.user', 'user'])
             ->where('is_initial', false)
             ->whereYear('due_date', $month->year)
             ->whereMonth('due_date', $month->month);
@@ -148,6 +148,15 @@ class BillController extends Controller
                 ? $this->billing->dueDateIn($b->lease->due_day, $b->due_date->copy()->startOfMonth()->addMonthNoOverflow())->subDay()
                 : $b->due_date->copy()->addMonth()->subDay();
 
+            $activeAppliances = $b->lease
+                ? $b->lease->appliances->filter(fn ($a) =>
+                    $a->date_added->lte($b->due_date->copy()->subDay())
+                    && ($a->date_removed === null || $a->date_removed->gte($b->period_start))
+                )
+                : collect();
+            $activeApplianceCount = $activeAppliances->count();
+            $activeApplianceItems = $activeAppliances->pluck('appliance_name')->values()->all();
+
             $billsMap[$b->bill_id] = [
                 'bill_id' => $b->bill_id,
                 'lease_id' => $b->lease_id,
@@ -164,6 +173,9 @@ class BillController extends Controller
                 'water' => (float) $b->water_amount,
                 'electricity' => (float) $b->electricity_amount,
                 'appliances' => (float) $b->appliance_amount,
+                'appliance_count' => $activeApplianceCount,
+                'appliance_fee' => $activeApplianceCount > 0 ? round((float) $b->appliance_amount / $activeApplianceCount, 2) : (float) $settings->appliance_fee,
+                'appliance_items' => $activeApplianceItems,
                 'penalty' => (float) $b->penalty_amount,
                 'other_charges' => (float) $b->other_charges,
                 'total' => (float) $b->total_amount,

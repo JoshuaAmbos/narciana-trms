@@ -39,24 +39,30 @@
                     </button>
                 </div>
 
-                <div class="room-chips-wrap">
-                    <span class="room-filter-label" style="font-weight: 600;">Status:</span>
-                    @foreach ($statuses as $st)
-                        <a href="{{ route('rooms.index', array_filter(['status' => $st, 'type' => $type !== 'All' ? $type : null])) }}"
-                           class="chip {{ $status === $st ? 'on' : '' }}">
-                            {{ $st === 'Disabled' ? 'Out / Disabled' : $st }}
-                            @if (isset($statusCounts[$st]))
-                                <span class="chip-count">({{ $statusCounts[$st] }})</span>
-                            @endif
-                        </a>
-                    @endforeach
-                    
-                    <div>
-                        <span class="room-filter-label" style="font-weight: 600; margin-left: 6px;">Type:</span>
-                        @foreach ($types as $tp)
-                            <a href="{{ route('rooms.index', array_filter(['type' => $tp, 'status' => $status !== 'All' ? $status : null])) }}"
-                            class="chip {{ $type === $tp ? 'on' : '' }}">{{ $tp }}</a>
-                        @endforeach
+                <div class="room-filter-groups filter-groups-row">
+                    <div class="filter-group-item room-filter-group">
+                        <span class="filter-label room-filter-label">Status:</span>
+                        <div class="room-chips-wrap">
+                            @foreach ($statuses as $st)
+                                <a href="{{ route('rooms.index', array_filter(['status' => $st, 'type' => $type !== 'All' ? $type : null])) }}"
+                                   class="chip {{ $status === $st ? 'on' : '' }}">
+                                    {{ $st === 'Disabled' ? 'Out / Disabled' : $st }}
+                                    @if (isset($statusCounts[$st]))
+                                        <span class="chip-count">({{ $statusCounts[$st] }})</span>
+                                    @endif
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="filter-group-item room-filter-group">
+                        <span class="filter-label room-filter-label">Type:</span>
+                        <div class="room-chips-wrap">
+                            @foreach ($types as $tp)
+                                <a href="{{ route('rooms.index', array_filter(['type' => $tp, 'status' => $status !== 'All' ? $status : null])) }}"
+                                class="chip {{ $type === $tp ? 'on' : '' }}">{{ $tp }}</a>
+                            @endforeach
+                        </div>
                     </div>
 
                     @if ($search !== '' || $status !== 'All' || $type !== 'All')

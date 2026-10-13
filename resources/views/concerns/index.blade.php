@@ -69,23 +69,25 @@
                     </button>
                 </div>
 
-                {{-- Status Filter Chips (Option B: Bottom on Portrait; Option A: Right on Landscape) --}}
-                <div class="concern-chips-box">
-                    <span class="status-label">Status:</span>
-                    <div class="concern-chips-wrap">
-                        @foreach (['open' => 'Not resolved', 'Open' => 'Open', 'In progress' => 'In progress', 'Resolved' => 'Resolved', 'all' => 'All'] as $key => $label)
-                            <a href="{{ route('concerns.index', array_filter(['status' => $key, 'room' => $room?->room_id])) }}"
-                            class="chip concern-chip {{ $status === $key && !$mine ? 'on' : '' }}">
-                                {{ $label }} ({{ $counts[$key] ?? 0 }})
+                {{-- Status Filter Chips (Positioned below search bar) --}}
+                <div class="concern-chips-box filter-groups-row">
+                    <div class="filter-group-item">
+                        <span class="status-label filter-label">Status:</span>
+                        <div class="concern-chips-wrap">
+                            @foreach (['open' => 'Not resolved', 'Open' => 'Open', 'In progress' => 'In progress', 'Resolved' => 'Resolved', 'all' => 'All'] as $key => $label)
+                                <a href="{{ route('concerns.index', array_filter(['status' => $key, 'room' => $room?->room_id])) }}"
+                                class="chip concern-chip {{ $status === $key && !$mine ? 'on' : '' }}">
+                                    {{ $label }} ({{ $counts[$key] ?? 0 }})
+                                </a>
+                            @endforeach
+                            <a href="{{ route('concerns.index', array_filter(['status' => $status, 'room' => $room?->room_id, 'mine' => $mine ? null : 1])) }}"
+                            class="chip concern-chip {{ $mine ? 'on' : '' }}">
+                                Assigned to me ({{ $counts['mine'] ?? 0 }})
                             </a>
-                        @endforeach
-                        <a href="{{ route('concerns.index', array_filter(['status' => $status, 'room' => $room?->room_id, 'mine' => $mine ? null : 1])) }}"
-                        class="chip concern-chip {{ $mine ? 'on' : '' }}">
-                            Assigned to me ({{ $counts['mine'] ?? 0 }})
-                        </a>
-                        @if ($search !== '' || ($status && $status !== ($room ? 'all' : 'open')) || $mine)
-                            <a href="{{ route('concerns.index', array_filter(['room' => $room?->room_id])) }}" class="btn sec reset-filter-btn" title="Reset all filters">Reset</a>
-                        @endif
+                            @if ($search !== '' || ($status && $status !== ($room ? 'all' : 'open')) || $mine)
+                                <a href="{{ route('concerns.index', array_filter(['room' => $room?->room_id])) }}" class="btn sec reset-filter-btn" title="Reset all filters">Reset</a>
+                            @endif
+                        </div>
                     </div>
                 </div>
             </div>

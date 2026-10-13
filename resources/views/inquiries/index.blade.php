@@ -40,18 +40,20 @@
                     </button>
                 </div>
 
-                <div class="inquiry-chips-wrap">
-                    <span class="status-label">Show:</span>
-                    <a href="{{ route('inquiries.index') }}"
-                       class="chip {{ $status ? '' : 'on' }}">
-                        All <span class="chip-count">({{ $counts['All'] }})</span>
-                    </a>
-                    @foreach ($statuses as $s)
-                        <a href="{{ route('inquiries.index', ['status' => $s]) }}"
-                           class="chip {{ $status === $s ? 'on' : '' }}">
-                            {{ $s }} <span class="chip-count">({{ $counts[$s] ?? 0 }})</span>
+                <div class="inquiry-chips-wrap filter-groups-row">
+                    <div class="filter-group-item">
+                        <span class="status-label filter-label">Show:</span>
+                        <a href="{{ route('inquiries.index') }}"
+                           class="chip {{ $status ? '' : 'on' }}">
+                            All <span class="chip-count">({{ $counts['All'] }})</span>
                         </a>
-                    @endforeach
+                        @foreach ($statuses as $s)
+                            <a href="{{ route('inquiries.index', ['status' => $s]) }}"
+                               class="chip {{ $status === $s ? 'on' : '' }}">
+                                {{ $s }} <span class="chip-count">({{ $counts[$s] ?? 0 }})</span>
+                            </a>
+                        @endforeach
+                    </div>
                     @if ($search !== '' || $status)
                         <a href="{{ route('inquiries.index') }}" class="btn sec reset-filter-btn" title="Reset all filters">Reset</a>
                     @endif

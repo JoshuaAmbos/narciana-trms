@@ -126,12 +126,14 @@
                     <button type="button" id="billing-search-clear" class="search-clear-btn" style="display: {{ ($searchQuery ?? request('search')) ? 'inline-flex' : 'none' }};">&times;</button>
                 </div>
 
-                <div class="billing-chips-wrap">
-                    <span class="status-label">Status:</span>
-                    @foreach (['All', 'Unpaid', 'Overdue', 'Paid'] as $st)
-                        <a href="{{ route('bills.index', ['month' => $month->format('Y-m'), 'status' => $st]) }}"
-                           class="chip {{ $statusFilter === $st ? 'on' : '' }}">{{ $st }}</a>
-                    @endforeach
+                <div class="billing-chips-wrap filter-groups-row">
+                    <div class="filter-group-item">
+                        <span class="status-label filter-label">Status:</span>
+                        @foreach (['All', 'Unpaid', 'Overdue', 'Paid'] as $st)
+                            <a href="{{ route('bills.index', ['month' => $month->format('Y-m'), 'status' => $st]) }}"
+                               class="chip {{ $statusFilter === $st ? 'on' : '' }}">{{ $st }}</a>
+                        @endforeach
+                    </div>
                     @if (($statusFilter ?? 'All') !== 'All')
                         <a href="{{ route('bills.index', ['month' => $month->format('Y-m')]) }}" class="btn sec reset-filter-btn">Reset</a>
                     @endif

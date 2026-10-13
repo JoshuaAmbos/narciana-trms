@@ -36,7 +36,7 @@ class SettingsTest extends TestCase
         ], $overrides);
     }
 
-    public function test_page_shows_current_values_and_fixed_rules(): void
+    public function test_page_shows_current_values(): void
     {
         Setting::current()->update(['water_rate' => 225.50, 'grace_days' => 4]);
 
@@ -44,9 +44,7 @@ class SettingsTest extends TestCase
             ->assertSee('value="225.50"', false)
             ->assertSee('value="4"', false)
             ->assertSee('Per day of rent')
-            ->assertSee('move-in day of the month')
-            ->assertSee('4 months')
-            ->assertSee(config('session.lifetime').' minutes');
+            ->assertDontSee('Fixed rules');
     }
 
     public function test_owner_saves_settings_and_the_change_is_audited_old_to_new(): void

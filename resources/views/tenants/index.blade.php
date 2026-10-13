@@ -82,11 +82,11 @@
                     </button>
                 </div>
 
-                {{-- Filter Chips (Option B: Bottom on Portrait; Option A: Right on Landscape) --}}
-                <div class="tenant-chips-container">
+                {{-- Filter Chips (Positioned below search bar) --}}
+                <div class="tenant-chips-container filter-groups-row">
                     {{-- Status Chips --}}
-                    <div class="tenant-chips-subgroup">
-                        <span class="status-label">Status:</span>
+                    <div class="tenant-chips-subgroup filter-group-item">
+                        <span class="status-label filter-label">Status:</span>
                         <div class="tenant-chips-wrap">
                             @foreach ($statuses as $st)
                                 <a href="{{ route('tenants.index', ['status' => $st, 'tenancy' => $tenancyFilter]) }}"
@@ -98,8 +98,8 @@
                     </div>
 
                     {{-- Tenancy Chips --}}
-                    <div class="tenant-chips-subgroup">
-                        <span class="status-label">Tenancy:</span>
+                    <div class="tenant-chips-subgroup filter-group-item">
+                        <span class="status-label filter-label">Tenancy:</span>
                         <div class="tenant-chips-wrap">
                             @foreach (['all' => 'All', 'active' => 'Currently Renting', 'past' => 'No Active Lease'] as $key => $lbl)
                                 <a href="{{ route('tenants.index', ['status' => $status, 'tenancy' => $key]) }}"

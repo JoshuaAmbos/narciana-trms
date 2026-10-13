@@ -3555,74 +3555,16 @@ svg.w-4 {
 }
 
 /* ==============================================================
-   2. CONTAINER-AWARE FILTER & SEARCH CONTROLS
+   UNIVERSAL FULL-WIDTH SEARCH BAR & STACKED FILTER GROUPS
    ============================================================== */
-/* Container wrap */
-.collections-controls-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
-    margin-bottom: 16px;
-    box-sizing: border-box;
-}
 
-/* Base Mobile & Portrait (< 768px): Stacked */
-.collections-search-box {
-    position: relative;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    box-sizing: border-box;
-}
-
-.collections-chips-wrap {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: nowrap;
-}
-
-/* Landscape Tablet (>= 768px / >= 1024px) & Desktop: Single Inline Row */
-@media (min-width: 768px) {
-    .collections-controls-wrap {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-    }
-
-    .collections-search-box {
-        flex: 1 1 auto;
-        width: auto;          /* Overrides width: 100% */
-        max-width: 440px;      /* Prevents search box from stretching excessively */
-    }
-
-    .collections-chips-wrap {
-        width: auto;          /* Overrides width: 100% */
-        flex-shrink: 0;       /* Keeps chips tightly grouped on the right */
-        justify-content: flex-end;
-    }
-}
-
+/* Container wrapping search + all filters */
 .filter-bar,
 .billing-filter-bar,
-.to-collect-controls-wrap,
 .tenant-filter-bar,
 .concern-filter-bar,
 .room-filter-bar,
-.inquiry-filter-bar {
-    width: 100%;
-    margin-bottom: 16px;
-    padding: 12px 14px;
-    background: var(--head-bg, #f4f7fb);
-    border: 1px solid var(--border, #d6dee8);
-    border-radius: 8px;
-    box-sizing: border-box;
-    container-type: inline-size;
-}
-
-/* Option B (Stacked): Default for phones & narrow panels (< 720px) */
+.inquiry-filter-bar,
 .controls-wrap,
 .billing-controls-wrap,
 .collections-controls-wrap,
@@ -3634,11 +3576,29 @@ svg.w-4 {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 12px;
     width: 100%;
+    gap: 12px;
     box-sizing: border-box;
 }
 
+/* Base filter bar container presentation */
+.filter-bar,
+.billing-filter-bar,
+.tenant-filter-bar,
+.concern-filter-bar,
+.room-filter-bar,
+.inquiry-filter-bar,
+.collections-controls-wrap,
+.to-collect-controls-wrap {
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    background: var(--head-bg, #f4f7fb);
+    border: 1px solid var(--border, #d6dee8);
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+/* Search Box: Always spans the full width of the parent container */
 .search-box,
 .billing-search-box,
 .collections-search-box,
@@ -3648,7 +3608,8 @@ svg.w-4 {
 .room-search-box,
 .inquiry-search-box {
     position: relative;
-    width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
     display: flex;
     align-items: center;
     box-sizing: border-box;
@@ -3666,7 +3627,7 @@ svg.w-4 {
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--muted, #51647a);
+    color: var(--muted, #64748b);
     pointer-events: none;
     width: 16px;
     height: 16px;
@@ -3675,28 +3636,29 @@ svg.w-4 {
 .search-input {
     width: 100% !important;
     min-width: 0 !important;
-    box-sizing: border-box !important;
-    min-height: var(--tap, 44px) !important;
     height: var(--tap, 44px);
+    min-height: var(--tap, 44px) !important;
+    box-sizing: border-box !important;
     padding: 8px 36px 8px 36px !important;
     font-size: 14px;
-    border: 1px solid var(--border, #d6dee8);
+    border: 1px solid var(--border, #cbd5e1);
     border-radius: 6px;
     background: #ffffff;
-    color: var(--text, #1f2d3d);
-    outline: none;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    color: var(--text, #1e293b);
 }
 
 .search-input:focus {
-    border-color: var(--navy-2, #2f5d91);
-    box-shadow: 0 0 0 2px rgba(47, 93, 145, 0.15);
+    outline: 2px solid var(--navy-2, #1d4ed8);
+    outline-offset: 0;
 }
 
 .search-clear-btn,
 .billing-search-clear-btn,
 .collections-search-clear-btn,
-.to-collect-search-clear-btn {
+.to-collect-search-clear-btn,
+.inquiry-search-clear-btn,
+.room-search-clear-btn,
+.concern-search-clear-btn {
     position: absolute;
     right: 8px;
     top: 50%;
@@ -3705,7 +3667,7 @@ svg.w-4 {
     border: none;
     font-size: 20px;
     line-height: 1;
-    color: var(--muted, #51647a);
+    color: var(--muted, #64748b);
     cursor: pointer;
     padding: 6px;
     display: inline-flex;
@@ -3713,21 +3675,47 @@ svg.w-4 {
     justify-content: center;
 }
 
-/* Stacked mode: Left-aligned chips prevent stair-step wrapping */
+/* Filter Groups Container: Sits below the full-width search bar */
+.filter-groups-row,
+.tenant-chips-container,
+.room-filter-groups,
 .chips-wrap,
 .billing-chips-wrap,
 .collections-chips-wrap,
 .to-collect-chips-wrap,
-.tenant-chips-container,
 .concern-chips-box,
-.room-chips-wrap,
 .inquiry-chips-wrap {
     display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: flex-start;
+    gap: 16px;
     flex-wrap: wrap;
-    gap: 8px;
     width: 100%;
+    box-sizing: border-box;
+}
+
+/* Individual Filter Group */
+.filter-group-item,
+.tenant-chips-subgroup,
+.room-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-group-item .filter-label,
+.tenant-chips-subgroup .status-label,
+.tenant-chips-subgroup .mode-label,
+.chips-wrap .status-label,
+.chips-wrap .mode-label,
+.room-filter-label,
+.inquiry-filter-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted, #64748b);
+    white-space: nowrap;
 }
 
 .chips-wrap .chip,
@@ -3736,8 +3724,10 @@ svg.w-4 {
 .to-collect-chips-wrap .chip,
 .tenant-chips-wrap .chip,
 .concern-chips-wrap .chip,
+.concern-chip,
 .room-chips-wrap .chip,
-.inquiry-chips-wrap .chip {
+.inquiry-chips-wrap .chip,
+.filter-group-item .chip {
     min-height: 38px;
     padding: 6px 12px;
     font-size: 13px;
@@ -3748,31 +3738,13 @@ svg.w-4 {
     text-decoration: none;
 }
 
-.tenant-chips-subgroup {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-
 .tenant-chips-wrap,
-.concern-chips-wrap {
+.concern-chips-wrap,
+.room-chips-wrap {
     display: flex;
     align-items: center;
     gap: 6px;
     flex-wrap: wrap;
-}
-
-.chips-wrap .status-label,
-.chips-wrap .mode-label,
-.tenant-chips-subgroup .status-label,
-.concern-chips-box .status-label,
-.room-filter-label,
-.inquiry-filter-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--muted, #51647a);
-    margin-right: 2px;
 }
 
 .reset-filter-btn {
@@ -3788,47 +3760,48 @@ svg.w-4 {
     margin-left: 4px;
 }
 
-/* Option A (Side-by-Side): Activates only when container has >= 720px */
-@container (min-width: 720px) {
-    .controls-wrap,
-    .billing-controls-wrap,
-    .collections-controls-wrap,
-    .to-collect-controls-wrap,
-    .tenant-controls-wrap,
-    .concern-controls-wrap,
-    .room-controls-wrap,
-    .inquiry-controls-wrap {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-    }
-
-    .search-box,
-    .billing-search-box,
-    .collections-search-box,
-    .to-collect-search-box,
-    .tenant-search-box,
-    .concern-search-box,
-    .room-search-box,
-    .inquiry-search-box {
-        flex: 1 1 auto;
-        min-width: 220px;
-        max-width: 440px;
-    }
-
-    .chips-wrap,
-    .billing-chips-wrap,
-    .collections-chips-wrap,
-    .to-collect-chips-wrap,
+/* When the container is too narrow to fit two filter groups side by side */
+@media (max-width: 768px) {
+    .filter-groups-row,
     .tenant-chips-container,
-    .concern-chips-box,
-    .room-chips-wrap,
-    .inquiry-chips-wrap {
-        width: auto;
-        flex: 1 1 auto;
-        justify-content: flex-end;
+    .room-filter-groups {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
     }
+
+    .filter-group-item,
+    .tenant-chips-subgroup,
+    .room-filter-group {
+        width: 100%;
+    }
+}
+
+/* ==============================================================
+   SETTINGS MODULE FULL CONTAINER WIDTH & GRID
+   ============================================================== */
+
+/* Allow Settings cards, panels, and forms to fill full container width */
+.settings-container,
+.settings-card,
+.settings-panel,
+.panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+}
+
+.settings-card form,
+.settings-form {
+    width: 100%;
+}
+
+.settings-grid-row,
+.settings-form .row {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+    width: 100% !important;
+    gap: 16px !important;
 }
 
 /* ==============================================================

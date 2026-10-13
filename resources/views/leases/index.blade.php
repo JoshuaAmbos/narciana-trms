@@ -57,9 +57,9 @@
                     <button type="button" id="lease-search-clear" class="search-clear-btn" aria-label="Clear search" style="display: {{ $search !== '' ? 'inline-flex' : 'none' }};">&times;</button>
                 </div>
 
-                <div class="tenant-chips-container">
-                    <div class="tenant-chips-subgroup">
-                        <span class="status-label">Status:</span>
+                <div class="tenant-chips-container filter-groups-row">
+                    <div class="tenant-chips-subgroup filter-group-item">
+                        <span class="status-label filter-label">Status:</span>
                         <div class="tenant-chips-wrap">
                             @foreach (['All' => 'All', 'Active' => 'Active', 'Ended' => 'Ended', 'Cancelled' => 'Cancelled'] as $st => $label)
                                 <a href="{{ route('leases.index', ['status' => $st, 'search' => $search, 'room_type' => $roomType]) }}"
@@ -68,8 +68,8 @@
                         </div>
                     </div>
 
-                    <div class="tenant-chips-subgroup">
-                        <span class="status-label">Room Type:</span>
+                    <div class="tenant-chips-subgroup filter-group-item">
+                        <span class="status-label filter-label">Room Type:</span>
                         <div class="tenant-chips-wrap">
                             @foreach (['All', 'Basic', 'Aircon'] as $rt)
                                 <a href="{{ route('leases.index', ['status' => $status, 'search' => $search, 'room_type' => $rt]) }}"

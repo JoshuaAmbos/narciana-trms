@@ -68,11 +68,13 @@
                 </div>
 
                 {{-- Mode Filter Chips --}}
-                <div class="collections-chips-wrap">
-                    <span class="mode-label">Mode:</span>
-                    <button type="button" class="chip on collections-filter-chip" data-mode="All">All</button>
-                    <button type="button" class="chip collections-filter-chip" data-mode="Cash">Cash</button>
-                    <button type="button" class="chip collections-filter-chip" data-mode="GCash">GCash</button>
+                <div class="collections-chips-wrap filter-groups-row">
+                    <div class="filter-group-item">
+                        <span class="mode-label filter-label">Mode:</span>
+                        <button type="button" class="chip on collections-filter-chip" data-mode="All">All</button>
+                        <button type="button" class="chip collections-filter-chip" data-mode="Cash">Cash</button>
+                        <button type="button" class="chip collections-filter-chip" data-mode="GCash">GCash</button>
+                    </div>
                 </div>
             </div>
 
@@ -133,12 +135,14 @@
                     </button>
                 </div>
 
-                {{-- Status Filter Chips (Below on Portrait, Inline on Landscape) --}}
-                <div class="to-collect-chips-wrap">
-                    <span class="status-label">Status:</span>
-                    <button type="button" class="chip on to-collect-filter-chip" data-status="All">All</button>
-                    <button type="button" class="chip to-collect-filter-chip" data-status="Grace">Grace Period</button>
-                    <button type="button" class="chip to-collect-filter-chip" data-status="Overdue">Overdue</button>
+                {{-- Status Filter Chips --}}
+                <div class="to-collect-chips-wrap filter-groups-row">
+                    <div class="filter-group-item">
+                        <span class="status-label filter-label">Status:</span>
+                        <button type="button" class="chip on to-collect-filter-chip" data-status="All">All</button>
+                        <button type="button" class="chip to-collect-filter-chip" data-status="Grace">Grace Period</button>
+                        <button type="button" class="chip to-collect-filter-chip" data-status="Overdue">Overdue</button>
+                    </div>
                 </div>
             </div>
         @endif

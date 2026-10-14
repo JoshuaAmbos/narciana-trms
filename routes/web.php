@@ -120,19 +120,29 @@ Route::middleware(['auth', 'active'])->group(function () {
 Route::get('/cron/run/{token}', function ($token) {
     $configuredSecret = config('app.cron_secret', env('CRON_SECRET'));
 
-    // Abort if CRON_SECRET is not configured or token does not match
+    // 1. Abort if CRON_SECRET is not configured or token does not match
     if (empty($configuredSecret) || !hash_equals($configuredSecret, (string) $token)) {
         abort(403, 'Unauthorized cron trigger');
     }
 
-    // Execute the scheduled tasks
-    Artisan::call('schedule:run');
-    $output = trim(Artisan::output());
+    // 2. Prevent script termination if cron-job.org disconnects
+    ignore_user_abort(true);
+    @set_time_limit(600); // Allow up to 10 minutes for mysqldump and compression
 
-    return response()->json([
-        'status'    => 'ok',
-        'message'   => 'Scheduler executed successfully',
-        'output'    => $output ?: 'No scheduled tasks were due.',
-        'timestamp' => now()->toIso8601String(),
-    ]);
+    // 3. Close the HTTP connection immediately and return 200 OK to cron-job.org
+    if (function_exists('fastcgi_finish_request')) {
+        response()->json([
+            'status'    => 'accepted',
+            'message'   => 'Scheduler execution dispatched to background process.',
+            'timestamp' => now()->toIso8601String(),
+        ])->send();
+
+        // Flushes output buffers and shuts down HTTP connection to client
+        fastcgi_finish_request();
+    }
+
+    // 4. Run scheduler in the background on the server
+    Artisan::call('schedule:run');
+
+    return response()->noContent();
 })->name('cron.run');
